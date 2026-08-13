@@ -872,6 +872,31 @@ var SPEICHER_STAND = "elementia.sammlung";
 var STAND_FASSUNG = 1;
 var gefundene = {};          // "Region|Name" -> true
 
+// ============================================================
+//  Lehrermodus – sammlung.html?lehrer=1
+//
+//  Ohne ihn kann eine Karte NUR über ihren Stationscode aufgehen.
+//  Das ist der ganze Sinn der Kärtchen: Wer die Karte will, geht an
+//  die Station. Ein Knopf „gefunden" in der Kartenansicht hob die
+//  Sperre mit einem Antippen wieder auf – dann hätte man sich das
+//  Drucken sparen können.
+//
+//  Der Lehrer braucht den Weg trotzdem: wenn eine Kamera vor der
+//  Klasse streikt, und um die Sammlung vorzuführen, ohne vorher
+//  neunzig Kärtchen abzuscannen.
+//
+//  Bewusst NICHT gemerkt. Der Modus gilt nur für diesen einen
+//  Seitenaufruf – auf einem geteilten Tablet soll er nicht liegen
+//  bleiben und dem nächsten Kind in die Hände fallen.
+//
+//  Das ist eine Schwelle, kein Schloss. Wer die Adresse kennt oder
+//  im Browserspeicher herumschreibt, kommt daran vorbei. Es geht
+//  darum, dass niemand versehentlich oder beiläufig darüber
+//  stolpert – nicht darum, Zwölfjährige auszusperren, die es
+//  wirklich darauf anlegen.
+// ============================================================
+var LEHRER = new URLSearchParams(location.search).get("lehrer") === "1";
+
 function schluessel(k) { return regionVon(k) + "|" + k.name; }
 
 function standLaden() {
@@ -1354,14 +1379,20 @@ function grossOeffnen(k, kachel) {
   });
 }
 
-// Seit Schritt 4 ist der übliche Weg der Stationscode. Dieser Knopf
-// bleibt trotzdem: als Notbehelf, wenn eine Kamera streikt, und als
-// einziger Weg, solange die Sammlung von der Festplatte läuft.
+// Der Knopf kann eine Karte nur noch WEGNEHMEN, nicht geben – außer
+// im Lehrermodus. Eine gefundene Karte wieder zuzumachen ist harmlos
+// (falscher Scan, Tablet weitergeben); sie ohne Stationscode zu
+// öffnen hebt die Sperre auf, und dann ist der ganze Bogen mit den
+// Kärtchen Makulatur.
 function zeichneGefundenKnopf() {
   var b = document.getElementById("gefunden");
   if (!aktuelleKarte) return;
   var offen = istGefunden(aktuelleKarte);
-  b.textContent = offen ? "✓ Gefunden" : "○ Noch nicht gefunden";
+
+  b.hidden = !offen && !LEHRER;
+  b.textContent = offen ? "✓ Gefunden" : "○ Freischalten";
+  b.title = offen ? "Aus der Sammlung nehmen"
+                  : "Lehrermodus: ohne Stationscode freischalten";
   b.setAttribute("aria-pressed", offen ? "true" : "false");
 }
 
@@ -1874,7 +1905,13 @@ document.getElementById("dateiwahl").addEventListener("change", function () {
   this.value = "";
 });
 
+// Die größere Tür: Ein Antippen, und die ganze Sammlung steht offen.
+// Sie ist zum Vorführen gemacht und gehört nicht in Schülerhände –
+// im Lehrermodus ist sie da, sonst gar nicht erst im Fußbereich.
+document.getElementById("allesAuf").hidden = !LEHRER;
+
 document.getElementById("allesAuf").addEventListener("click", function () {
+  if (!LEHRER) return;
   KARTEN.forEach(function (k) { gefundene[schluessel(k)] = true; });
   standSichern();
   zeichneRaster();
@@ -1995,6 +2032,16 @@ function appVorbereiten() {
 //  Verdrahtung
 // ============================================================
 
+// Der Lehrermodus muss sichtbar sein. Wer ihn versehentlich anhat und
+// vor der Klasse etwas freischaltet, soll es merken – und wer das
+// Tablet weitergibt, soll sehen, dass er die Seite ohne den Zusatz
+// neu laden muss.
+if (LEHRER) {
+  document.getElementById("zaehler").insertAdjacentHTML("beforebegin",
+    '<span style="font-size:11px;font-weight:600;color:#d8cfa8;' +
+    'border:1px solid #7a6a4e;border-radius:5px;padding:1px 6px">Lehrermodus</span> ');
+}
+
 standLaden();
 filterAufbauen();
 effekteSetzen(effekteAn());
@@ -2033,7 +2080,14 @@ document.getElementById("scannerzu").addEventListener("click", scannerSchliessen
 document.getElementById("schliessen").addEventListener("click", grossSchliessen);
 document.getElementById("gefunden").addEventListener("click", function () {
   if (!aktuelleKarte) return;
-  gefundenSetzen(aktuelleKarte, !istGefunden(aktuelleKarte));
+  var offen = istGefunden(aktuelleKarte);
+  // Zweiter Riegel, nicht nur der versteckte Knopf: Auch ein Aufruf
+  // von außen (Tastatur, Vorlese-Hilfe) darf ohne Lehrermodus nichts
+  // freischalten.
+  if (!offen && !LEHRER) return;
+  if (offen && !confirm("„" + aktuelleKarte.name + "“ wieder aus der Sammlung nehmen?")) return;
+
+  gefundenSetzen(aktuelleKarte, !offen);
   zeichneGefundenKnopf();
   // Beide Seiten neu bauen: Die Karte soll sich sofort zeigen, statt
   // erst beim nächsten Öffnen. Der Augenblick, in dem die Silhouette

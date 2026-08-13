@@ -111,7 +111,14 @@ function messen() {
   z("ELEMENTIA GERÄTETEST  " + new Date().toISOString().slice(0, 16).replace("T", " "));
 
   titel("Gerät");
-  wert("Kennung", navigator.userAgent);
+  // Zuerst und in Großbuchstaben, weil der häufigste Irrtum beim
+  // Abschicken der ist, die Seite auf dem falschen Gerät geöffnet zu
+  // haben. Ein Bericht vom Rechner beantwortet keine Handy-Frage.
+  var kennung = navigator.userAgent;
+  var handy = /iPhone|iPad|iPod|Android/i.test(kennung) ||
+              (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  wert("ART", handy ? ">>> HANDY / TABLET <<<" : ">>> RECHNER <<<");
+  wert("Kennung", kennung);
   wert("Plattform", navigator.platform + "  Finger: " + (navigator.maxTouchPoints || 0));
   wert("Fenster", window.innerWidth + " x " + window.innerHeight +
                   "  Dichte: " + (window.devicePixelRatio || 1));
@@ -190,9 +197,19 @@ function messen() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistration().then(function (reg) {
       z("");
+      // Diese Seite richtet selbst KEINEN Service Worker ein – das tut
+      // nur die Sammlung. Ohne diesen Zusatz liest sich ein „NEIN"
+      // wie ein Defekt, obwohl es nur heißt: hier war die Sammlung
+      // noch nicht offen. Ein Bericht, der Fehlalarm gibt, ist
+      // schlimmer als keiner.
       wert("SW eingerichtet", jaNein(!!reg) +
            (reg && reg.active ? "  (aktiv)" : reg ? "  (nicht aktiv)" : ""));
       wert("SW steuert Seite", jaNein(!!navigator.serviceWorker.controller));
+      if (!reg) {
+        z("       -> kein Defekt: Diese Seite richtet keinen Service Worker ein.");
+        z("          Erst die Sammlung in DIESEM Browser öffnen, dann hier");
+        z("          „Messung wiederholen\" drücken.");
+      }
       return window.caches ? caches.keys() : [];
     }).then(function (namen) {
       wert("Speicherbereiche", namen.length ? namen.join(", ") : "keine");
