@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elementia · Gerätetest</title>
+<style>
+  /* ============================================================
+     GERÄTETEST
+
+     Wozu es diese Seite gibt: Das Umdrehen der Kartenansicht war
+     auf dem iPhone zweimal kaputt, und beide Male wurde die
+     Ursache vom Rechner aus ERSCHLOSSEN – wo alles lief. Zweimal
+     falsch geraten, zweimal hochgeladen, zweimal umsonst.
+
+     Diese Seite misst stattdessen. Sie wird auf dem Gerät
+     geöffnet, das sich merkwürdig verhält, und gibt aus, was dort
+     wirklich gilt. Das Ergebnis wird abfotografiert oder über
+     „Kopieren" weitergereicht.
+
+     Sie gehört nicht zum Spiel. Schüler brauchen sie nie.
+     ============================================================ */
+  :root { --grund: #14120f; --text: #ece5d8; --gedaempft: #9b9184; --rand: #38312a; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--grund); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+    padding: max(14px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom));
+    line-height: 1.5;
+  }
+  h1 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  p.hinweis { color: var(--gedaempft); font-size: 13px; margin-bottom: 14px; }
+  .knopfreihe { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  button {
+    background: #2a251e; color: var(--text);
+    border: 1px solid var(--rand); border-radius: 8px;
+    padding: 10px 15px; font: inherit; font-size: 14px; cursor: pointer; min-height: 44px;
+  }
+  button.wichtig { background: #4a3f2c; border-color: #7a6a4e; }
+  pre {
+    background: #0e0c0a; border: 1px solid var(--rand); border-radius: 8px;
+    padding: 11px; font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-word;
+  }
+  .gut { color: #a9c47c; }
+  .schlecht { color: #d99a8e; }
+  #meldung { color: #a9c47c; font-size: 13px; min-height: 1.4em; margin-top: 8px; }
+
+  /* Der Prüfstand: dieselbe Bauweise wie die Kartenansicht in
+     sammlung.html, nur ohne Inhalt. Gemessen wird an ihm, nicht an
+     Behauptungen über ihn. */
+  #pruefstand { position: absolute; left: -9999px; top: 0; width: 200px; }
+  #pruefstand .buehne { perspective: 1300px; width: 200px; }
+  #pruefstand .karte3d { position: relative; aspect-ratio: 63.5 / 88.9; }
+  #pruefstand .karte3d.kante { transform: scaleX(0); }
+  #pruefstand .seite {
+    position: absolute; inset: 0; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  #pruefstand .karte3d .rueckseite { display: none; }
+  #pruefstand .karte3d.hinten .vorderseite { display: none; }
+  #pruefstand .karte3d.hinten .rueckseite { display: flex; }
+</style>
+</head>
+<body>
+
+<h1>⚗ Elementia · Gerätetest</h1>
+<p class="hinweis">Diese Seite gehört nicht zum Spiel. Sie misst, wie sich <b>dieses Gerät</b>
+verhält, damit ein Fehler nicht geraten werden muss. Ergebnis abfotografieren oder kopieren.</p>
+
+<div class="knopfreihe">
+  <button id="nochmal" class="wichtig">↻ Messung wiederholen</button>
+  <button id="kopieren">⧉ Ergebnis kopieren</button>
+</div>
+
+<pre id="bericht">wird gemessen …</pre>
+<div id="meldung"></div>
+
+<div id="pruefstand" aria-hidden="true">
+  <div class="buehne"><div class="karte3d" id="pkarte">
+    <div class="seite vorderseite" id="pvorne"><span>vorne</span></div>
+    <div class="seite rueckseite" id="phinten"><span>hinten</span></div>
+  </div></div>
+</div>
+
+<script>
+"use strict";
+
+var zeilen = [];
+function z(text) { zeilen.push(text); }
+function titel(text) { z(""); z("== " + text + " " + Array(Math.max(2, 40 - text.length)).join("=")); }
+function wert(name, w) { z("  " + (name + ":                    ").slice(0, 22) + w); }
+
+function jaNein(b) { return b ? "ja" : "NEIN"; }
+
+// ------------------------------------------------------------
+//  Was unterstützt der Browser wirklich?
+//  Gemessen mit CSS.supports statt aus der Browserkennung
+//  erraten – die Kennung lügt seit zwanzig Jahren.
+// ------------------------------------------------------------
+function kannCss(eigenschaft, w) {
+  return window.CSS && CSS.supports ? CSS.supports(eigenschaft, w) : false;
+}
+
+function messen() {
+  zeilen = [];
+  var karte = document.getElementById("pkarte");
+  var vorne = document.getElementById("pvorne");
+  var hinten = document.getElementById("phinten");
+
+  z("ELEMENTIA GERÄTETEST  " + new Date().toISOString().slice(0, 16).replace("T", " "));
+
+  titel("Gerät");
+  wert("Kennung", navigator.userAgent);
+  wert("Plattform", navigator.platform + "  Finger: " + (navigator.maxTouchPoints || 0));
+  wert("Fenster", window.innerWidth + " x " + window.innerHeight +
+                  "  Dichte: " + (window.devicePixelRatio || 1));
+  wert("Sprache", navigator.language);
+
+  titel("Wie die Seite läuft");
+  wert("Adresse", location.protocol + "//" + location.host);
+  wert("Sicherer Ursprung", jaNein(window.isSecureContext));
+  var alsApp = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) ||
+               window.navigator.standalone === true;
+  wert("Vom Startbildschirm", jaNein(alsApp) + (alsApp ? "" : "  <-- im Browser"));
+  wert("Bewegung reduziert", jaNein(window.matchMedia &&
+       matchMedia("(prefers-reduced-motion: reduce)").matches));
+
+  titel("Das Umdrehen der Karte");
+  // Genau die Bauweise, die in sammlung.html benutzt wird. Wenn
+  // hier etwas anderes herauskommt als erwartet, ist der Fehler
+  // gefunden, ohne dass jemand raten muss.
+  karte.classList.remove("hinten", "kante");
+  var a = getComputedStyle(vorne).display, b = getComputedStyle(hinten).display;
+  wert("vorne / hinten", a + " / " + b + "   (erwartet: flex / none)");
+  var zustand1 = (a !== "none" && b === "none");
+
+  karte.classList.add("hinten");
+  var c = getComputedStyle(vorne).display, d = getComputedStyle(hinten).display;
+  wert("umgedreht", c + " / " + d + "   (erwartet: none / flex)");
+  var zustand2 = (c === "none" && d !== "none");
+  karte.classList.remove("hinten");
+
+  z("");
+  z(zustand1 && zustand2
+    ? "  ERGEBNIS: Umdrehen arbeitet richtig."
+    : "  ERGEBNIS: UMDREHEN IST KAPUTT – genau hier liegt der Fehler.");
+
+  titel("Was dieser Browser kann");
+  // Die drei Techniken, an denen das Umdrehen zweimal gescheitert
+  // ist. Sie werden nicht mehr benutzt; gemessen werden sie
+  // trotzdem, weil sie erklären, warum es auf manchen Geräten ging
+  // und auf anderen nicht.
+  wert("preserve-3d", jaNein(kannCss("transform-style", "preserve-3d")));
+  wert("backface-visibility", jaNein(kannCss("backface-visibility", "hidden")));
+  wert("aspect-ratio", jaNein(kannCss("aspect-ratio", "1 / 1")));
+  wert("color-mix", jaNein(kannCss("color", "color-mix(in srgb, red 50%, blue)")));
+  wert("View Transitions", jaNein(!!document.startViewTransition));
+  wert("Lagesensor", jaNein(!!window.DeviceOrientationEvent) +
+       (window.DeviceOrientationEvent &&
+        typeof window.DeviceOrientationEvent.requestPermission === "function"
+        ? "  (Freigabe nötig)" : ""));
+
+  titel("Kamera und App");
+  wert("Kamera möglich", jaNein(!!(navigator.mediaDevices &&
+                                   navigator.mediaDevices.getUserMedia)));
+  wert("Service Worker", jaNein("serviceWorker" in navigator));
+  wert("Zwischenspeicher", jaNein(!!window.caches));
+
+  var speicherGeht = false, gesammelt = "—";
+  try {
+    localStorage.setItem("elementia.probe", "1");
+    localStorage.removeItem("elementia.probe");
+    speicherGeht = true;
+    var roh = localStorage.getItem("elementia.sammlung");
+    if (roh) {
+      var st = JSON.parse(roh);
+      gesammelt = (st.karten ? st.karten.length : 0) + " Karten, Stand " + (st.stand || "?");
+    } else {
+      gesammelt = "noch nichts gespeichert";
+    }
+  } catch (e) { gesammelt = "Speicher gesperrt (" + e.name + ")"; }
+  wert("Speicher nutzbar", jaNein(speicherGeht));
+  wert("Sammelstand", gesammelt);
+
+  // Der Rest kommt erst später – die Ausgabe steht schon jetzt da,
+  // damit sie auch dann brauchbar ist, wenn eine Abfrage hängt.
+  document.getElementById("bericht").textContent = zeilen.join("\n");
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      z("");
+      wert("SW eingerichtet", jaNein(!!reg) +
+           (reg && reg.active ? "  (aktiv)" : reg ? "  (nicht aktiv)" : ""));
+      wert("SW steuert Seite", jaNein(!!navigator.serviceWorker.controller));
+      return window.caches ? caches.keys() : [];
+    }).then(function (namen) {
+      wert("Speicherbereiche", namen.length ? namen.join(", ") : "keine");
+      document.getElementById("bericht").textContent = zeilen.join("\n");
+    })["catch"](function (f) {
+      z("  (Service-Worker-Abfrage fehlgeschlagen: " + f + ")");
+      document.getElementById("bericht").textContent = zeilen.join("\n");
+    });
+  }
+}
+
+document.getElementById("nochmal").addEventListener("click", messen);
+
+document.getElementById("kopieren").addEventListener("click", function () {
+  var text = document.getElementById("bericht").textContent;
+  var m = document.getElementById("meldung");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () {
+      m.textContent = "Kopiert – jetzt einfügen und schicken.";
+    })["catch"](function () {
+      m.textContent = "Kopieren ging nicht. Text markieren und abfotografieren.";
+    });
+  } else {
+    m.textContent = "Dieser Browser kann nicht kopieren. Bitte abfotografieren.";
+  }
+});
+
+messen();
+</script>
+</body>
+</html>

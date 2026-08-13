@@ -19,7 +19,7 @@
 //  Fassung holt. Wird sie vergessen, sitzt die halbe Klasse mit
 //  der alten App da und niemand versteht, warum.
 // ------------------------------------------------------------
-var FASSUNG = 3;
+var FASSUNG = 4;
 
 var GERUEST_SPEICHER = "elementia-geruest-" + FASSUNG;
 var BILD_SPEICHER    = "elementia-bilder-" + FASSUNG;
@@ -37,6 +37,7 @@ var GERUEST = [
   "index.html",
   "manifest.webmanifest",
   "App/sammlung.html",
+  "geraetetest.html",
   "App/kern/kartenstil.js",
   "App/kern/stationscode.js",
   "App/lib/jsQR.js",

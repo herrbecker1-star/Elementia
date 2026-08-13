@@ -264,53 +264,76 @@
   #grossansicht[hidden] { display: none; }
 
   .buehne { perspective: 1300px; width: min(84vw, 360px); max-height: 100%; }
+  /* Die Neigung dreht eine FLACHE Fläche unter der Perspektive der
+     Bühne – dafür braucht es kein preserve-3d. Das stand hier, solange
+     das Umdrehen zwei Flächen im Raum stapelte; seit das 2D läuft,
+     wäre es nur noch die letzte Abhängigkeit von einer Eigenschaft,
+     die Safari unzuverlässig behandelt. */
   .kipp {
     transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-    transform-style: preserve-3d;
     transition: transform 0.14s ease-out;
   }
+  /* ============================================================
+     Das Umdrehen — bewusst ohne 3D
+
+     Zwei Anläufe mit echtem 3D sind auf dem iPhone gescheitert:
+     erst war die GESPIEGELTE VORDERSEITE zu sehen, dann ein
+     SCHWARZER BILDSCHIRM. Drei voneinander unabhängige Ursachen
+     kamen zusammen:
+
+       1. Safari ignoriert `backface-visibility`, sobald das
+          Element ein eigenes Scrollfeld aufmacht — und beide
+          Seiten haben `overflow` (die Rückseite muss scrollen,
+          die Vorderseite schneidet das Bild rund).
+       2. `transform-style: preserve-3d` wird von Masken und
+          `mix-blend-mode` flachgedrückt — beides benutzt der
+          Holo-Glanz auf der Vorderseite.
+       3. `visibility` wird VERERBT. Die abgewandte Seite so zu
+          verbergen ließ auf Safari die Kindelemente hängen: Die
+          Rückseite wurde sichtbar, ihr Inhalt nicht — dunkler
+          Kartengrund ohne Text, also schwarz.
+
+     Jede einzelne Falle wäre zu umgehen. Aber es sind drei
+     Fallen in einer Technik, die für die Sache nicht nötig ist.
+     Deshalb: nicht die nächste umgehen, sondern die Technik
+     verlassen.
+
+     Jetzt ist IMMER NUR EINE SEITE ÜBERHAUPT DA (`display: none`
+     für die andere), und der Umdreh-Eindruck entsteht in zwei
+     Hälften mit reinem 2D:
+
+         scaleX(1) → scaleX(0)   Karte dreht sich zur Kante
+            dort: display umschalten
+         scaleX(0) → scaleX(1)   andere Seite dreht sich heran
+
+     Bei scaleX(0) steht die Karte als Kante — genau das, was ein
+     echtes Umdrehen zeigt. `display` kennt keine Vererbung und
+     keine Rückseiten: Entweder eine Seite ist im Layout oder
+     nicht. Damit ist die ganze Fehlerklasse weg.
+     ============================================================ */
   .karte3d {
     position: relative; aspect-ratio: 63.5 / 88.9;
-    transform-style: preserve-3d;
-    transition: transform 0.62s cubic-bezier(0.2, 0.75, 0.3, 1);
+    /* ease-out beim Herandrehen … */
+    transition: transform 0.16s ease-out;
   }
-  .karte3d.gedreht { transform: rotateY(180deg); }
+  /* … und ease-in beim Wegdrehen. Zusammen ergibt das eine Drehung,
+     die an der Kante am schnellsten ist – so bewegt sich auch eine
+     echte Karte zwischen den Fingern. */
+  .karte3d.kante { transform: scaleX(0); transition-timing-function: ease-in; }
   body.ruhig .kipp, body.ruhig .karte3d { transition: none; }
   body.ruhig .kipp { transform: none; }
 
   .seite {
     position: absolute; inset: 0;
-    backface-visibility: hidden; -webkit-backface-visibility: hidden;
     border-radius: 14px; overflow: hidden;
     box-shadow: 0 18px 44px -12px #000;
     display: flex; flex-direction: column;
   }
-  /* Das translateZ trennt die beiden Seiten um einen Punkt in der
-     Tiefe. Sonst liegen sie exakt aufeinander, und welche gewinnt,
-     entscheidet der Browser mehr oder weniger zufällig. */
-  .rueckseite { transform: rotateY(180deg) translateZ(1px); }
-
-  /* ------ Warum hier nicht auf backface-visibility vertraut wird ------
-     Auf dem iPhone war beim Umdrehen die GESPIEGELTE VORDERSEITE zu
-     sehen statt der Rückseite. Grund: Safari ignoriert
-     backface-visibility, sobald das Element ein eigenes Scrollfeld
-     aufmacht – und beide Seiten haben overflow gesetzt (die Rückseite
-     muss scrollen können, die Vorderseite schneidet das Bild rund).
-
-     Statt an dieser Safari-Eigenheit herumzukurieren, wird die
-     abgewandte Seite ausdrücklich unsichtbar geschaltet. Das hängt an
-     keiner 3D-Eigenschaft und verhält sich in jedem Browser gleich.
-
-     Der Kniff ist die Verzögerung: 0,31 s ist die halbe Drehdauer, der
-     Umschlag passiert also genau im rechten Winkel – dort, wo die
-     Karte ohnehin nur als Kante zu sehen ist. Ohne die Verzögerung
-     würde die Seite sichtbar umspringen. */
-  .vorderseite { visibility: visible; }
-  .rueckseite  { visibility: hidden; }
-  .karte3d.gedreht .vorderseite { visibility: hidden; }
-  .karte3d.gedreht .rueckseite  { visibility: visible; }
-  .seite { transition: visibility 0s linear 0.31s; }
-  body.ruhig .seite { transition: none; }
+  /* Die Rückseite ist zunächst gar nicht im Layout. Umgeschaltet
+     wird über die Klasse `hinten` auf der Karte. */
+  .karte3d .rueckseite { display: none; }
+  .karte3d.hinten .vorderseite { display: none; }
+  .karte3d.hinten .rueckseite { display: flex; }
 
   /* ------ Vorderseite: Bild, Name, sonst nichts ------
      Die Zahlen stehen auf der Rückseite. Vorn zählt das Bild –
@@ -340,6 +363,28 @@
      mehr, an die Station zu gehen. */
   .vorderseite.zu .vbild img,
   .vorderseite.zu .vbild .emoji { filter: brightness(0.16) grayscale(1) contrast(1.6); }
+
+  /* ------ Der Augenblick des Freischaltens ------
+     Beim Scannen an der Station soll die Silhouette dem Bild
+     weichen, nicht umspringen. Der Ablauf startet auf der frisch
+     gebauten, schon offenen Karte: Sie beginnt bei den Werten der
+     Silhouette und blendet auf.
+
+     Das ist die Stelle, an der „zeigen und belohnen statt
+     verlangen" sichtbar wird – die einzige Bewegung in der
+     Sammlung, die etwas feiert. */
+  .vorderseite.aufblenden .vbild img,
+  .vorderseite.aufblenden .vbild .emoji {
+    animation: bildAuf 0.55s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+  }
+  @keyframes bildAuf {
+    from { filter: brightness(0.16) grayscale(1) contrast(1.6); }
+    to   { filter: none; }
+  }
+  /* Im Ruhemodus ist die Karte einfach sofort da. Wer „Effekte aus"
+     gewählt hat, hat das für alles gewählt. */
+  body.ruhig .vorderseite.aufblenden .vbild img,
+  body.ruhig .vorderseite.aufblenden .vbild .emoji { animation: none; }
   .vsperre {
     position: absolute; inset: 0; display: flex;
     flex-direction: column; align-items: center; justify-content: center;
@@ -1098,6 +1143,69 @@ function abschnitt(titel, inhalt) {
   return b;
 }
 
+// ============================================================
+//  Umdrehen
+//
+//  Zwei Hälften: bis zur Kante, dort die Seite tauschen, wieder
+//  heraus. Warum das so und nicht mit 3D gebaut ist, steht
+//  ausführlich im Stilblock oben.
+//
+//  Das Umschalten steht bewusst an EINER Stelle. Vorher hing es an
+//  vier (Knopf, Klick auf die Karte, Tastatur, Zurücksetzen beim
+//  Öffnen) – eine zweiteilige Bewegung viermal zu wiederholen wäre
+//  die nächste Fehlerquelle gewesen.
+// ============================================================
+
+var HALBZEIT = 160;      // ms, muss zur Dauer im Stilblock passen
+var drehtGerade = false;
+
+function istHinten() {
+  return document.getElementById("karte3d").classList.contains("hinten");
+}
+
+function seiteZeigen(hinten) {
+  document.getElementById("karte3d").classList.toggle("hinten", !!hinten);
+}
+
+// Beim Öffnen einer Karte: ohne Bewegung nach vorn, und einen
+// eventuell laufenden Halbschritt abräumen.
+function vorneZeigen() {
+  var karte = document.getElementById("karte3d");
+  karte.classList.remove("hinten");
+  karte.classList.remove("kante");
+  drehtGerade = false;
+}
+
+// Lässt das Bild einer gerade freigeschalteten Karte aus der
+// Silhouette auftauchen. Die Klasse wird nach dem Ablauf wieder
+// entfernt, damit ein zweites Freischalten sie erneut auslösen kann.
+function aufblenden() {
+  var v = document.getElementById("vorderseite");
+  v.classList.remove("aufblenden");
+  void v.offsetWidth;                 // erzwingt den Neustart
+  v.classList.add("aufblenden");
+  setTimeout(function () { v.classList.remove("aufblenden"); }, 700);
+}
+
+function umdrehen() {
+  var karte = document.getElementById("karte3d");
+
+  // Im Ruhemodus wird nichts bewegt – dann ist der Wechsel sofort.
+  if (istRuhig()) { seiteZeigen(!istHinten()); return; }
+
+  // Ein zweiter Antipper mitten in der Drehung würde die Seite
+  // zweimal tauschen und die Karte in der Kante stehen lassen.
+  if (drehtGerade) return;
+  drehtGerade = true;
+
+  karte.classList.add("kante");
+  setTimeout(function () {
+    seiteZeigen(!istHinten());
+    karte.classList.remove("kante");
+    setTimeout(function () { drehtGerade = false; }, HALBZEIT);
+  }, HALBZEIT);
+}
+
 function baueVorderseite(k) {
   var v = document.getElementById("vorderseite");
   v.innerHTML = "";
@@ -1233,7 +1341,7 @@ function grossOeffnen(k, kachel) {
   wechsel(quelle, function () {
     var g = document.getElementById("grossansicht");
     g.style.setProperty("--klassenfarbe", STIL.farbe(k.klasse));
-    document.getElementById("karte3d").classList.remove("gedreht");
+    vorneZeigen();
     baueVorderseite(k);
     baueRueckseite(k);
     zeichneGefundenKnopf();
@@ -1519,6 +1627,7 @@ function trefferZeigen(ergebnis) {
     scannerLage("Diese Karte war bereits in deiner Sammlung.");
   }
 
+  var frischGefunden = (ergebnis.art === "neu");
   kasten.querySelector("#trefferansehen").onclick = function () {
     scannerSchliessen();
     // Erst nach dem Neuzeichnen: grossOeffnen braucht die Kachel, aus
@@ -1529,6 +1638,10 @@ function trefferZeigen(ergebnis) {
       if (kacheln[i].querySelector(".kname").textContent === k.name) { kachel = kacheln[i]; break; }
     }
     grossOeffnen(k, kachel);
+    // Nur bei einer eben erst gefundenen Karte. Erst nach dem
+    // Übergang von der Kachel zur Großansicht, sonst laufen zwei
+    // Bewegungen übereinander.
+    if (frischGefunden) setTimeout(aufblenden, 380);
   };
 }
 
@@ -1925,21 +2038,18 @@ document.getElementById("gefunden").addEventListener("click", function () {
   // Beide Seiten neu bauen: Die Karte soll sich sofort zeigen, statt
   // erst beim nächsten Öffnen. Der Augenblick, in dem die Silhouette
   // dem Bild weicht, ist der ganze Lohn – zeigen und belohnen.
-  document.getElementById("karte3d").classList.remove("gedreht");
+  vorneZeigen();
   baueVorderseite(aktuelleKarte);
   baueRueckseite(aktuelleKarte);
+  if (istGefunden(aktuelleKarte)) aufblenden();
   // Das Raster wird erst beim Schließen neu gezeichnet: Es liegt ohnehin
   // hinter der Großansicht, und ein Neuaufbau würde die Kachel wegwerfen,
   // zu der der Übergang beim Schließen zurücklaufen soll.
   rasterVeraltet = true;
   zeichneFortschritt();
 });
-document.getElementById("drehen").addEventListener("click", function () {
-  document.getElementById("karte3d").classList.toggle("gedreht");
-});
-document.getElementById("karte3d").addEventListener("click", function () {
-  this.classList.toggle("gedreht");
-});
+document.getElementById("drehen").addEventListener("click", umdrehen);
+document.getElementById("karte3d").addEventListener("click", umdrehen);
 
 // Auf den dunklen Grund neben der Karte tippen schließt – wie das
 // Zurücklegen einer Karte auf den Tisch.
@@ -1964,7 +2074,7 @@ document.addEventListener("keydown", function (e) {
     // Nur wenn kein Knopf im Fokus steht – sonst löst man zwei Dinge aus.
     if (document.activeElement && document.activeElement.tagName === "BUTTON") return;
     e.preventDefault();
-    document.getElementById("karte3d").classList.toggle("gedreht");
+    umdrehen();
   }
 });
 
