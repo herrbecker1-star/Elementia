@@ -1,0 +1,1917 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elementia · Sammlung</title>
+
+<!-- ============================================================
+     Verpackung als App
+
+     Diese vier Verweise zeigen auf Dateien, die es NUR im Web-Ordner
+     gibt (siehe pwa\LIESMICH-pwa.md). Von der Festplatte aus laufen
+     sie ins Leere – das ist harmlos, der Browser meldet es still und
+     die Seite funktioniert unverändert. Sie hier stehen zu haben
+     erspart eine zweite Fassung der Sammlung fürs Web.
+
+     apple-mobile-web-app-capable ist veraltet und wird trotzdem
+     gebraucht: Ohne dieses Meta öffnet iOS die abgelegte Seite in
+     Safari mit Adressleiste statt als App.
+     ============================================================ -->
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#14120f">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Elementia">
+<style>
+  /* ============================================================
+     ELEMENTIA · SAMMLUNG  (Stufe 1a)
+
+     Ersetzt den gedruckten Sammelpass. Alles kommt aus
+     ..\Karten\karten-daten.js – es steht keine einzige Karte,
+     Region oder Klasse im Code. Eine neue Karte in den Daten
+     erscheint hier ohne jede Änderung.
+
+     Die Darstellung ist bewusst NICHT mit dem Druckbogen geteilt:
+     generator.html rechnet in Millimetern und druckt Flächen,
+     hier wird geleuchtet und gekippt. Geteilt werden die Daten
+     (kern\kartenstil.js), nicht das Aussehen.
+
+     Dunkler Grund mit der Klassenfarbe als einzigem Akzent –
+     Karten in gedeckter Umgebung wirken wertvoller. Aber: Die
+     Farbe trägt nie allein. Das Klassenwort steht überall daneben,
+     denn 22 Klassen sind über Farbe nicht unterscheidbar, und
+     statistisch sitzt in jeder Klasse ein rot-grün-blindes Kind.
+     ============================================================ */
+
+  :root {
+    --grund:     #14120f;
+    --flaeche:   #201c17;
+    --erhoben:   #2a251e;
+    --rand:      #38312a;
+    --text:      #ece5d8;
+    --gedaempft: #9b9184;
+    --papier:    #f6efdd;   /* der Kartengrund aus dem Druckbogen */
+    --papierdunkel: #26201a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--grund);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ====== Kopfleiste ====== */
+  #leiste {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(20, 18, 15, 0.94);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rand);
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  }
+  #leiste h1 {
+    font-size: 15px; font-weight: 600; letter-spacing: 0.4px;
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  }
+  #leiste h1 .zaehler { font-size: 12px; font-weight: 400; color: var(--gedaempft); }
+
+  /* Der Scan-Knopf steht neben der Überschrift, nicht bei den Filtern:
+     Er ist die einzige Handlung hier oben, alles andere ist Auswahl.
+     Und er ist der Weg, auf dem die Sammlung wächst – das gehört nicht
+     zwischen drei Klappfelder. */
+  #kopfzeile { display: flex; align-items: center; gap: 10px; }
+  #kopfzeile h1 { flex: 1 1 auto; min-width: 0; }
+  #scanknopf {
+    flex: 0 0 auto;
+    background: #4a3f2c; color: var(--text);
+    border: 1px solid #7a6a4e; border-radius: 8px;
+    padding: 7px 13px; font: inherit; font-size: 13px; cursor: pointer;
+    min-height: 38px; white-space: nowrap;
+  }
+  #scanknopf:hover { background: #5a4d36; }
+
+  /* Auf dem Handy ein Raster, damit nichts über den Rand hinausläuft –
+     "Alle Klassen" abgeschnitten zu sehen ist schlimmer, als eine Zeile
+     mehr zu brauchen. Ab Tabletbreite passt alles in eine Zeile. */
+  #filter {
+    display: grid; gap: 8px; margin-top: 9px;
+    grid-template-columns: 1fr 1fr;
+  }
+  #suche { grid-column: 1 / -1; }
+  #filter select, #filter input, #filter button {
+    background: var(--erhoben); color: var(--text);
+    border: 1px solid var(--rand); border-radius: 7px;
+    padding: 7px 9px; font: inherit; font-size: 13px;
+    min-width: 0; min-height: 38px;   /* Fingerkuppe, nicht Mauszeiger */
+  }
+  #filter button { color: var(--gedaempft); cursor: pointer; }
+  #filter button[aria-pressed="true"] { color: var(--text); border-color: #7a6a4e; }
+
+  @media (min-width: 760px) {
+    #filter { display: flex; flex-wrap: wrap; align-items: center; }
+    #suche { flex: 1 1 230px; }
+    #filter select { flex: 0 1 auto; max-width: 30vw; }
+  }
+
+  /* ====== Raster ====== */
+  /* ====== Fortschritt je Region ====== */
+  #fortschritt {
+    display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px 2px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  #fortschritt::-webkit-scrollbar { display: none; }
+  #fortschritt button {
+    flex: 0 0 auto; background: var(--flaeche); color: var(--gedaempft);
+    border: 1px solid var(--rand); border-radius: 20px;
+    padding: 6px 12px; font: inherit; font-size: 12px; cursor: pointer;
+    white-space: nowrap; min-height: 34px;
+  }
+  #fortschritt button.aktiv { color: var(--text); border-color: #7a6a4e; background: var(--erhoben); }
+  #fortschritt button .anteil { color: var(--gedaempft); font-size: 11px; margin-left: 5px; }
+  #fortschritt button.voll { border-color: #7f9b56; }
+  #fortschritt button.voll .anteil { color: #a9c47c; }
+
+  #raster {
+    display: grid; gap: 12px; padding: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  }
+  #leer { padding: 40px 14px; text-align: center; color: var(--gedaempft); }
+
+  /* ====== Gesperrte Karten ======
+     Silhouette statt Lücke. Das Sichtbarmachen des Fehlenden ist der
+     halbe Sammelreiz – und der Fundort daneben macht aus der Sammlung
+     einen Wegweiser durch die Quests. */
+  .kachel.zu { border-color: var(--rand); }
+  .kachel.zu .bildflaeche { filter: brightness(0.16) grayscale(1) contrast(1.6); }
+  .kachel.zu .band { opacity: 0.3; }
+  .kachel.zu .kname { color: #7d7466; }
+  .kachel.zu .fundort {
+    position: absolute; inset: 0; display: flex;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px; padding: 10px; text-align: center;
+    color: #8c8274; font-size: 10.5px; line-height: 1.35;
+  }
+  .kachel.zu .fundort .schloss { font-size: 21px; opacity: 0.55; }
+
+  .kachel {
+    position: relative; aspect-ratio: 63.5 / 88.9;
+    border-radius: 10px; overflow: hidden; cursor: pointer;
+    background: var(--flaeche);
+    border: 1px solid color-mix(in srgb, var(--klassenfarbe) 45%, var(--rand));
+    /* Rückfall für Browser ohne color-mix – sonst gar kein Rand */
+    border-color: var(--rand);
+    border-color: color-mix(in srgb, var(--klassenfarbe) 45%, var(--rand));
+    transition: transform 0.16s ease-out, box-shadow 0.16s ease-out;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .kachel:hover, .kachel:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px -6px var(--klassenfarbe);
+    outline: none;
+  }
+  .kachel:focus-visible { border-color: var(--text); }
+  body.ruhig .kachel { transition: none; }
+  body.ruhig .kachel:hover { transform: none; }
+
+  /* Das Band ist das zweite, farbunabhängige Merkmal nicht – es ist
+     dieselbe Farbe. Die Unterscheidung leistet das Klassenwort im Fuß. */
+  .kachel .band { position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--klassenfarbe); }
+
+  .bildflaeche { position: absolute; inset: 0; }
+  .bildflaeche img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bildflaeche .emoji {
+    width: 100%; height: 100%; display: grid; place-items: center;
+    font-size: 2.6rem;
+    background: radial-gradient(ellipse at center, #3a332a 0%, #1c1813 100%);
+  }
+
+  .kachel .fuss {
+    position: absolute; inset: auto 0 0 0; padding: 16px 8px 7px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.9) 55%);
+    line-height: 1.25;
+  }
+  .kachel .kname { font-size: 12.5px; font-weight: 600; }
+  .kachel .kunten {
+    font-size: 10px; color: #c3b8a5; margin-top: 1px;
+    display: flex; gap: 5px; justify-content: space-between;
+  }
+  .kachel .kformel { font-style: italic; }
+  .kachel .kklasse { text-align: right; }
+
+  /* ====== Fußbereich ====== */
+  #fuss { padding: 6px 16px 40px; color: var(--gedaempft); font-size: 12.5px; }
+  #fuss summary { cursor: pointer; padding: 8px 0; }
+  #fuss ul { margin: 4px 0 10px 18px; line-height: 1.55; }
+  #fuss b { color: var(--text); font-weight: 600; }
+  #fuss p { margin: 6px 0; line-height: 1.5; }
+
+  #standfach .knopfreihe { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  #standfach button {
+    background: var(--erhoben); color: var(--text);
+    border: 1px solid var(--rand); border-radius: 7px;
+    padding: 8px 13px; font: inherit; font-size: 12.5px; cursor: pointer; min-height: 38px;
+  }
+  #standfach button.warnung { color: #d99a8e; border-color: #5c3b34; }
+  #standfach textarea {
+    width: 100%; min-height: 78px; margin-top: 6px;
+    background: #15120e; color: var(--gedaempft);
+    border: 1px solid var(--rand); border-radius: 7px;
+    padding: 8px; font-family: ui-monospace, Consolas, monospace; font-size: 11px;
+    word-break: break-all; resize: vertical;
+  }
+  #standmeldung { color: #a9c47c; min-height: 1.4em; display: block; margin-top: 4px; }
+  #standmeldung.fehler { color: #d99a8e; }
+
+  #offlinefach .knopfreihe { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  #offlinefach button {
+    background: var(--erhoben); color: var(--text);
+    border: 1px solid var(--rand); border-radius: 7px;
+    padding: 8px 13px; font: inherit; font-size: 12.5px; cursor: pointer; min-height: 38px;
+  }
+  #offlinefach button:disabled { color: var(--gedaempft); cursor: default; }
+  #offlinemeldung { color: #a9c47c; min-height: 1.4em; display: block; margin-top: 4px; }
+  #offlinemeldung.fehler { color: #d99a8e; }
+  /* Der Ablege-Hinweis ist kein Tipp, sondern eine Bedingung: iOS
+     löscht den Speicher einer Webseite nach etwa einer Woche ohne
+     Nutzung, und nur abgelegte Seiten sind ausgenommen. Deshalb
+     abgesetzt und nicht als vierter Satz im Fließtext. */
+  #ablegehinweis {
+    background: #241f19; border-left: 3px solid #7a6a4e;
+    border-radius: 0 6px 6px 0; padding: 8px 11px; margin: 8px 0;
+    color: #d8cfa8;
+  }
+
+  /* ============================================================
+     Großansicht
+     Bühne (Perspektive) > Kippung > Karte (Drehung) > zwei Seiten.
+     Vier Ebenen, weil Kippen und Umdrehen beide "transform"
+     brauchen und sich sonst gegenseitig überschreiben würden.
+     ============================================================ */
+  #grossansicht {
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(10, 8, 6, 0.92);
+    backdrop-filter: blur(7px);
+    display: grid; grid-template-rows: 1fr auto;
+    place-items: center; gap: 12px;
+    padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+  }
+  #grossansicht[hidden] { display: none; }
+
+  .buehne { perspective: 1300px; width: min(84vw, 360px); max-height: 100%; }
+  .kipp {
+    transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+    transform-style: preserve-3d;
+    transition: transform 0.14s ease-out;
+  }
+  .karte3d {
+    position: relative; aspect-ratio: 63.5 / 88.9;
+    transform-style: preserve-3d;
+    transition: transform 0.62s cubic-bezier(0.2, 0.75, 0.3, 1);
+  }
+  .karte3d.gedreht { transform: rotateY(180deg); }
+  body.ruhig .kipp, body.ruhig .karte3d { transition: none; }
+  body.ruhig .kipp { transform: none; }
+
+  .seite {
+    position: absolute; inset: 0;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 18px 44px -12px #000;
+    display: flex; flex-direction: column;
+  }
+  .rueckseite { transform: rotateY(180deg); }
+
+  /* ------ Vorderseite: Bild, Name, sonst nichts ------
+     Die Zahlen stehen auf der Rückseite. Vorn zählt das Bild –
+     das ist der Unterschied zwischen einer Datenzeile und einer
+     Karte, die man haben will. */
+  .vorderseite { background: var(--papier); color: var(--papierdunkel); }
+  .vkopf {
+    background: var(--klassenfarbe); color: #fff;
+    padding: 7px 11px 6px; flex-shrink: 0;
+  }
+  .vkopf .zeile1 { display: flex; align-items: baseline; gap: 8px; }
+  .vkopf .vname { font-size: 17px; font-weight: 700; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; line-height: 1.15; }
+  .vkopf .vlp { font-size: 14px; font-weight: 700; white-space: nowrap; }
+  .vkopf .zeile2 {
+    display: flex; justify-content: space-between; gap: 8px;
+    font-size: 10px; margin-top: 2px; opacity: 0.95;
+  }
+  .vkopf .vart { text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; }
+  .vkopf .vformel { font-style: italic; }
+
+  .vbild { flex: 1 1 auto; position: relative; overflow: hidden; }
+  .vbild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vbild .emoji {
+    width: 100%; height: 100%; display: grid; place-items: center; font-size: 5rem;
+    background: radial-gradient(ellipse at center, #fff8e6 0%, #e6dabc 100%);
+  }
+  /* Über dem Glanz (z-index 2), nicht darunter: Hier steht das
+     Klassenwort, und das ist die Information, die die Farbe nicht
+     tragen kann. Auf dem hellen Kartenfuß reißt color-dodge die
+     Streifen sonst nach Weiß aus und frisst die Schrift. */
+  .vfuss {
+    position: relative; z-index: 3;
+    flex-shrink: 0; padding: 7px 11px 9px; font-size: 11px;
+    display: flex; justify-content: space-between; gap: 8px;
+    border-top: 1px solid #d8cbaa; color: #6b5a3e;
+  }
+  .vfuss .vklasse { font-weight: 600; color: var(--papierdunkel); }
+
+  /* ------ Der Glanz ------
+     Ein Streiflicht und ein feines Streifenmuster in der
+     Klassenfarbe, beide an die Neigung gekoppelt. Kein Bild,
+     kein Video – reines CSS, deshalb kostet es keine Ladezeit
+     und funktioniert auf jeder der 124 Karten sofort. */
+  /* Zwei Ebenen, weil die Streifen NUR dort erscheinen dürfen, wo gerade
+     das Streiflicht liegt – so verhält sich eine echte Holo-Karte. Läge
+     das Streifenmuster über der ganzen Fläche, sähe es nach Druckfehler
+     aus. Die Maske ist derselbe Verlauf wie das Streiflicht und wandert
+     mit derselben Position, also decken sich beide immer. */
+  .vorderseite::before, .vorderseite::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    background-position: var(--gx, 50%) var(--gy, 50%);
+    background-repeat: no-repeat;
+  }
+  /* Ebene 1: die Streifen in der Klassenfarbe, vom Streiflicht ausgeschnitten */
+  .vorderseite::before {
+    background-image: repeating-linear-gradient(112deg,
+      var(--klassenfarbe) 0 9px, transparent 9px 22px);
+    background-size: 220% 220%;
+    background-repeat: repeat;
+    -webkit-mask-image: linear-gradient(112deg, transparent 32%, #000 47%, transparent 64%);
+            mask-image: linear-gradient(112deg, transparent 32%, #000 47%, transparent 64%);
+    -webkit-mask-size: 260% 260%;         mask-size: 260% 260%;
+    -webkit-mask-repeat: no-repeat;       mask-repeat: no-repeat;
+    -webkit-mask-position: var(--gx, 50%) var(--gy, 50%);
+            mask-position: var(--gx, 50%) var(--gy, 50%);
+    mix-blend-mode: color-dodge;
+    /* Zurückhaltend dosiert: color-dodge reißt helle Flächen sonst nach
+       Weiß aus – am hellen Kartenfuß war das deutlich zu sehen. */
+    opacity: 0.45;
+  }
+  /* Ebene 2: das Streiflicht selbst */
+  .vorderseite::after {
+    background-image: linear-gradient(112deg,
+      transparent 32%, rgba(255, 255, 255, 0.5) 47%, transparent 64%);
+    background-size: 260% 260%;
+    mix-blend-mode: soft-light;
+  }
+  body.ruhig .vorderseite::before,
+  body.ruhig .vorderseite::after { display: none; }
+
+  /* ------ Rückseite: die Chemie ------ */
+  .rueckseite {
+    background: linear-gradient(160deg, #241f19, #191510);
+    color: var(--text);
+    border: 1px solid color-mix(in srgb, var(--klassenfarbe) 40%, var(--rand));
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 12px 13px 14px; gap: 9px;
+    font-size: 12px; line-height: 1.4;
+  }
+  .rueckseite h2 {
+    font-size: 14px; font-weight: 700; line-height: 1.2;
+    padding-bottom: 6px; border-bottom: 2px solid var(--klassenfarbe);
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  }
+  .rueckseite h2 .rformel { font-size: 11px; font-style: italic; color: var(--gedaempft); font-weight: 400; }
+  .rblock { flex-shrink: 0; }
+  .rtitel {
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--gedaempft); margin-bottom: 3px;
+  }
+  .steckbrief { display: flex; flex-wrap: wrap; gap: 4px; }
+  .marke {
+    background: var(--erhoben); border: 1px solid var(--rand);
+    border-radius: 5px; padding: 2px 6px; font-size: 10.5px;
+  }
+  .marke.wert { border-color: color-mix(in srgb, var(--klassenfarbe) 55%, var(--rand)); }
+
+  .rattacke { margin-bottom: 5px; }
+  .rattacke .kopfzeile { display: flex; align-items: baseline; gap: 6px; }
+  .rattacke .typ {
+    background: var(--typfarbe); color: #fff; font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 4px; white-space: nowrap;
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .rattacke .aname { font-weight: 600; flex: 1 1 auto; }
+  .rattacke .schaden { font-weight: 700; white-space: nowrap; }
+  .rattacke .effekt { color: var(--gedaempft); font-size: 11px; margin-top: 1px; }
+
+  .rsynthese {
+    background: color-mix(in srgb, var(--klassenfarbe) 14%, #1a1611);
+    border: 1px solid color-mix(in srgb, var(--klassenfarbe) 45%, var(--rand));
+    border-radius: 7px; padding: 7px 8px;
+  }
+  .rsynthese .gleichung { font-weight: 600; }
+  .rsynthese .bilanz { color: var(--gedaempft); font-style: italic; font-size: 11px; margin-top: 2px; }
+  /* Abgesetzt, damit die Belohnung nicht als Teil der Gleichung gelesen wird. */
+  .rsynthese .lohn {
+    margin-top: 6px; padding-top: 5px; font-size: 11px; line-height: 1.35;
+    border-top: 1px dashed color-mix(in srgb, var(--klassenfarbe) 50%, var(--rand));
+    color: #d8cfa8;
+  }
+
+  /* Flavor und Fundort rutschen ans untere Ende der Karte – so wie im
+     Druckbogen auch. Sonst sammelt sich der Leerraum unter ihnen. */
+  .rsockel { margin-top: auto; padding-top: 8px; }
+  .rflavor { color: #c0b39c; font-style: italic; border-top: 1px solid var(--rand); padding-top: 7px; }
+  .rfund { color: var(--gedaempft); font-size: 11px; margin-top: 4px; }
+
+  /* ============================================================
+     Der Scanner
+     Das Kamerabild füllt die Fläche, darüber liegen nur drei
+     Dinge: ein Sucherrahmen, eine Zeile Text und das Ergebnis.
+     Wer ein Handy vor ein Kärtchen hält, hat keine Hand frei,
+     um etwas zu bedienen.
+     ============================================================ */
+  #scanner {
+    position: fixed; inset: 0; z-index: 45;
+    background: #0a0806;
+    display: flex; flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #scanner[hidden] { display: none; }
+
+  /* Der Sucher erscheint erst, wenn die Kamera wirklich läuft. Ein
+     schwarzes Rechteck mit einem Rahmen darin, in dem nie etwas
+     auftaucht, sieht nach kaputt aus – und genau das wäre der
+     Anblick, solange die Sammlung von der Festplatte läuft. */
+  #sucher { display: none; }
+  #scanner.kamera #sucher {
+    display: block; position: relative; flex: 1 1 auto;
+    overflow: hidden; background: #000;
+  }
+  #sucher video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  /* Ohne Kamera rückt der Fußbereich nach oben statt in der Mitte
+     eines leeren Fensters zu schweben. */
+  #scanner:not(.kamera) #scannerfuss { margin-top: 6px; }
+  #scanner:not(.kamera) { justify-content: flex-start; }
+
+  /* Der Rahmen ist keine Zierde: Ohne ihn halten Kinder das Handy
+     zu weit weg, und dann ist der Code im Bild zu klein für jsQR. */
+  #rahmen {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    pointer-events: none;
+  }
+  #rahmen .fenster {
+    width: min(62vw, 240px); aspect-ratio: 1;
+    border: 2px solid rgba(255, 255, 255, 0.85); border-radius: 12px;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
+  }
+  body.ruhig #rahmen .fenster { box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.55); }
+
+  #scannerkopf {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid var(--rand);
+  }
+  #scannerkopf h2 { font-size: 15px; font-weight: 600; flex: 1 1 auto; }
+  #scannerkopf button {
+    background: var(--erhoben); color: var(--text);
+    border: 1px solid var(--rand); border-radius: 8px;
+    padding: 8px 13px; font: inherit; font-size: 13px; cursor: pointer; min-height: 40px;
+  }
+
+  #scannerfuss { padding: 12px 14px; }
+  #scannerlage { color: var(--gedaempft); font-size: 12.5px; line-height: 1.45; }
+  #scannerlage.fehler { color: #d99a8e; }
+
+  /* Das Ergebnis. Es ersetzt die Lagezeile nicht, es tritt daneben –
+     wer gerade etwas gefunden hat, soll es sehen, ohne den Blick vom
+     Sucher zu nehmen. */
+  #treffer {
+    display: flex; align-items: center; gap: 11px;
+    background: var(--flaeche); border: 1px solid var(--rand);
+    border-left: 4px solid var(--klassenfarbe, var(--rand));
+    border-radius: 9px; padding: 9px 11px; margin-bottom: 10px;
+  }
+  #treffer[hidden] { display: none; }
+  #treffer .tbild { width: 42px; height: 59px; border-radius: 5px; overflow: hidden; flex: 0 0 auto; }
+  #treffer .tbild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #treffer .tbild .emoji {
+    width: 100%; height: 100%; display: grid; place-items: center; font-size: 1.5rem;
+    background: radial-gradient(ellipse at center, #3a332a 0%, #1c1813 100%);
+  }
+  #treffer .ttext { flex: 1 1 auto; min-width: 0; line-height: 1.35; }
+  #treffer .tname { font-weight: 600; font-size: 14px; }
+  #treffer .tlage { font-size: 11.5px; color: var(--gedaempft); }
+  #treffer .tlage.neu { color: #a9c47c; }
+  #treffer button {
+    background: var(--erhoben); color: var(--text);
+    border: 1px solid var(--rand); border-radius: 7px;
+    padding: 7px 11px; font: inherit; font-size: 12.5px; cursor: pointer;
+    min-height: 38px; flex: 0 0 auto;
+  }
+
+  /* Der Weg ohne Kamera. Er ist von Anfang an sichtbar und nicht in
+     einem Hilfemenü versteckt: Solange die Sammlung von der
+     Festplatte läuft, ist er der EINZIGE, der funktioniert. */
+  #handeingabe { display: flex; gap: 8px; margin-top: 10px; }
+  #handeingabe input {
+    flex: 1 1 auto; min-width: 0;
+    background: #15120e; color: var(--text);
+    border: 1px solid var(--rand); border-radius: 7px;
+    padding: 9px; font-family: ui-monospace, Consolas, monospace; font-size: 12px;
+    min-height: 40px;
+  }
+  #handeingabe button {
+    background: var(--erhoben); color: var(--text);
+    border: 1px solid var(--rand); border-radius: 7px;
+    padding: 9px 14px; font: inherit; font-size: 13px; cursor: pointer; min-height: 40px;
+  }
+
+  /* ====== Bedienung unter der Karte ====== */
+  #werkzeuge { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  #werkzeuge button {
+    background: var(--erhoben); color: var(--text);
+    border: 1px solid var(--rand); border-radius: 8px;
+    padding: 9px 15px; font: inherit; font-size: 13px; cursor: pointer;
+    min-height: 40px;
+  }
+  #werkzeuge button:hover { border-color: #7a6a4e; }
+  #schliessen {
+    position: absolute; top: max(10px, env(safe-area-inset-top)); right: 12px;
+    background: rgba(0, 0, 0, 0.45); color: var(--text);
+    border: 1px solid var(--rand); border-radius: 50%;
+    width: 40px; height: 40px; font-size: 19px; cursor: pointer; line-height: 1;
+  }
+
+  /* ====== Fließender Übergang Kachel → Großansicht ====== */
+  ::view-transition-old(kartenbild), ::view-transition-new(kartenbild) {
+    animation-duration: 0.36s;
+  }
+
+  /* Wer im System "Bewegung reduzieren" gesetzt hat, bekommt es sofort –
+     ohne den Schalter zu finden. Der Schalter kann es danach wieder
+     einschalten, deshalb steht hier nur die Voreinstellung. */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header id="leiste">
+  <div id="kopfzeile">
+    <h1>⚗ Elementia · Sammlung <span class="zaehler" id="zaehler"></span></h1>
+    <button id="scanknopf" title="Stationscode einlesen">📷 Scannen</button>
+  </div>
+  <div id="filter">
+    <input type="search" id="suche" placeholder="Suchen: Name, Formel, Eigenschaft …" autocomplete="off">
+    <select id="regionwahl"></select>
+    <select id="klassenwahl"></select>
+    <select id="artwahl"></select>
+    <button id="effektschalter" aria-pressed="false" title="Glanz, Neigung und Übergänge abschalten">✨ Effekte</button>
+  </div>
+</header>
+
+<nav id="fortschritt" aria-label="Fortschritt je Region"></nav>
+<main id="raster"></main>
+<p id="leer" hidden>Keine Karte passt zu dieser Auswahl.</p>
+
+<footer id="fuss">
+  <details id="standfach">
+    <summary><b>Sammelstand sichern und wiederherstellen</b></summary>
+    <p>Der Sammelstand liegt <b>nur auf diesem Gerät</b>. Wird der Browserspeicher geleert,
+    das Gerät gewechselt oder das Tablet mit jemandem geteilt, ist er weg. Auf iPhones löscht
+    das Betriebssystem den Speicher zusätzlich nach etwa einer Woche ohne Nutzung – es sei denn,
+    die Seite liegt auf dem Startbildschirm.</p>
+    <div class="knopfreihe">
+      <button id="standDatei">⤓ Als Datei sichern</button>
+      <button id="standLaden">⤒ Datei einlesen</button>
+      <button id="standCode">⧉ Code anzeigen</button>
+    </div>
+    <textarea id="standfeld" placeholder="Hier erscheint der Sicherungscode – oder einen vorhandenen Code hier einfügen und „Code einlesen“ drücken. Ein einzelner Stationscode (ELEMENTIA1:…) geht hier auch." spellcheck="false"></textarea>
+    <div class="knopfreihe">
+      <button id="codeLesen">Code einlesen</button>
+      <button id="allesAuf">Alles freischalten</button>
+      <button id="allesZu" class="warnung">Sammlung zurücksetzen</button>
+    </div>
+    <span id="standmeldung"></span>
+    <input type="file" id="dateiwahl" accept=".json,application/json" hidden>
+  </details>
+
+  <details id="offlinefach" hidden>
+    <summary><b>Offline benutzen</b></summary>
+    <p id="ablegehinweis" hidden></p>
+    <p>Die Sammlung startet auch ohne Netz. Die <b>Kartenbilder</b> werden dabei erst
+    geladen, wenn du sie ansiehst – hier lassen sie sich auf einmal holen, solange noch
+    WLAN da ist.</p>
+    <div class="knopfreihe">
+      <button id="offlineladen">⤓ Alle Bilder für offline laden</button>
+    </div>
+    <span id="offlinemeldung"></span>
+  </details>
+
+  <div id="bildliste"></div>
+</footer>
+
+<div id="scanner" hidden>
+  <div id="scannerkopf">
+    <h2>Stationscode einlesen</h2>
+    <button id="scannerzu">✕ Schließen</button>
+  </div>
+  <div id="sucher">
+    <video id="kamerabild" playsinline muted autoplay></video>
+    <div id="rahmen"><div class="fenster"></div></div>
+  </div>
+  <div id="scannerfuss">
+    <div id="treffer" hidden>
+      <div class="tbild"></div>
+      <div class="ttext">
+        <div class="tname"></div>
+        <div class="tlage"></div>
+      </div>
+      <button id="trefferansehen">Ansehen</button>
+    </div>
+    <div id="scannerlage"></div>
+    <div id="handeingabe">
+      <input type="text" id="codefeld" placeholder="oder Code abtippen: ELEMENTIA1:…"
+             autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button id="codeknopf">Einlesen</button>
+    </div>
+  </div>
+</div>
+
+<div id="grossansicht" hidden>
+  <button id="schliessen" title="Schließen (Esc)" aria-label="Schließen">✕</button>
+  <div class="buehne">
+    <div class="kipp" id="kipp">
+      <div class="karte3d" id="karte3d">
+        <div class="seite vorderseite" id="vorderseite"></div>
+        <div class="seite rueckseite" id="rueckseite"></div>
+      </div>
+    </div>
+  </div>
+  <div id="werkzeuge">
+    <button id="gefunden">✓ Gefunden</button>
+    <button id="drehen">↻ Umdrehen</button>
+    <button id="neigung" hidden>📱 Neigung erlauben</button>
+  </div>
+</div>
+
+<script src="../Karten/karten-daten.js"></script>
+<script src="kern/kartenstil.js"></script>
+<script src="kern/stationscode.js"></script>
+<script>
+"use strict";
+
+// ============================================================
+//  Daten
+// ============================================================
+
+var DATEN  = window.KARTEN_DATEN;
+var STIL   = window.KARTENSTIL;
+var CODE   = window.STATIONSCODE;
+
+if (!DATEN || !STIL || !CODE) {
+  document.getElementById("raster").innerHTML =
+    '<p style="grid-column:1/-1;padding:30px;line-height:1.6">' +
+    "<b>Die Daten fehlen.</b><br>Diese Seite braucht " +
+    "<code>..\\Karten\\karten-daten.js</code>, <code>kern\\kartenstil.js</code> und " +
+    "<code>kern\\stationscode.js</code>. " +
+    "Der Ordner <b>App</b> muss neben dem Ordner <b>Karten</b> liegen.</p>";
+  throw new Error("karten-daten.js, kartenstil.js oder stationscode.js fehlt");
+}
+
+var KARTEN = DATEN.karten;
+
+// Karten ohne Regionsangabe gehören nach Feuerlande – dieselbe
+// Voreinstellung wie im Druckbogen-Generator.
+function regionVon(k) { return k.region || "Feuerlande"; }
+
+// Der Bildpfad steht in den Daten relativ zum Ordner Karten
+// ("bilder/eisen.jpg"), weil generator.html dort liegt. Von App aus
+// fehlt ein Schritt nach oben. Das hier ist der einzige Grund, warum
+// nicht alle 124 bild-Felder geändert werden mussten.
+function urbildPfad(k) {
+  return "../Karten/" + k.bild;
+}
+
+// Die App benutzt nicht die Druckvorlagen, sondern die verkleinerten
+// Fassungen aus Karten\bilder-app (erzeugt von App\bilder-verkleinern.ps1).
+// Zwei Größen, weil das Raster 124 Bilder gleichzeitig zeigt und die
+// Kartenansicht eines: 25,6 MB Vorlagen werden so zu 4 MB.
+//
+// Fehlt der Ordner – etwa weil das Skript nach neuen Bildern noch
+// nicht gelaufen ist –, greift in bildFlaeche() der Rückfall auf das
+// Original. Ein Bild, das dann eben groß geladen wird, ist besser als
+// ein leeres Kästchen; im Zweifel merkt es niemand.
+function bildPfad(k, gross) {
+  var datei = String(k.bild).split("/").pop().replace(/\.[^.]+$/, ".jpg");
+  return "../Karten/bilder-app/" + (gross ? "gross" : "klein") + "/" + datei;
+}
+
+// Ein Bild erkennt man am Punkt im Dateinamen – alles andere ist ein
+// Emoji-Platzhalter. Genau diese Regel benutzt auch der Druckbogen,
+// damit Karten regionsweise bebildert werden können, ohne dass
+// irgendwo ein Stichtag nötig wäre.
+function hatBild(k) { return !!(k.bild && k.bild.indexOf(".") >= 0); }
+
+// ============================================================
+//  Ruhemodus – "Effekte reduzieren"
+//
+//  Zwei Quellen: die Systemeinstellung des Geräts und der Schalter.
+//  Das System gibt die Voreinstellung, der Schalter überstimmt sie
+//  und wird gemerkt. Schul-Tablets sind schwach, und einzelne
+//  Schüler reagieren empfindlich auf ständige Bewegung.
+// ============================================================
+
+var SPEICHER_EFFEKTE = "elementia.effekte";
+
+function systemWillRuhe() {
+  return window.matchMedia &&
+         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function effekteAn() {
+  var gemerkt = null;
+  try { gemerkt = localStorage.getItem(SPEICHER_EFFEKTE); } catch (e) { /* privater Modus */ }
+  if (gemerkt === "an")  return true;
+  if (gemerkt === "aus") return false;
+  return !systemWillRuhe();
+}
+
+function effekteSetzen(an) {
+  try { localStorage.setItem(SPEICHER_EFFEKTE, an ? "an" : "aus"); } catch (e) { /* egal */ }
+  document.body.classList.toggle("ruhig", !an);
+  var b = document.getElementById("effektschalter");
+  b.setAttribute("aria-pressed", an ? "true" : "false");
+  b.textContent = an ? "✨ Effekte" : "✨ Effekte aus";
+  if (!an) kippungZuruecksetzen();
+}
+
+function istRuhig() { return document.body.classList.contains("ruhig"); }
+
+// ============================================================
+//  Der Sammelstand
+//
+//  Liegt im Speicher des Geräts, nicht auf einem Server: kein Login,
+//  keine Anmeldung, keine personenbezogenen Daten – und damit auch
+//  kein Verarbeitungsverzeichnis.
+//
+//  Der Preis dafür steht im Fußbereich: Der Stand hängt am Gerät.
+//  Deshalb gehören Sicherung und Wiederherstellung in die erste
+//  Fassung und nicht in eine spätere.
+//
+//  Der Schlüssel ist "Region|Name", nicht der Name allein: Wasserstoff,
+//  Sauerstoff, Wasser und Methan sind absichtlich je zweimal gedruckt,
+//  in zwei Regionen. Über den Namen allein würden vier Kartenpaare
+//  gemeinsam auf- und zugehen.
+// ============================================================
+
+var SPEICHER_STAND = "elementia.sammlung";
+var STAND_FASSUNG = 1;
+var gefundene = {};          // "Region|Name" -> true
+
+function schluessel(k) { return regionVon(k) + "|" + k.name; }
+
+function standLaden() {
+  gefundene = {};
+  var roh = null;
+  try { roh = localStorage.getItem(SPEICHER_STAND); } catch (e) { return; }
+  if (!roh) return;
+  try {
+    var d = JSON.parse(roh);
+    standUebernehmen(d);
+  } catch (e) { /* unlesbar: als leer behandeln, nicht abstürzen */ }
+}
+
+// Die Fassungsnummer entscheidet, ob ein gespeicherter Stand eine
+// Regeländerung überlebt. Heute gibt es nur Fassung 1; künftige
+// Fassungen wandeln hier um, statt den Stand wegzuwerfen.
+function standUebernehmen(d) {
+  if (!d || !d.karten || !d.karten.length) return false;
+  if (d.fassung !== STAND_FASSUNG) return false;
+  gefundene = {};
+  for (var i = 0; i < d.karten.length; i++) gefundene[d.karten[i]] = true;
+  return true;
+}
+
+function standSichern() {
+  try {
+    localStorage.setItem(SPEICHER_STAND, JSON.stringify(standObjekt()));
+  } catch (e) { /* privater Modus oder Speicher voll – nicht abstürzen */ }
+}
+
+function standObjekt() {
+  return {
+    fassung: STAND_FASSUNG,
+    stand: new Date().toISOString().slice(0, 10),
+    karten: Object.keys(gefundene)
+  };
+}
+
+function istGefunden(k) { return gefundene[schluessel(k)] === true; }
+
+function gefundenSetzen(k, an) {
+  if (an) gefundene[schluessel(k)] = true;
+  else delete gefundene[schluessel(k)];
+  standSichern();
+}
+
+function anzahlGefunden(karten) {
+  return karten.filter(istGefunden).length;
+}
+
+// Nachschlagen in der Gegenrichtung: vom Schlüssel zur Karte. Braucht
+// der Scanner – ein Code nennt Region und Name, gesucht ist die Karte.
+var NACH_SCHLUESSEL = (function () {
+  var raus = {};
+  for (var i = 0; i < KARTEN.length; i++) raus[schluessel(KARTEN[i])] = KARTEN[i];
+  return raus;
+})();
+
+// ============================================================
+//  Filter – jede Auswahlliste kommt aus den Daten
+// ============================================================
+
+var ALLE = "— alle —";
+
+function eindeutig(werte) {
+  var gesehen = {}, raus = [];
+  for (var i = 0; i < werte.length; i++) {
+    if (werte[i] && !gesehen[werte[i]]) { gesehen[werte[i]] = 1; raus.push(werte[i]); }
+  }
+  return raus;
+}
+
+function listeFuellen(id, werte, beschriftung) {
+  var s = document.getElementById(id);
+  s.innerHTML = "";
+  var alle = document.createElement("option");
+  alle.value = ""; alle.textContent = beschriftung;
+  s.appendChild(alle);
+  for (var i = 0; i < werte.length; i++) {
+    var o = document.createElement("option");
+    o.value = werte[i]; o.textContent = werte[i];
+    s.appendChild(o);
+  }
+}
+
+function filterAufbauen() {
+  // Klassen nach Art gruppiert – Elemente, Verbindungen, Ausrüstung.
+  // Alphabetisch wären "Alkan" und "Alkalimetall" Nachbarn, obwohl
+  // das eine ein Element und das andere eine Verbindung ist.
+  var artFolge = { "Element": 0, "Verbindung": 1, "Ausrüstung": 2 };
+  var klassen = eindeutig(KARTEN.map(function (k) { return k.klasse; })).sort(function (a, b) {
+    var fa = artFolge[STIL.kartenart[a]], fb = artFolge[STIL.kartenart[b]];
+    if (fa === undefined) fa = 9;
+    if (fb === undefined) fb = 9;
+    return fa - fb || a.localeCompare(b, "de");
+  });
+
+  var arten = eindeutig(KARTEN.map(function (k) { return STIL.art(k); }));
+
+  // Regionen in der Reihenfolge des Lehrgangs, nicht alphabetisch –
+  // dieselbe Folge wie im Fortschrittsstreifen.
+  listeFuellen("regionwahl",  regionsFolge(), "Alle Regionen");
+  listeFuellen("klassenwahl", klassen,  "Alle Klassen");
+  listeFuellen("artwahl",     arten,    "Element · Verbindung · Ausrüstung");
+}
+
+function gefiltert() {
+  var region  = document.getElementById("regionwahl").value;
+  var klasse  = document.getElementById("klassenwahl").value;
+  var art     = document.getElementById("artwahl").value;
+  var suche   = document.getElementById("suche").value.trim().toLowerCase();
+
+  return KARTEN.filter(function (k) {
+    if (region && regionVon(k) !== region) return false;
+    if (klasse && k.klasse !== klasse) return false;
+    if (art && STIL.art(k) !== art) return false;
+    if (!suche) return true;
+
+    // Gesucht wird über alles, was ein Schüler im Kopf haben könnte:
+    // Name, Formel, Klasse, Eigenschaften und die Attackennamen.
+    var heuhaufen = [
+      k.name, k.formel, k.klasse, regionVon(k), k.quest,
+      (k.eigenschaften || []).join(" "),
+      (k.attacken || []).map(function (a) { return a.name + " " + a.typ; }).join(" ")
+    ].join(" ").toLowerCase();
+    return heuhaufen.indexOf(suche) >= 0;
+  });
+}
+
+// ============================================================
+//  Raster
+// ============================================================
+
+function el(tag, klasse, text) {
+  var e = document.createElement(tag);
+  if (klasse) e.className = klasse;
+  if (text !== undefined && text !== null) e.textContent = text;
+  return e;
+}
+
+function bildFlaeche(k, klein) {
+  var f = el("div", "bildflaeche");
+  if (hatBild(k)) {
+    var img = document.createElement("img");
+    img.src = bildPfad(k, !klein);
+    img.alt = k.name;
+    img.loading = klein ? "lazy" : "eager";   // 124 Bilder nicht auf einmal
+    img.decoding = "async";
+    // Rückfall auf die Druckvorlage, wenn die verkleinerte Fassung
+    // fehlt. Genau einmal – sonst dreht sich das im Kreis, wenn auch
+    // das Original nicht da ist.
+    img.onerror = function () {
+      this.onerror = null;
+      this.src = urbildPfad(k);
+    };
+    f.appendChild(img);
+  } else {
+    f.appendChild(el("div", "emoji", k.bild || "❔"));
+  }
+  return f;
+}
+
+function baueKachel(k) {
+  var offen = istGefunden(k);
+  var kachel = el("div", offen ? "kachel" : "kachel zu");
+  kachel.style.setProperty("--klassenfarbe", STIL.farbe(k.klasse));
+  kachel.tabIndex = 0;
+  kachel.setAttribute("role", "button");
+  kachel.setAttribute("aria-label",
+    k.name + ", " + k.klasse + ", " + regionVon(k) +
+    (offen ? ", gefunden" : ", noch nicht gefunden" + (k.quest ? ", zu finden bei " + k.quest : "")));
+
+  kachel.appendChild(bildFlaeche(k, true));
+  kachel.appendChild(el("div", "band"));
+
+  // Gesperrt: Silhouette statt Bild, dazu der Fundort. Der Name bleibt
+  // lesbar – das hier ist der Nachfolger des Sammelpasses, auf dem auch
+  // die noch fehlenden Stoffe stehen, und der Fundort ist der eigentliche
+  // Nutzen: Er sagt, in welche Quest man dafür muss.
+  if (!offen) {
+    var sperre = el("div", "fundort");
+    sperre.appendChild(el("div", "schloss", "🔒"));
+    if (k.quest) sperre.appendChild(el("div", null, k.quest));
+    kachel.appendChild(sperre);
+  }
+
+  var fuss = el("div", "fuss");
+  fuss.appendChild(el("div", "kname", k.name));
+  var unten = el("div", "kunten");
+  unten.appendChild(el("span", "kformel", k.formel || ""));
+  unten.appendChild(el("span", "kklasse", k.klasse));
+  fuss.appendChild(unten);
+  kachel.appendChild(fuss);
+
+  function oeffnen() { grossOeffnen(k, kachel); }
+  kachel.addEventListener("click", oeffnen);
+  kachel.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); oeffnen(); }
+  });
+  return kachel;
+}
+
+function zeichneRaster() {
+  var karten = gefiltert();
+  var raster = document.getElementById("raster");
+  raster.innerHTML = "";
+  for (var i = 0; i < karten.length; i++) raster.appendChild(baueKachel(karten[i]));
+
+  document.getElementById("leer").hidden = karten.length > 0;
+
+  document.getElementById("zaehler").textContent =
+    anzahlGefunden(karten) + " von " + karten.length + " gefunden" +
+    (karten.length === KARTEN.length ? "" : " (Auswahl)");
+  zeichneFortschritt();
+}
+
+// ============================================================
+//  Fortschritt je Region
+//
+//  "Feuerlande 18/32" – die Zeile, die den Sammelreiz trägt. Zugleich
+//  die schnellste Art, die Region zu wechseln: Der Streifen ist auch
+//  die Bedienung, nicht nur die Anzeige.
+// ============================================================
+
+function regionsFolge() {
+  var reihenfolge = (DATEN.meta && DATEN.meta.regionen) || [];
+  var vorhanden = eindeutig(KARTEN.map(regionVon));
+  return reihenfolge.filter(function (r) { return vorhanden.indexOf(r) >= 0; })
+    .concat(vorhanden.filter(function (r) { return reihenfolge.indexOf(r) < 0; }));
+}
+
+function zeichneFortschritt() {
+  var leiste = document.getElementById("fortschritt");
+  var gewaehlt = document.getElementById("regionwahl").value;
+  leiste.innerHTML = "";
+
+  function knopf(beschriftung, region, karten) {
+    var b = document.createElement("button");
+    b.className = (region === gewaehlt ? "aktiv" : "") +
+      (karten.length && anzahlGefunden(karten) === karten.length ? " voll" : "");
+    b.appendChild(el("span", null, beschriftung));
+    b.appendChild(el("span", "anteil", anzahlGefunden(karten) + "/" + karten.length));
+    b.addEventListener("click", function () {
+      document.getElementById("regionwahl").value = region;
+      zeichneRaster();
+      window.scrollTo({ top: 0, behavior: istRuhig() ? "auto" : "smooth" });
+    });
+    return b;
+  }
+
+  leiste.appendChild(knopf("Alle", "", KARTEN));
+  regionsFolge().forEach(function (r) {
+    leiste.appendChild(knopf(r, r, KARTEN.filter(function (k) { return regionVon(k) === r; })));
+  });
+}
+
+// ============================================================
+//  Großansicht
+// ============================================================
+
+var aktuelleKarte = null;
+var vorherigerFokus = null;
+var rasterVeraltet = false;
+
+function abschnitt(titel, inhalt) {
+  var b = el("div", "rblock");
+  b.appendChild(el("div", "rtitel", titel));
+  b.appendChild(inhalt);
+  return b;
+}
+
+function baueVorderseite(k) {
+  var v = document.getElementById("vorderseite");
+  v.innerHTML = "";
+  var art = STIL.art(k);
+
+  var kopf = el("div", "vkopf");
+  var z1 = el("div", "zeile1");
+  z1.appendChild(el("div", "vname", k.name));
+  if (k.lp !== null && k.lp !== undefined) z1.appendChild(el("div", "vlp", "♥ " + k.lp));
+  kopf.appendChild(z1);
+  var z2 = el("div", "zeile2");
+  z2.appendChild(el("span", "vart", art));
+  z2.appendChild(el("span", "vformel", k.formel || ""));
+  kopf.appendChild(z2);
+  v.appendChild(kopf);
+
+  var bild = el("div", "vbild");
+  bild.appendChild(bildFlaeche(k, false).firstChild);
+  v.appendChild(bild);
+
+  var fuss = el("div", "vfuss");
+  fuss.appendChild(el("span", "vklasse", k.klasse + (k.legendaer ? " ✦ legendär" : "")));
+  fuss.appendChild(el("span", null, regionVon(k)));
+  v.appendChild(fuss);
+}
+
+function baueRueckseite(k) {
+  var r = document.getElementById("rueckseite");
+  r.innerHTML = "";
+
+  var h = el("h2");
+  h.appendChild(el("span", null, k.name));
+  if (k.formel) h.appendChild(el("span", "rformel", k.formel));
+  r.appendChild(h);
+
+  // --- Steckbrief -------------------------------------------
+  var steck = el("div", "steckbrief");
+  function marke(text, betont) { steck.appendChild(el("span", betont ? "marke wert" : "marke", text)); }
+  if (k.oz)    marke("Ordnungszahl " + k.oz, true);
+  if (k.masse) marke("Masse " + k.masse + " u", true);
+  if (k.lp !== null && k.lp !== undefined) marke(k.lp + " LP", true);
+  marke(k.klasse);
+  (k.eigenschaften || []).forEach(function (e) { marke(e); });
+  r.appendChild(abschnitt("Steckbrief", steck));
+
+  // --- Attacken ---------------------------------------------
+  if (k.attacken && k.attacken.length) {
+    var liste = el("div");
+    k.attacken.forEach(function (a) {
+      var z = el("div", "rattacke");
+      var kopf = el("div", "kopfzeile");
+      var typ = el("span", "typ", a.typ);
+      typ.style.setProperty("--typfarbe", STIL.typfarbe(a.typ));
+      kopf.appendChild(typ);
+      kopf.appendChild(el("span", "aname", a.name));
+      if (a.schaden) kopf.appendChild(el("span", "schaden", a.schaden));
+      z.appendChild(kopf);
+      if (a.effekt) z.appendChild(el("div", "effekt", a.effekt));
+      liste.appendChild(z);
+    });
+    r.appendChild(abschnitt("Attacken", liste));
+  }
+
+  // --- Synthese ---------------------------------------------
+  // Der fachliche Kern des Spiels: Wortgleichung und Massenbilanz.
+  if (k.synthese) {
+    var s = k.synthese;
+    var kasten = el("div", "rsynthese");
+    kasten.appendChild(el("div", "gleichung", s.wortgleichung));
+    if (s.bilanz) kasten.appendChild(el("div", "bilanz", s.bilanz));
+
+    // Der Befund aus dem Testlauf am Tisch: Synthetisiert wurde erst,
+    // als jemand bemerkte, dass die Verbindung mit vollen LP kommt.
+    // Im Regelwerk steht das längst (Abschnitt 6, Kasten „Die
+    // Besonderheit der Synthese"), nur eben nicht dort, wo man
+    // nachsieht, was eine Karte kann. Der Wert wird aus k.lp
+    // gerechnet, damit er für legendäre 50-LP-Karten von selbst
+    // stimmt – kein zweiter Ort, an dem dieselbe Zahl steht.
+    if (k.lp !== null && k.lp !== undefined) {
+      kasten.appendChild(el("div", "lohn",
+        "Kommt mit vollen " + k.lp + " LP ins Spiel – auch aus schwer " +
+        "angeschlagenen Edukten."));
+    }
+
+    var titel = "Synthese";
+    if (s.aktivierung) titel += " ⚡ Zündung nötig";
+    if (s.exotherm)    titel += " · exotherm " + s.exotherm;
+    r.appendChild(abschnitt(titel, kasten));
+  }
+
+  if (k.besonderheit) r.appendChild(abschnitt("Besonderheit", el("div", null, k.besonderheit)));
+
+  var sockel = el("div", "rsockel");
+  if (k.flavor) sockel.appendChild(el("div", "rflavor", k.flavor));
+  if (k.quest)  sockel.appendChild(el("div", "rfund", "Fundort: " + k.quest));
+  if (sockel.childNodes.length) r.appendChild(sockel);
+}
+
+function grossOeffnen(k, kachel) {
+  aktuelleKarte = k;
+  vorherigerFokus = kachel;
+  var quelle = kachel ? kachel.querySelector(".bildflaeche") : null;
+
+  wechsel(quelle, function () {
+    var g = document.getElementById("grossansicht");
+    g.style.setProperty("--klassenfarbe", STIL.farbe(k.klasse));
+    document.getElementById("karte3d").classList.remove("gedreht");
+    baueVorderseite(k);
+    baueRueckseite(k);
+    zeichneGefundenKnopf();
+    kippungZuruecksetzen();
+    g.hidden = false;
+    document.body.style.overflow = "hidden";
+    document.getElementById("drehen").focus();
+  }, function () {
+    return document.querySelector("#vorderseite .vbild");
+  });
+}
+
+// Seit Schritt 4 ist der übliche Weg der Stationscode. Dieser Knopf
+// bleibt trotzdem: als Notbehelf, wenn eine Kamera streikt, und als
+// einziger Weg, solange die Sammlung von der Festplatte läuft.
+function zeichneGefundenKnopf() {
+  var b = document.getElementById("gefunden");
+  if (!aktuelleKarte) return;
+  var offen = istGefunden(aktuelleKarte);
+  b.textContent = offen ? "✓ Gefunden" : "○ Noch nicht gefunden";
+  b.setAttribute("aria-pressed", offen ? "true" : "false");
+}
+
+function grossSchliessen() {
+  var g = document.getElementById("grossansicht");
+  if (g.hidden) return;
+  var quelle = document.querySelector("#vorderseite .vbild");
+  var ziel = vorherigerFokus;
+
+  wechsel(quelle, function () {
+    g.hidden = true;
+    document.body.style.overflow = "";
+    aktuelleKarte = null;
+    if (ziel) ziel.focus();
+  }, function () {
+    return ziel ? ziel.querySelector(".bildflaeche") : null;
+  });
+
+  // Erst nach dem Übergang: Die Kachel, zu der zurückgelaufen wird,
+  // muss bis dahin dieselbe bleiben.
+  if (rasterVeraltet) {
+    rasterVeraltet = false;
+    setTimeout(zeichneRaster, 420);
+  }
+}
+
+// ============================================================
+//  Fließender Übergang (View Transitions)
+//
+//  Die Kachel wächst an ihrem Platz zur Großansicht, statt dass ein
+//  Fenster aufpoppt. Der Name darf immer nur an EINEM Element hängen,
+//  sonst bricht der Übergang ab – deshalb die Buchführung in
+//  nameSetzen(). Wo der Browser das nicht kann (Safari älterer
+//  Stände), passiert schlicht nichts Besonderes.
+// ============================================================
+
+var UEBERGANG = "kartenbild";
+var traeger = null;
+
+function nameSetzen(e) {
+  if (traeger) traeger.style.viewTransitionName = "";
+  traeger = e || null;
+  if (traeger) traeger.style.viewTransitionName = UEBERGANG;
+}
+
+function wechsel(quelle, aendern, zielFn) {
+  if (!document.startViewTransition || istRuhig()) {
+    nameSetzen(null);
+    aendern();
+    return;
+  }
+  nameSetzen(quelle);
+  var vt = document.startViewTransition(function () {
+    nameSetzen(null);
+    aendern();
+    nameSetzen(zielFn ? zielFn() : null);
+  });
+  vt.finished.then(function () { nameSetzen(null); },
+                   function () { nameSetzen(null); });
+}
+
+// ============================================================
+//  Kippen und Glanz
+//
+//  Ein Wert von -1 bis +1 je Achse, daraus Drehwinkel und die
+//  Position des Streiflichts. Der Glanz wandert also mit der
+//  Neigung – das ist der Effekt, der eine Karte am Handy sofort
+//  wertvoll wirken lässt, und er kostet kein einziges Bild.
+// ============================================================
+
+var AUSSCHLAG = 11;   // Grad. Mehr sieht nach Jahrmarkt aus.
+
+function klemm(x, min, max) { return x < min ? min : (x > max ? max : x); }
+
+function kippungSetzen(nx, ny) {
+  if (istRuhig()) return;
+  var kipp = document.getElementById("kipp");
+  kipp.style.setProperty("--ry", (klemm(nx, -1, 1) * AUSSCHLAG).toFixed(2) + "deg");
+  kipp.style.setProperty("--rx", (-klemm(ny, -1, 1) * AUSSCHLAG).toFixed(2) + "deg");
+  kipp.style.setProperty("--gx", (50 + klemm(nx, -1, 1) * 50).toFixed(1) + "%");
+  kipp.style.setProperty("--gy", (50 + klemm(ny, -1, 1) * 50).toFixed(1) + "%");
+}
+
+function kippungZuruecksetzen() {
+  var kipp = document.getElementById("kipp");
+  kipp.style.setProperty("--rx", "0deg");
+  kipp.style.setProperty("--ry", "0deg");
+  kipp.style.setProperty("--gx", "50%");
+  kipp.style.setProperty("--gy", "50%");
+}
+
+// --- Finger und Maus: die Position auf der Karte ---
+// Der Rückfall für alles ohne brauchbaren Lagesensor – Tablets im
+// Ständer, Schul-Rechner, und iOS, solange die Freigabe fehlt.
+function zeigerKippen(e) {
+  var punkt = e.touches && e.touches.length ? e.touches[0] : e;
+  if (punkt.clientX === undefined) return;
+  var kasten = document.getElementById("karte3d").getBoundingClientRect();
+  kippungSetzen(
+    ((punkt.clientX - kasten.left) / kasten.width  - 0.5) * 2,
+    ((punkt.clientY - kasten.top)  / kasten.height - 0.5) * 2
+  );
+}
+
+// --- Lagesensor ---
+// Die erste Messung ist die Ruhelage. Sonst müsste das Handy
+// senkrecht gehalten werden, damit die Karte gerade steht – und
+// niemand hält ein Handy senkrecht.
+var nullBeta = null, nullGamma = null, sensorLaeuft = false;
+var SPANNE = 22;   // Grad Neigung für den vollen Ausschlag
+
+function lageMessung(e) {
+  if (e.beta === null || e.gamma === null) return;
+  if (nullBeta === null) { nullBeta = e.beta; nullGamma = e.gamma; return; }
+  kippungSetzen((e.gamma - nullGamma) / SPANNE, (e.beta - nullBeta) / SPANNE);
+}
+
+function sensorStarten() {
+  if (sensorLaeuft) return;
+  sensorLaeuft = true;
+  nullBeta = null; nullGamma = null;
+  window.addEventListener("deviceorientation", lageMessung);
+}
+
+function sensorAnbieten() {
+  var knopf = document.getElementById("neigung");
+  var braucheFreigabe = window.DeviceOrientationEvent &&
+    typeof window.DeviceOrientationEvent.requestPermission === "function";
+
+  if (braucheFreigabe) {
+    // iOS fragt nur nach einer echten Berührung – deshalb ein Knopf
+    // und keine Abfrage beim Laden.
+    knopf.hidden = false;
+    knopf.addEventListener("click", function () {
+      window.DeviceOrientationEvent.requestPermission().then(function (antwort) {
+        if (antwort === "granted") { sensorStarten(); knopf.hidden = true; }
+        else knopf.textContent = "Neigung nicht erlaubt";
+      })["catch"](function () { knopf.textContent = "Neigung nicht verfügbar"; });
+    });
+  } else if (window.DeviceOrientationEvent) {
+    sensorStarten();
+  }
+}
+
+// ============================================================
+//  Die Arbeitsliste: welche Karten haben noch kein Bild
+//
+//  Nebenprodukt der Daten, kostenlos: die Vorlage für die nächsten
+//  Bildsitzungen. Steht hier und nicht in einer eigenen Datei, damit
+//  sie nicht veralten kann.
+// ============================================================
+
+function baueFusszeile() {
+  var ohne = KARTEN.filter(function (k) { return !hatBild(k); });
+  var fuss = document.getElementById("bildliste");
+  fuss.innerHTML = "";
+  if (!ohne.length) {
+    fuss.appendChild(el("p", null, "Alle " + KARTEN.length + " Karten sind bebildert."));
+    return;
+  }
+
+  var d = document.createElement("details");
+  var s = document.createElement("summary");
+  s.innerHTML = "<b>" + ohne.length + " Karten warten noch auf ihr Bild</b> " +
+                "(" + (KARTEN.length - ohne.length) + " von " + KARTEN.length + " fertig) – Liste anzeigen";
+  d.appendChild(s);
+
+  var nachRegion = {};
+  ohne.forEach(function (k) {
+    var r = regionVon(k);
+    (nachRegion[r] = nachRegion[r] || []).push(k.name);
+  });
+  var reihenfolge = (DATEN.meta && DATEN.meta.regionen) || Object.keys(nachRegion);
+  var ul = document.createElement("ul");
+  reihenfolge.forEach(function (r) {
+    if (!nachRegion[r]) return;
+    var li = document.createElement("li");
+    li.innerHTML = "<b>" + r + "</b> (" + nachRegion[r].length + "): " + nachRegion[r].join(", ");
+    ul.appendChild(li);
+  });
+  d.appendChild(ul);
+  fuss.appendChild(d);
+}
+
+// ============================================================
+//  Stationscodes einlesen
+//
+//  An jeder Station klebt ein Kärtchen aus Karten\stationscodes.html.
+//  Wer es scannt, bekommt die Karte. Das ist der Unterschied zwischen
+//  einer Sammlung, die man sich verdient, und einer Liste mit einem
+//  Knopf "Alles freischalten".
+//
+//  Der Knopf "○ Noch nicht gefunden" in der Kartenansicht bleibt
+//  trotzdem stehen. Eine Kamera, die vor einer Klasse streikt, darf
+//  nicht die Stunde kosten.
+// ============================================================
+
+// Ein Code, ein Ergebnis. Immer dasselbe Objekt, egal ob der Code aus
+// der Kamera oder aus dem Textfeld kam – die Auswertung darf nicht an
+// zwei Stellen stehen und auseinanderlaufen.
+function codeVerarbeiten(text) {
+  var gelesen = CODE.lesen(text);
+  if (!gelesen.ok) return { art: "fehler", meldung: gelesen.grund };
+
+  var karte = NACH_SCHLUESSEL[gelesen.schluessel];
+  if (!karte) {
+    // Kann passieren, wenn ein altes Kärtchen zu einer inzwischen
+    // umbenannten Karte gehört. Der Name gehört in die Meldung –
+    // sonst steht man davor und weiß nicht, welches Kärtchen alt ist.
+    return { art: "fehler",
+             meldung: "„" + gelesen.name + "“ steht nicht (mehr) im Kartensatz." };
+  }
+  if (istGefunden(karte)) return { art: "schon", karte: karte };
+
+  gefundenSetzen(karte, true);
+  return { art: "neu", karte: karte };
+}
+
+var scannerLaeuft = false;
+var strom = null;            // MediaStream
+var scanBild = null;         // Canvas, auf dem gesucht wird
+var letzterCode = "";        // gegen 30 Meldungen je Sekunde
+var rasterNachScan = false;
+
+function scannerLage(text, fehler) {
+  var f = document.getElementById("scannerlage");
+  f.textContent = text;
+  f.className = fehler ? "fehler" : "";
+}
+
+function trefferZeigen(ergebnis) {
+  var kasten = document.getElementById("treffer");
+  if (ergebnis.art === "fehler") {
+    kasten.hidden = true;
+    scannerLage(ergebnis.meldung, true);
+    return;
+  }
+
+  var k = ergebnis.karte;
+  kasten.hidden = false;
+  kasten.style.setProperty("--klassenfarbe", STIL.farbe(k.klasse));
+
+  var bild = kasten.querySelector(".tbild");
+  bild.innerHTML = "";
+  // Kleines Bild (das Feld ist 42 Punkte breit), aber nicht "lazy":
+  // Das ist der Moment, auf den die Station hinausläuft, und ein
+  // einzelnes Bild darf dabei nicht nachtröpfeln.
+  var vorschau = bildFlaeche(k, true).firstChild;
+  if (vorschau.tagName === "IMG") vorschau.loading = "eager";
+  bild.appendChild(vorschau);
+
+  kasten.querySelector(".tname").textContent = k.name;
+  var lage = kasten.querySelector(".tlage");
+  if (ergebnis.art === "neu") {
+    lage.className = "tlage neu";
+    lage.textContent = "Neu in deiner Sammlung · " + k.klasse;
+    rasterNachScan = true;
+    zeichneFortschritt();
+    scannerLage("Nächstes Kärtchen vor die Kamera halten.");
+  } else {
+    lage.className = "tlage";
+    lage.textContent = "Hattest du schon · " + k.klasse;
+    scannerLage("Diese Karte war bereits in deiner Sammlung.");
+  }
+
+  kasten.querySelector("#trefferansehen").onclick = function () {
+    scannerSchliessen();
+    // Erst nach dem Neuzeichnen: grossOeffnen braucht die Kachel, aus
+    // der die Karte herauswachsen soll.
+    var kachel = null;
+    var kacheln = document.querySelectorAll("#raster .kachel");
+    for (var i = 0; i < kacheln.length; i++) {
+      if (kacheln[i].querySelector(".kname").textContent === k.name) { kachel = kacheln[i]; break; }
+    }
+    grossOeffnen(k, kachel);
+  };
+}
+
+// --- Die Suchschleife ---------------------------------------
+// Gesucht wird auf einem verkleinerten Bild: jsQR über 1080×1920
+// kostet auf einem Schul-Tablet mehr Zeit, als zwischen zwei Bildern
+// zur Verfügung steht – und ein QR-Code, der den Sucherrahmen füllt,
+// ist auch bei 480 Punkten noch deutlich größer als nötig.
+var SUCHBREITE = 480;
+
+function suchen() {
+  if (!scannerLaeuft) return;
+  var video = document.getElementById("kamerabild");
+
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    var mass = Math.min(1, SUCHBREITE / video.videoWidth);
+    var b = Math.round(video.videoWidth * mass);
+    var h = Math.round(video.videoHeight * mass);
+    if (scanBild.width !== b) { scanBild.width = b; scanBild.height = h; }
+
+    var stift = scanBild.getContext("2d", { willReadFrequently: true });
+    stift.drawImage(video, 0, 0, b, h);
+    var punkte = stift.getImageData(0, 0, b, h);
+    var erkannt = window.jsQR(punkte.data, b, h, { inversionAttempts: "dontInvert" });
+
+    // Ein Kärtchen bleibt sekundenlang im Bild. Ohne diese Sperre
+    // liefe die Auswertung dreißigmal je Sekunde und die Meldung
+    // flackerte.
+    if (erkannt && erkannt.data !== letzterCode) {
+      letzterCode = erkannt.data;
+      trefferZeigen(codeVerarbeiten(erkannt.data));
+    } else if (!erkannt) {
+      letzterCode = "";
+    }
+  }
+  requestAnimationFrame(suchen);
+}
+
+// --- jsQR erst laden, wenn jemand scannen will ---------------
+// 250 KB, die 90 % der Aufrufe nie brauchen. Beim Blättern in der
+// Sammlung sollen sie den Start nicht aufhalten.
+var jsqrGeladen = null;
+
+function jsqrLaden() {
+  if (jsqrGeladen) return jsqrGeladen;
+  jsqrGeladen = new Promise(function (fertig, schiefgegangen) {
+    if (window.jsQR) { fertig(); return; }
+    var s = document.createElement("script");
+    s.src = "lib/jsQR.js";
+    s.onload = function () { window.jsQR ? fertig() : schiefgegangen(); };
+    s.onerror = schiefgegangen;
+    document.head.appendChild(s);
+  });
+  return jsqrGeladen;
+}
+
+function kameraStarten() {
+  // Von der Festplatte aus gibt es keine Kamera: getUserMedia verlangt
+  // https oder localhost. Das ist kein Fehler, den man beheben kann –
+  // also sagen, was stattdessen geht, statt eine Erlaubnis zu erbitten,
+  // die ohnehin nicht kommt.
+  if (location.protocol === "file:") {
+    scannerLage("Die Kamera braucht eine Web-Adresse (https). Von der Festplatte " +
+                "aus geht sie nicht — tippe den Code unten ab oder nimm in der " +
+                "Kartenansicht den Knopf „○ Noch nicht gefunden“.", true);
+    document.getElementById("codefeld").focus();
+    return;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    scannerLage("Dieser Browser kennt keine Kamera. Der Code lässt sich unten abtippen.", true);
+    return;
+  }
+
+  scannerLage("Kamera wird gestartet …");
+
+  jsqrLaden().then(function () {
+    // facingMode statt einer Geräteauswahl: Auf dem Handy ist die
+    // rückwärtige Kamera gemeint, auf einem Rechner nimmt der Browser
+    // die einzige, die da ist.
+    return navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" } }, audio: false
+    });
+  }).then(function (s) {
+    if (!scannerLaeuft) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
+    strom = s;
+    var video = document.getElementById("kamerabild");
+    video.srcObject = s;
+    video.setAttribute("playsinline", "");   // sonst geht iOS in den Vollbildspieler
+    return video.play();
+  }).then(function () {
+    if (!scannerLaeuft) return;
+    document.getElementById("scanner").classList.add("kamera");
+    scannerLage("Halte das Kärtchen in den Rahmen.");
+    requestAnimationFrame(suchen);
+  })["catch"](function (fehler) {
+    var name = fehler && fehler.name;
+    if (name === "NotAllowedError") {
+      scannerLage("Die Kamera wurde nicht erlaubt. In den Browsereinstellungen " +
+                  "freigeben — oder den Code unten abtippen.", true);
+    } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+      scannerLage("Keine Kamera gefunden. Der Code lässt sich unten abtippen.", true);
+    } else if (!window.jsQR) {
+      scannerLage("lib\\jsQR.js fehlt. Siehe App\\lib\\HERKUNFT.md.", true);
+    } else {
+      scannerLage("Die Kamera lässt sich nicht starten. Der Code lässt sich unten abtippen.", true);
+    }
+  });
+}
+
+function scannerOeffnen() {
+  if (scannerLaeuft) return;
+  scannerLaeuft = true;
+  letzterCode = "";
+  if (!scanBild) scanBild = document.createElement("canvas");
+  document.getElementById("treffer").hidden = true;
+  document.getElementById("codefeld").value = "";
+  document.getElementById("scanner").classList.remove("kamera");
+  document.getElementById("scanner").hidden = false;
+  document.body.style.overflow = "hidden";
+  kameraStarten();
+}
+
+function scannerSchliessen() {
+  if (!scannerLaeuft) return;
+  scannerLaeuft = false;
+
+  // Die Kamerastreifen einzeln beenden. Ohne das bleibt auf manchen
+  // Geräten das Lämpchen an — und nichts erschreckt einen Elternabend
+  // zuverlässiger als eine Schul-App mit laufender Kamera.
+  if (strom) { strom.getTracks().forEach(function (t) { t.stop(); }); strom = null; }
+  var video = document.getElementById("kamerabild");
+  video.pause();
+  video.srcObject = null;
+
+  document.getElementById("scanner").hidden = true;
+  document.getElementById("scanner").classList.remove("kamera");
+  document.body.style.overflow = "";
+  if (rasterNachScan) { rasterNachScan = false; zeichneRaster(); }
+  document.getElementById("scanknopf").focus();
+}
+
+// ============================================================
+//  Sichern und Wiederherstellen
+//
+//  Zwei Wege, weil beide gebraucht werden: Die Datei ist der sichere
+//  Weg beim Gerätewechsel, der Code der schnelle, wenn nur etwas
+//  weitergereicht werden soll. Beides läuft ohne Server und ohne
+//  Internet.
+// ============================================================
+
+function melden(text, fehler) {
+  var m = document.getElementById("standmeldung");
+  m.textContent = text;
+  m.className = fehler ? "fehler" : "";
+}
+
+// Umweg über encodeURIComponent, weil btoa an Umlauten scheitert –
+// und in "Salzküste" und "Erdhügel" stecken welche.
+function codeErzeugen() {
+  return btoa(unescape(encodeURIComponent(JSON.stringify(standObjekt()))));
+}
+
+function codeEinlesen(code) {
+  var d = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
+  if (!standUebernehmen(d)) throw new Error("leer oder falsche Fassung");
+  standSichern();
+  zeichneRaster();
+  return d.karten.length;
+}
+
+document.getElementById("standCode").addEventListener("click", function () {
+  document.getElementById("standfeld").value = codeErzeugen();
+  melden("Code erzeugt – markieren und kopieren. Er enthält " +
+         Object.keys(gefundene).length + " Karten.");
+});
+
+// Das Feld nimmt beides an: einen Sicherungscode (die ganze Sammlung)
+// und einen Stationscode (eine Karte). Zwei Felder nebeneinander, die
+// verschiedene Codes wollen, sind eine Verwechslung mit Ansage —
+// zumal beide von außen gleich aussehen: eine lange Zeichenkette.
+document.getElementById("codeLesen").addEventListener("click", function () {
+  var code = document.getElementById("standfeld").value;
+  if (!code.trim()) { melden("Erst einen Code in das Feld einfügen.", true); return; }
+
+  if (code.trim().indexOf(CODE.kennung) === 0) {
+    var e = codeVerarbeiten(code);
+    if (e.art === "fehler")     melden(e.meldung, true);
+    else if (e.art === "schon") melden(e.karte.name + " war schon in deiner Sammlung.");
+    else { zeichneRaster(); melden(e.karte.name + " freigeschaltet."); }
+    return;
+  }
+
+  try {
+    melden(codeEinlesen(code) + " Karten übernommen.");
+  } catch (e) {
+    melden("Der Code lässt sich nicht lesen. Wurde beim Kopieren etwas abgeschnitten?", true);
+  }
+});
+
+document.getElementById("standDatei").addEventListener("click", function () {
+  var text = JSON.stringify(standObjekt(), null, 2);
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  a.download = "elementia-sammlung-" + standObjekt().stand + ".json";
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  melden("Datei gesichert.");
+});
+
+document.getElementById("standLaden").addEventListener("click", function () {
+  document.getElementById("dateiwahl").click();
+});
+
+document.getElementById("dateiwahl").addEventListener("change", function () {
+  var datei = this.files && this.files[0];
+  if (!datei) return;
+  var leser = new FileReader();
+  leser.onload = function () {
+    try {
+      if (!standUebernehmen(JSON.parse(leser.result))) throw new Error("leer");
+      standSichern();
+      zeichneRaster();
+      melden(Object.keys(gefundene).length + " Karten aus der Datei übernommen.");
+    } catch (e) {
+      melden("Die Datei ist keine gültige Elementia-Sicherung.", true);
+    }
+  };
+  leser.readAsText(datei);
+  this.value = "";
+});
+
+document.getElementById("allesAuf").addEventListener("click", function () {
+  KARTEN.forEach(function (k) { gefundene[schluessel(k)] = true; });
+  standSichern();
+  zeichneRaster();
+  melden("Alle " + KARTEN.length + " Karten freigeschaltet.");
+});
+
+document.getElementById("allesZu").addEventListener("click", function () {
+  if (!confirm("Wirklich die ganze Sammlung zurücksetzen? Das lässt sich nur mit einer " +
+               "vorher erzeugten Sicherung rückgängig machen.")) return;
+  gefundene = {};
+  standSichern();
+  zeichneRaster();
+  melden("Sammlung zurückgesetzt.");
+});
+
+// ============================================================
+//  Als App laufen
+//
+//  Alles hier passiert nur, wenn die Sammlung über eine Web-Adresse
+//  läuft. Von der Festplatte gibt es keinen Service Worker und kein
+//  Ablegen auf dem Startbildschirm – dann bleibt das ganze Fach
+//  unsichtbar, statt Knöpfe anzubieten, die nichts tun.
+// ============================================================
+
+function imNetz() {
+  return location.protocol === "http:" || location.protocol === "https:";
+}
+
+// Liegt die Seite auf dem Startbildschirm? Zwei Wege, weil iOS den
+// eigenen hat und den anderen lange nicht kannte.
+function alsAppGestartet() {
+  return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+         window.navigator.standalone === true;
+}
+
+function offlineMelden(text, fehler) {
+  var m = document.getElementById("offlinemeldung");
+  m.textContent = text;
+  m.className = fehler ? "fehler" : "";
+}
+
+// Beide Größen jedes bebilderten Stoffes. Die Liste kommt aus den
+// Daten, nicht aus einer gepflegten Aufzählung – eine neue Karte ist
+// damit auch offline dabei, ohne dass hier jemand etwas nachträgt.
+function alleBildpfade() {
+  var raus = [];
+  KARTEN.forEach(function (k) {
+    if (!hatBild(k)) return;
+    raus.push(bildPfad(k, false));
+    raus.push(bildPfad(k, true));
+  });
+  return raus;
+}
+
+function bilderVorladen() {
+  var knopf = document.getElementById("offlineladen");
+  var arbeiter = navigator.serviceWorker && navigator.serviceWorker.controller;
+  if (!arbeiter) {
+    offlineMelden("Die App ist noch nicht bereit. Seite einmal neu laden und noch " +
+                  "einmal versuchen.", true);
+    return;
+  }
+
+  var liste = alleBildpfade();
+  knopf.disabled = true;
+  offlineMelden("0 von " + liste.length + " Bildern …");
+
+  var kanal = new MessageChannel();
+  kanal.port1.onmessage = function (e) {
+    var d = e.data || {};
+    if (d.zustand === "fertig") {
+      knopf.disabled = false;
+      if (d.gescheitert) {
+        offlineMelden(d.fertig + " Bilder geladen, " + d.gescheitert +
+                      " nicht erreichbar. Noch einmal versuchen, wenn das Netz besser ist.", true);
+      } else {
+        offlineMelden("Fertig – alle " + d.fertig + " Bilder sind jetzt auch ohne Netz da.");
+      }
+    } else {
+      offlineMelden(d.fertig + " von " + d.gesamt + " Bildern …");
+    }
+  };
+  arbeiter.postMessage({ art: "bilder-holen", liste: liste }, [kanal.port2]);
+}
+
+function appVorbereiten() {
+  if (!imNetz()) return;
+
+  var fach = document.getElementById("offlinefach");
+  fach.hidden = false;
+
+  // Der Hinweis steht nur da, solange er zutrifft. Wer die App schon
+  // abgelegt hat, soll nicht aufgefordert werden, es zu tun.
+  if (!alsAppGestartet()) {
+    var h = document.getElementById("ablegehinweis");
+    var iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    h.innerHTML = iOS
+      ? "<b>Wichtig auf iPhone und iPad:</b> Lege diese Seite auf den Startbildschirm " +
+        "(Teilen-Knopf → „Zum Home-Bildschirm“). Sonst löscht das Betriebssystem deine " +
+        "Sammlung nach etwa einer Woche ohne Nutzung."
+      : "<b>Tipp:</b> Lege diese Seite auf den Startbildschirm (Browsermenü → „App " +
+        "installieren“ oder „Zum Startbildschirm hinzufügen“). Dann startet sie ohne " +
+        "Adressleiste und auch ohne Netz.";
+    h.hidden = false;
+  }
+
+  if (!("serviceWorker" in navigator)) return;
+  // Relativ, nicht "/sw.js": Auf GitHub Pages liegt die Seite in einem
+  // Unterordner (…github.io/elementia/), und eine absolute Adresse
+  // zeigte dort an der Wurzel vorbei.
+  navigator.serviceWorker.register("../sw.js")["catch"](function (e) {
+    console.warn("Service Worker nicht registriert:", e);
+  });
+}
+
+// ============================================================
+//  Verdrahtung
+// ============================================================
+
+standLaden();
+filterAufbauen();
+effekteSetzen(effekteAn());
+zeichneRaster();
+baueFusszeile();
+sensorAnbieten();
+appVorbereiten();
+
+document.getElementById("offlineladen").addEventListener("click", bilderVorladen);
+
+["regionwahl", "klassenwahl", "artwahl"].forEach(function (id) {
+  document.getElementById(id).addEventListener("change", zeichneRaster);
+});
+document.getElementById("suche").addEventListener("input", zeichneRaster);
+
+document.getElementById("effektschalter").addEventListener("click", function () {
+  effekteSetzen(istRuhig());
+});
+
+document.getElementById("scanknopf").addEventListener("click", scannerOeffnen);
+document.getElementById("scannerzu").addEventListener("click", scannerSchliessen);
+
+(function () {
+  var feld = document.getElementById("codefeld");
+  function einlesen() {
+    if (!feld.value.trim()) return;
+    trefferZeigen(codeVerarbeiten(feld.value));
+    feld.value = "";
+  }
+  document.getElementById("codeknopf").addEventListener("click", einlesen);
+  feld.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); einlesen(); }
+  });
+})();
+
+document.getElementById("schliessen").addEventListener("click", grossSchliessen);
+document.getElementById("gefunden").addEventListener("click", function () {
+  if (!aktuelleKarte) return;
+  gefundenSetzen(aktuelleKarte, !istGefunden(aktuelleKarte));
+  zeichneGefundenKnopf();
+  // Das Raster wird erst beim Schließen neu gezeichnet: Es liegt ohnehin
+  // hinter der Großansicht, und ein Neuaufbau würde die Kachel wegwerfen,
+  // zu der der Übergang beim Schließen zurücklaufen soll.
+  rasterVeraltet = true;
+  zeichneFortschritt();
+});
+document.getElementById("drehen").addEventListener("click", function () {
+  document.getElementById("karte3d").classList.toggle("gedreht");
+});
+document.getElementById("karte3d").addEventListener("click", function () {
+  this.classList.toggle("gedreht");
+});
+
+// Auf den dunklen Grund neben der Karte tippen schließt – wie das
+// Zurücklegen einer Karte auf den Tisch.
+document.getElementById("grossansicht").addEventListener("click", function (e) {
+  if (e.target === this) grossSchliessen();
+});
+
+var buehne = document.querySelector(".buehne");
+buehne.addEventListener("mousemove", zeigerKippen);
+buehne.addEventListener("touchmove", zeigerKippen, { passive: true });
+buehne.addEventListener("mouseleave", kippungZuruecksetzen);
+buehne.addEventListener("touchend", kippungZuruecksetzen);
+
+document.addEventListener("keydown", function (e) {
+  if (!document.getElementById("scanner").hidden) {
+    if (e.key === "Escape") scannerSchliessen();
+    return;
+  }
+  if (document.getElementById("grossansicht").hidden) return;
+  if (e.key === "Escape") grossSchliessen();
+  if (e.key === "Enter" || e.key === " ") {
+    // Nur wenn kein Knopf im Fokus steht – sonst löst man zwei Dinge aus.
+    if (document.activeElement && document.activeElement.tagName === "BUTTON") return;
+    e.preventDefault();
+    document.getElementById("karte3d").classList.toggle("gedreht");
+  }
+});
+
+// ============================================================
+//  Ein Code in der Adresse – der zweite Weg ins Spiel
+//
+//  sammlung.html#code=ELEMENTIA1%3A…
+//
+//  Sobald die App im Netz steht, kann ein Kärtchen diesen Link
+//  tragen statt des Klartexts. Dann erkennt ihn die eingebaute
+//  Kamera-App jedes Handys, tippt der Schüler auf die Meldung und
+//  ist drin – ohne die App zu starten und ohne Kameraerlaubnis.
+//  Das ist der Weg für alle, bei denen der Scanner in der App an
+//  einer verweigerten Berechtigung scheitert.
+//
+//  Danach wird der Rautenteil entfernt: Ein Neuladen der Seite darf
+//  nicht so aussehen, als würde die Karte noch einmal gefunden.
+// ============================================================
+if (location.hash.indexOf("#code=") === 0) {
+  var ausAdresse = codeVerarbeiten(location.hash);
+  if (ausAdresse.art !== "fehler") {
+    zeichneRaster();
+    grossOeffnen(ausAdresse.karte, null);
+  }
+  if (history.replaceState) {
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+}
+
+// Region auch per URL wählbar – sammlung.html?region=Feuerlande
+var parameter = new URLSearchParams(location.search);
+var urlRegion = parameter.get("region");
+if (urlRegion) {
+  var feld = document.getElementById("regionwahl");
+  for (var i = 0; i < feld.options.length; i++) {
+    if (feld.options[i].value === urlRegion) { feld.value = urlRegion; zeichneRaster(); break; }
+  }
+}
+</script>
+</body>
+</html>

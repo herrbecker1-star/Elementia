@@ -1,0 +1,21 @@
+{
+  "name": "Elementia · Sammlung",
+  "short_name": "Elementia",
+  "description": "Die Kartensammlung zum Chemie-Lernspiel Elementia. Stationscodes scannen, Karten sammeln, nachschlagen – ohne Anmeldung und ohne Internet.",
+  "lang": "de",
+  "dir": "ltr",
+
+  "start_url": "App/sammlung.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+
+  "background_color": "#14120f",
+  "theme_color": "#14120f",
+
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.jpg", "sizes": "512x512", "type": "image/jpeg" },
+    { "src": "icons/icon-maskable-512.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "maskable" }
+  ]
+}
