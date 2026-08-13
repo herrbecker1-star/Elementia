@@ -285,7 +285,32 @@
     box-shadow: 0 18px 44px -12px #000;
     display: flex; flex-direction: column;
   }
-  .rueckseite { transform: rotateY(180deg); }
+  /* Das translateZ trennt die beiden Seiten um einen Punkt in der
+     Tiefe. Sonst liegen sie exakt aufeinander, und welche gewinnt,
+     entscheidet der Browser mehr oder weniger zufällig. */
+  .rueckseite { transform: rotateY(180deg) translateZ(1px); }
+
+  /* ------ Warum hier nicht auf backface-visibility vertraut wird ------
+     Auf dem iPhone war beim Umdrehen die GESPIEGELTE VORDERSEITE zu
+     sehen statt der Rückseite. Grund: Safari ignoriert
+     backface-visibility, sobald das Element ein eigenes Scrollfeld
+     aufmacht – und beide Seiten haben overflow gesetzt (die Rückseite
+     muss scrollen können, die Vorderseite schneidet das Bild rund).
+
+     Statt an dieser Safari-Eigenheit herumzukurieren, wird die
+     abgewandte Seite ausdrücklich unsichtbar geschaltet. Das hängt an
+     keiner 3D-Eigenschaft und verhält sich in jedem Browser gleich.
+
+     Der Kniff ist die Verzögerung: 0,31 s ist die halbe Drehdauer, der
+     Umschlag passiert also genau im rechten Winkel – dort, wo die
+     Karte ohnehin nur als Kante zu sehen ist. Ohne die Verzögerung
+     würde die Seite sichtbar umspringen. */
+  .vorderseite { visibility: visible; }
+  .rueckseite  { visibility: hidden; }
+  .karte3d.gedreht .vorderseite { visibility: hidden; }
+  .karte3d.gedreht .rueckseite  { visibility: visible; }
+  .seite { transition: visibility 0s linear 0.31s; }
+  body.ruhig .seite { transition: none; }
 
   /* ------ Vorderseite: Bild, Name, sonst nichts ------
      Die Zahlen stehen auf der Rückseite. Vorn zählt das Bild –
