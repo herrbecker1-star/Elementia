@@ -308,6 +308,37 @@
 
   .vbild { flex: 1 1 auto; position: relative; overflow: hidden; }
   .vbild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* ------ Die gesperrte Karte ------
+     Dieselbe Silhouette wie auf der Kachel. Das Bild ist die
+     Belohnung; wer es schon beim Antippen sieht, hat keinen Grund
+     mehr, an die Station zu gehen. */
+  .vorderseite.zu .vbild img,
+  .vorderseite.zu .vbild .emoji { filter: brightness(0.16) grayscale(1) contrast(1.6); }
+  .vsperre {
+    position: absolute; inset: 0; display: flex;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 7px; padding: 18px; text-align: center; color: #b3a894;
+  }
+  .vsperre .schloss { font-size: 34px; opacity: 0.6; }
+  .vsperre .wort { font-size: 13px; font-weight: 600; letter-spacing: 0.3px; }
+  .vsperre .wo { font-size: 12px; line-height: 1.35; color: #948a7b; }
+  /* Der Holo-Glanz gehört zur fertigen Karte. Auf einer schwarzen
+     Silhouette sähe er nach Fehler aus. */
+  .vorderseite.zu::before, .vorderseite.zu::after { display: none; }
+
+  .rgesperrt {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 8px; text-align: center;
+    flex: 1 1 auto; padding: 18px 10px; color: #b3a894;
+  }
+  .rgesperrt .schloss { font-size: 30px; opacity: 0.55; }
+  .rgesperrt .wort { font-size: 13px; font-weight: 600; }
+  .rgesperrt .wo {
+    font-size: 12.5px; color: var(--text);
+    border-top: 1px solid var(--rand); padding-top: 9px; margin-top: 2px;
+  }
+  .rgesperrt .wie { font-size: 11.5px; color: var(--gedaempft); line-height: 1.4; }
   .vbild .emoji {
     width: 100%; height: 100%; display: grid; place-items: center; font-size: 5rem;
     background: radial-gradient(ellipse at center, #fff8e6 0%, #e6dabc 100%);
@@ -1046,6 +1077,8 @@ function baueVorderseite(k) {
   var v = document.getElementById("vorderseite");
   v.innerHTML = "";
   var art = STIL.art(k);
+  var offen = istGefunden(k);
+  v.classList.toggle("zu", !offen);
 
   var kopf = el("div", "vkopf");
   var z1 = el("div", "zeile1");
@@ -1060,6 +1093,17 @@ function baueVorderseite(k) {
 
   var bild = el("div", "vbild");
   bild.appendChild(bildFlaeche(k, false).firstChild);
+
+  // Gesperrt: dieselbe Silhouette wie auf der Kachel, dazu Schloss und
+  // Fundort. Das Bild IST die Belohnung – wer es schon beim Antippen
+  // sieht, hat keinen Grund mehr, an die Station zu gehen.
+  if (!offen) {
+    var sperre = el("div", "vsperre");
+    sperre.appendChild(el("div", "schloss", "🔒"));
+    sperre.appendChild(el("div", "wort", "Noch nicht gefunden"));
+    if (k.quest) sperre.appendChild(el("div", "wo", k.quest));
+    bild.appendChild(sperre);
+  }
   v.appendChild(bild);
 
   var fuss = el("div", "vfuss");
@@ -1076,6 +1120,22 @@ function baueRueckseite(k) {
   h.appendChild(el("span", null, k.name));
   if (k.formel) h.appendChild(el("span", "rformel", k.formel));
   r.appendChild(h);
+
+  // Gesperrte Karten geben ihre Chemie nicht preis. Was sie zeigen,
+  // ist der Weg dorthin – die Sammlung bleibt so ein Wegweiser durch
+  // die Quests, ohne die Belohnung vorwegzunehmen.
+  if (!istGefunden(k)) {
+    var hinweis = el("div", "rgesperrt");
+    hinweis.appendChild(el("div", "schloss", "🔒"));
+    hinweis.appendChild(el("div", "wort", "Diese Karte fehlt dir noch."));
+    if (k.quest) {
+      hinweis.appendChild(el("div", "wo", "Zu holen bei: " + k.quest));
+    }
+    hinweis.appendChild(el("div", "wie",
+      "Scanne dort den Stationscode – dann stehen hier Attacken, Synthese und Steckbrief."));
+    r.appendChild(hinweis);
+    return;
+  }
 
   // --- Steckbrief -------------------------------------------
   var steck = el("div", "steckbrief");
@@ -1837,6 +1897,12 @@ document.getElementById("gefunden").addEventListener("click", function () {
   if (!aktuelleKarte) return;
   gefundenSetzen(aktuelleKarte, !istGefunden(aktuelleKarte));
   zeichneGefundenKnopf();
+  // Beide Seiten neu bauen: Die Karte soll sich sofort zeigen, statt
+  // erst beim nächsten Öffnen. Der Augenblick, in dem die Silhouette
+  // dem Bild weicht, ist der ganze Lohn – zeigen und belohnen.
+  document.getElementById("karte3d").classList.remove("gedreht");
+  baueVorderseite(aktuelleKarte);
+  baueRueckseite(aktuelleKarte);
   // Das Raster wird erst beim Schließen neu gezeichnet: Es liegt ohnehin
   // hinter der Großansicht, und ein Neuaufbau würde die Kachel wegwerfen,
   // zu der der Übergang beim Schließen zurücklaufen soll.
