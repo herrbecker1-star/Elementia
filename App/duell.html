@@ -1,0 +1,2899 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elementia · Duell</title>
+<meta name="theme-color" content="#16130f">
+
+<!-- ============================================================
+     DAS DUELL – Spielfeld
+
+     Diese Seite RECHNET NICHTS. Das Duell rechnet kern\engine.js;
+     hier wird nur gezeigt, was sie meldet, und entgegengenommen,
+     was angetippt wird. Deshalb gilt am Bildschirm genau dasselbe
+     wie am Tisch – es gibt keinen zweiten Regelsatz.
+
+     Aufbau des Feldes (Hochformat, von oben nach unten):
+        Leiste des Gegners (Handkarten nur als Anzahl)
+        Bank des Gegners
+        aktives Elemental des Gegners
+        KAMPFLINIE – hier passiert alles
+        mein aktives Elemental
+        meine Bank
+        meine Hand
+     Im Querformat rückt die Bank neben die Arena.
+
+     Bedienung: antippen wählt, nochmal antippen führt aus. Kein
+     Ziehen – das ist auf Tablets zu unzuverlässig, und ein Zug ist
+     am Tisch auch nur eine Entscheidung.
+     ============================================================ -->
+
+<style>
+:root {
+  --brett:      #16130f;
+  --brett-hoch: #241d16;
+  --brett-tief: #0d0b08;
+  --gold:       #c8a24a;
+  --gold-hell:  #ecd9a0;
+  --gold-matt:  rgba(200,162,74,.30);
+  --text:       #ece5d8;
+  --leise:      #9b8f7c;
+  --rot:        #c0392b;
+  --gruen:      #4d8b52;
+  --warn:       #d8a13a;
+  --karte:      #201a14;
+  --schrift: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--brett-tief);
+  color: var(--text);
+  font-family: var(--schrift);
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  /* Das Brett: ein warm beleuchteter Tisch. Alles aus Verläufen,
+     keine einzige Bilddatei – die App soll nicht wegen der Kulisse
+     größer werden als wegen der Karten. */
+  background:
+    radial-gradient(120% 80% at 50% 50%, rgba(200,162,74,.10), transparent 70%),
+    radial-gradient(90% 60% at 50% 0%,   rgba(120,80,40,.22),  transparent 75%),
+    radial-gradient(90% 60% at 50% 100%, rgba(120,80,40,.22),  transparent 75%),
+    linear-gradient(#1b1610, #100d09 55%, #1b1610);
+  background-attachment: fixed;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; }
+
+.knopf {
+  background: linear-gradient(#3a2f22, #241c14);
+  border: 1px solid var(--gold-matt);
+  color: var(--gold-hell);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.knopf:hover  { border-color: var(--gold); background: linear-gradient(#4a3c2b, #2c231a); }
+.knopf:active { transform: translateY(1px); }
+.knopf.haupt  { background: linear-gradient(#6d5320, #493716); border-color: var(--gold); color: #fff6de; }
+.knopf[disabled] { opacity: .4; cursor: default; }
+
+/* ============================================================
+   1 · Vorspiel – wer, wo, womit
+   ============================================================ */
+#vorspiel {
+  min-height: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 18px; padding: 24px 18px 40px;
+  text-align: center;
+}
+#vorspiel h1 {
+  margin: 0; font-size: clamp(24px, 7vw, 40px); font-weight: 700;
+  letter-spacing: .04em; color: var(--gold-hell);
+  text-shadow: 0 0 24px rgba(200,162,74,.35);
+}
+#vorspiel .unter { margin: 0; color: var(--leise); max-width: 34em; line-height: 1.55; }
+
+.wahlblock {
+  width: 100%; max-width: 480px; text-align: left;
+  border: 1px solid var(--gold-matt); border-radius: 14px;
+  background: rgba(32,26,20,.75); padding: 14px 16px;
+}
+.wahlblock h2 {
+  margin: 0 0 10px; font-size: 13px; text-transform: uppercase;
+  letter-spacing: .12em; color: var(--gold); font-weight: 700;
+}
+.wahlreihe { display: flex; flex-wrap: wrap; gap: 8px; }
+.wahl {
+  flex: 1 1 140px; text-align: left; padding: 10px 12px; border-radius: 10px;
+  background: rgba(0,0,0,.28); border: 1px solid rgba(200,162,74,.18);
+  color: var(--text);
+}
+.wahl b { display: block; font-size: 15px; }
+.wahl span { display: block; font-size: 12px; color: var(--leise); margin-top: 2px; line-height: 1.35; }
+.wahl[aria-pressed="true"] {
+  border-color: var(--gold); background: rgba(200,162,74,.16);
+  box-shadow: inset 0 0 0 1px rgba(200,162,74,.35);
+}
+.wahl[disabled] { opacity: .45; cursor: default; }
+
+#vorspiel select, #vorspiel input[type="url"], #vorspiel input[type="text"] {
+  width: 100%; padding: 9px 10px; border-radius: 9px;
+  background: #211a13; color: var(--text);
+  border: 1px solid rgba(200,162,74,.25); font: inherit;
+}
+.netzlabel {
+  display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--leise); margin: 8px 0 3px;
+}
+.netzhilfe { font-size: 11.5px; color: var(--leise); line-height: 1.5; margin: 6px 0 0; }
+.netzhilfe code { color: var(--gold-hell); }
+#raumcode {
+  font-size: 26px; font-weight: 800; letter-spacing: .25em; text-align: center;
+  text-transform: uppercase; color: var(--gold-hell);
+}
+#netzlage { font-size: 12.5px; color: var(--leise); margin: 10px 0 0; line-height: 1.5; min-height: 1.3em; }
+#netzlage.gut { color: #8de08f; }
+#netzlage.warte { color: var(--warn); }
+.merk { display: flex; align-items: flex-start; gap: 9px; margin-top: 10px; font-size: 13px; color: var(--leise); }
+.merk input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--gold); }
+#deckvorschau { margin-top: 10px; font-size: 12.5px; color: var(--leise); line-height: 1.6; }
+#deckvorschau b { color: var(--text); font-weight: 600; }
+#vorspielmeldung { color: var(--warn); font-size: 13.5px; min-height: 1.2em; max-width: 34em; line-height: 1.5; }
+#vorspiel .fusszeile { font-size: 12px; color: #6d6455; }
+#vorspiel .fusszeile a { color: #8a7d66; }
+
+/* ============================================================
+   2 · Das Brett
+   ============================================================ */
+#brett {
+  display: none;
+  height: 100%; width: 100%;
+  max-width: 780px; margin: 0 auto;
+  padding: max(6px, env(safe-area-inset-top)) 8px max(6px, env(safe-area-inset-bottom));
+  /* Acht Zeilen. Die beiden 1fr sind die Arenen – gleich hoch,
+     weil das Raster sie gleich macht. Alles andere nimmt, was es
+     braucht. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows:
+    auto              /* Leiste des Gegners */
+    auto              /* Bank des Gegners */
+    minmax(0, 1fr)    /* Arena des Gegners */
+    auto              /* Kampflinie */
+    minmax(0, 1fr)    /* meine Arena */
+    auto              /* meine Bank */
+    auto              /* meine Leiste */
+    auto;             /* meine Hand */
+  gap: 5px;
+}
+body.spielt #brett { display: grid; }
+body.spielt { overflow: hidden; position: fixed; inset: 0; }
+
+/* --- Leiste: Name, Handkarten als Anzahl, Ablage --------------
+   Die Hand des Gegners kostet als Kartenfächer eine ganze Zeile
+   und sagt nichts: Sie liegt verdeckt. Als Anzahl sagt sie genau
+   dasselbe und lässt Platz für die Karten, auf die es ankommt. */
+.leiste {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--leise); padding: 0 2px; min-height: 22px;
+}
+.leiste .wer { color: var(--text); font-weight: 600; font-size: 13px; }
+.leiste .marke {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: 1px solid rgba(200,162,74,.22); border-radius: 20px;
+  padding: 1px 8px; background: rgba(0,0,0,.3);
+}
+.leiste .schub { margin-left: auto; }
+.leiste .amzug { color: var(--gold-hell); border-color: var(--gold); background: rgba(200,162,74,.14); }
+
+/* --- Bankreihe ------------------------------------------------ */
+.bank { display: flex; gap: 6px; justify-content: center; align-items: flex-start; min-height: 0; }
+.bankplatz {
+  width: clamp(44px, 12.5vw, 62px); aspect-ratio: 635 / 889;
+  border: 1px dashed rgba(200,162,74,.16); border-radius: 8px;
+}
+
+/* ============================================================
+   EINE KARTENBAUFORM FÜR ALLES
+   Vorher gab es drei: eine quer liegende Arena-Karte, eine
+   Minikarte und eine Handkarte. Jetzt eine hochkant im
+   Seitenverhältnis der GEDRUCKTEN Karte (63,5 × 88,9 mm) in drei
+   Größen. Der Grund ist nicht Sparsamkeit: Die Karte am Bildschirm
+   soll dieselbe sein wie die in der Hand.
+
+   Auf der Karte selbst stehen nur Bild, Name, Formel und LP – wie
+   bei Gwent. Eigenschaften und Attacken stehen DANEBEN, in der
+   Breite, die im Hochformat neben einer 164 px breiten Karte übrig
+   ist. Auf die Karte passen sie nicht: Auf 360×640 wäre die
+   Arena-Karte 118 px breit, und "FEUER Glutkohle 20" braucht mehr.
+   ============================================================ */
+.spielkarte {
+  position: relative; padding: 0; flex: 0 0 auto;
+  aspect-ratio: 635 / 889;                 /* die gedruckte Karte */
+  border-radius: 8px; overflow: hidden;
+  background: linear-gradient(160deg, #2a2119, #191410);
+  border: 1px solid rgba(0,0,0,.7);
+  box-shadow: 0 2px 8px rgba(0,0,0,.55), inset 0 0 0 1px var(--kf, #555);
+  display: flex; flex-direction: column; text-align: left;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.k-arena { height: 100%; max-width: 100%; }
+.k-bank  { width: clamp(44px, 12.5vw, 62px); }
+.k-hand  { width: clamp(60px, 18vw, 82px); margin: 0 -3px; transform-origin: bottom center; }
+
+/* Das Bild füllt die Karte; Name und LP liegen darüber. Genau so
+   liest man eine Karte im Fächer: am Bild und am Namensband. */
+.kbild { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; background: #0d0b08; }
+/* Absolut statt height:100% – ein Prozentwert braucht eine feste
+   Höhe am Elternteil, und die hat ein Flex-Kind nicht immer. */
+.kbild img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.kbild .emoji { position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; }
+.k-arena .kbild .emoji { font-size: 46px; }
+
+.klp {
+  position: absolute; top: 3px; right: 3px;
+  font-size: 10px; font-weight: 800; font-variant-numeric: tabular-nums;
+  color: #fff; background: rgba(10,8,6,.82);
+  border: 1px solid rgba(200,162,74,.5); border-radius: 20px;
+  padding: 0 5px; line-height: 1.5;
+}
+.klp small { font-weight: 400; opacity: .7; }
+.k-arena .klp { font-size: 14px; top: 5px; right: 5px; padding: 1px 8px; }
+
+.knamensband {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 8px 2px 3px;
+  background: linear-gradient(transparent, rgba(8,6,4,.92) 55%);
+}
+/* „Wasserstoff" passte auf der Bankkarte um zwei Pixel nicht in eine
+   Zeile und brach zu „Wassers/toff". Silbentrennung half nicht —
+   Chrome hat ohne Trennmuster keine. Gelöst wird es dort, wo es
+   entsteht: weniger Innenabstand, und lange Namen bekommen eine
+   Stufe kleinere Schrift statt eines Umbruchs mitten im Wort. */
+.kname {
+  display: block; font-size: 8.5px; line-height: 1.15; color: var(--text);
+  overflow-wrap: break-word; font-weight: 600;
+}
+.kname.mittel { font-size: 7.6px; letter-spacing: -.01em; }
+.kname.lang   { font-size: 6.8px; letter-spacing: -.02em; }
+.k-arena .kname.mittel { font-size: clamp(10px, 3vw, 13px); }
+.k-arena .kname.lang   { font-size: clamp(9px, 2.6vw, 12px); }
+.kformel { display: block; font-size: 7.5px; color: var(--gold-hell); }
+.k-arena .kname   { font-size: clamp(11px, 3.4vw, 15px); }
+.k-arena .kformel { font-size: clamp(9px, 2.6vw, 12px); }
+
+/* Klassenfarbe als Kante am linken Rand – nie die einzige
+   Information, das Klassenwort steht in der Kartenschau daneben. */
+.kkante { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--kf, #555); }
+
+.klpbalken {
+  flex: 0 0 auto; height: 4px; background: rgba(0,0,0,.6);
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.5);
+}
+.k-arena .klpbalken { height: 6px; }
+.klpbalken i {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, #6fbf73, #4d8b52);
+  transition: width .45s cubic-bezier(.4,0,.2,1);
+}
+.klpbalken.mittel i { background: linear-gradient(90deg, #e2b23c, #b7861f); }
+.klpbalken.wenig  i { background: linear-gradient(90deg, #d4513f, #a12e21); }
+
+/* Zustände einer Karte */
+.spielkarte.waehlbar { border-color: var(--gold-matt); }
+.spielkarte.gewaehlt {
+  outline: 2px solid var(--gold); outline-offset: 1px; z-index: 5;
+  box-shadow: 0 6px 18px rgba(0,0,0,.7), 0 0 18px rgba(200,162,74,.55);
+}
+.k-hand.gewaehlt { transform: translateY(-14px); }
+.k-arena.gewaehlt { transform: translateY(-6px); }
+.spielkarte.bereit { box-shadow: 0 2px 8px rgba(0,0,0,.55), inset 0 0 0 1px var(--kf,#555), 0 0 12px rgba(77,139,82,.75); }
+.spielkarte.edukt  { outline: 2px solid var(--gruen); outline-offset: 1px; }
+.spielkarte.edukt::after {
+  content: "→ Reaktion"; position: absolute; top: 3px; left: 3px;
+  font-size: 7.5px; font-weight: 700; color: #d4f0d6;
+  background: var(--gruen); border-radius: 20px; padding: 0 5px;
+}
+.spielkarte.stumpf { opacity: .55; }
+.spielkarte[disabled] { cursor: default; }
+body:not(.ruhig) .k-hand:not([disabled]):hover { transform: translateY(-8px); z-index: 4; }
+
+/* Der Zielring: die Karte, auf die der gewählte Zug wirkt.
+   Er ist die zweite Hälfte der Kampfgeste – erst die eigene Karte,
+   dann das Ziel. */
+.spielkarte.ziel {
+  outline: 2px dashed var(--rot); outline-offset: 3px;
+  animation: zielpulsen 1.1s ease-in-out infinite;
+}
+@keyframes zielpulsen {
+  0%,100% { box-shadow: 0 2px 8px rgba(0,0,0,.55), 0 0 0 0 rgba(192,57,43,.55); }
+  50%     { box-shadow: 0 2px 8px rgba(0,0,0,.55), 0 0 18px 3px rgba(192,57,43,.55); }
+}
+body.ruhig .spielkarte.ziel { animation: none; outline-style: solid; }
+
+/* --- Der Kampfplatz: Karte links, was sie kann rechts ---------- */
+.arena { display: flex; justify-content: center; min-height: 0; min-width: 0; }
+
+.kampfplatz {
+  display: flex; gap: 8px; align-items: stretch;
+  width: 100%; max-width: 560px; min-height: 0; min-width: 0; height: 100%;
+}
+.kampfinfo {
+  flex: 1 1 auto; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: 4px; justify-content: center;
+}
+.leerplatz {
+  flex: 1 1 auto; display: grid; place-items: center; color: var(--leise);
+  font-size: 13px; border: 1px dashed rgba(200,162,74,.2); border-radius: 10px;
+}
+
+.eigen { display: flex; flex-wrap: wrap; gap: 3px; }
+.eigen span {
+  font-size: 10px; color: var(--leise); border: 1px solid rgba(200,162,74,.18);
+  border-radius: 4px; padding: 0 4px; background: rgba(0,0,0,.25);
+}
+.eigen span.gefahr { color: #f0b0a6; border-color: rgba(192,57,43,.55); background: rgba(192,57,43,.14); }
+
+.attacken { display: flex; flex-direction: column; gap: 3px; }
+.attacke {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 4px 7px; border-radius: 7px; text-align: left;
+  background: rgba(0,0,0,.34); border: 1px solid rgba(200,162,74,.14);
+}
+.attacke .typ {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700;
+  color: #fff; background: var(--tf, #555); border-radius: 3px; padding: 1px 5px; flex: 0 0 auto;
+}
+.attacke .an { flex: 1 1 auto; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attacke .sch { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.attacke .sch small { font-size: 9.5px; font-weight: 400; color: var(--leise); }
+.attacke .wirkt { font-size: 10px; font-weight: 700; flex: 0 0 auto; }
+.attacke .wirkt.hoch { color: #ff9b86; }
+.attacke .wirkt.tief { color: #86b0ff; }
+.attacke.waehlbar:hover { border-color: var(--gold-matt); background: rgba(200,162,74,.10); }
+.attacke.gewaehlt {
+  border-color: var(--gold); background: rgba(200,162,74,.20);
+  box-shadow: 0 0 12px rgba(200,162,74,.35);
+}
+.attacke[disabled] { cursor: default; }
+.kampfinfo.gegen .attacke { opacity: .8; cursor: default; }
+.kampfinfo .schau {
+  align-self: flex-start; font-size: 10.5px; color: var(--leise);
+  background: none; border: 0; padding: 2px 0; text-decoration: underline;
+}
+
+/* --- Kampflinie ----------------------------------------------- */
+#linie {
+  position: relative; height: 26px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+}
+#linie::before {
+  content: ""; position: absolute; left: 4%; right: 4%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-matt) 18%, var(--gold) 50%, var(--gold-matt) 82%, transparent);
+}
+#linie .raute {
+  position: relative; width: 11px; height: 11px; transform: rotate(45deg);
+  background: linear-gradient(135deg, var(--gold-hell), #8a6a22);
+  box-shadow: 0 0 12px rgba(200,162,74,.6);
+}
+#linie .sage {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  white-space: nowrap; font-size: 11.5px; color: var(--gold-hell);
+  background: rgba(16,13,9,.92); border: 1px solid var(--gold-matt);
+  border-radius: 20px; padding: 2px 12px; max-width: 94%;
+  overflow: hidden; text-overflow: ellipsis;
+}
+#linie .sage:empty { display: none; }
+
+/* --- Meine Hand ----------------------------------------------- */
+.hand {
+  display: flex; justify-content: center; align-items: flex-end;
+  gap: 0; min-height: 0; flex: 0 0 auto; padding-top: 4px;
+}
+/* Streifen unten an der Handkarte: Verbindung / Energie / Ausrüstung.
+   Die Art einer Handkarte entscheidet, was sie kann – das muss ohne
+   Antippen lesbar sein. */
+.kart {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  font-size: 7px; text-transform: uppercase; letter-spacing: .02em;
+  text-align: center; color: #fff; background: var(--kf, #555);
+  padding: 1px 1px 2px; white-space: nowrap; overflow: hidden;
+}
+.spielkarte.bereit .kart::after { content: " ✦"; }
+.k-hand .knamensband { bottom: 11px; padding-bottom: 1px; }
+
+/* --- Ablagestapel ---------------------------------------------- */
+.ablage {
+  position: relative; width: 26px; height: 34px; flex: 0 0 auto; padding: 0;
+  border-radius: 5px; background: #100d09;
+  border: 1px solid rgba(200,162,74,.25);
+  box-shadow: 2px 2px 0 -1px #1a1510, 4px 4px 0 -2px #14100c;
+  font-size: 11px; color: var(--leise); display: grid; place-items: center;
+}
+.ablage[disabled] { opacity: .5; }
+.ablage b { font-size: 12px; color: var(--text); }
+
+/* ============================================================
+   1b · Der Deckbildschirm
+   Das Regelwerk sagt in Abschnitt 1: „Weil nicht gezogen wird,
+   entscheidest du das Duell schon beim Zusammenstellen." Genau
+   dieser Satz braucht einen Bildschirm.
+   ============================================================ */
+#deckschirm {
+  position: fixed; inset: 0; z-index: 55; display: none;
+  background: linear-gradient(#151109, #0d0b08);
+  flex-direction: column;
+}
+#deckschirm.an { display: flex; }
+#deckschirm .dkopf {
+  flex: 0 0 auto; padding: max(10px, env(safe-area-inset-top)) 14px 8px;
+  border-bottom: 1px solid rgba(200,162,74,.18);
+}
+#deckschirm h2 { margin: 0 0 2px; font-size: 17px; color: var(--gold-hell); }
+#deckschirm .dregion { font-size: 12px; color: var(--leise); }
+
+/* Die Statuszeile ist der eigentliche Bildschirm: Sie beantwortet
+   die Frage, um die es beim Deckbau geht — geht meine Reaktion auf? */
+#deckstand { flex: 0 0 auto; padding: 8px 14px; background: rgba(0,0,0,.35); font-size: 12.5px; }
+#deckstand .quoten { display: flex; gap: 10px; flex-wrap: wrap; color: var(--leise); margin-bottom: 5px; }
+#deckstand .quoten b { color: var(--text); }
+#deckstand .quoten .voll b { color: #8de08f; }
+#deckstand .zeile { line-height: 1.55; margin: 2px 0; }
+#deckstand .ja   { color: #8de08f; }
+#deckstand .nein { color: var(--warn); }
+#deckstand .merke { color: var(--gold-hell); }
+
+#deckliste { flex: 1 1 auto; overflow-y: auto; padding: 10px 14px 4px; }
+#deckliste h3 {
+  margin: 14px 0 3px; font-size: 11px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--gold);
+}
+#deckliste h3:first-child { margin-top: 0; }
+#deckliste .erklaerung { font-size: 11.5px; color: var(--leise); margin: 0 0 8px; line-height: 1.5; }
+.kartenraster { display: flex; flex-wrap: wrap; gap: 7px; }
+.kartenraster .spielkarte { width: clamp(62px, 17vw, 78px); }
+.kartenraster .wahlkarte { position: relative; display: flex; flex-direction: column; gap: 3px; }
+.kartenraster .spielkarte.drin {
+  outline: 2px solid var(--gold); outline-offset: 1px;
+  box-shadow: 0 0 14px rgba(200,162,74,.5), inset 0 0 0 1px var(--kf, #555);
+}
+.kartenraster .spielkarte.drin::before {
+  content: "✓"; position: absolute; top: 2px; left: 3px; z-index: 2;
+  font-size: 11px; font-weight: 800; color: #0d0b08;
+  background: var(--gold); border-radius: 50%; width: 15px; height: 15px;
+  display: grid; place-items: center;
+}
+.eduktknopf {
+  font-size: 9px; padding: 3px 2px; border-radius: 6px;
+  background: rgba(77,139,82,.2); border: 1px solid rgba(77,139,82,.6);
+  color: #b9e6bb; line-height: 1.2;
+}
+.eduktknopf[disabled] { opacity: .35; }
+.kartenraster .warnmarke {
+  font-size: 9px; text-align: center; color: var(--warn); line-height: 1.25;
+}
+
+#deckfuss {
+  flex: 0 0 auto; display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(200,162,74,.18); background: rgba(0,0,0,.35);
+}
+#deckfuss .knopf { flex: 1 1 auto; }
+
+/* ============================================================
+   2b · Die Kartenschau
+   Ein langer Druck oder der Knopf „ansehen" zeigt die ganze
+   Karte – Attacken mit Effekttext, Synthese, Besonderheit,
+   Flavor. Damit muss auf dem Brett nicht alles gleichzeitig
+   stehen, und trotzdem geht keine Information verloren. Beim
+   Gegner ist das die einzige Stelle, an der man nachliest,
+   was er kann.
+   ============================================================ */
+#kartenschau {
+  position: fixed; inset: 0; z-index: 65; display: none;
+  place-items: center; padding: 18px;
+  background: rgba(8,7,5,.93); backdrop-filter: blur(3px);
+}
+#kartenschau.an { display: grid; }
+#kartenschau .blatt {
+  width: 100%; max-width: 380px; max-height: 92vh; overflow: auto;
+  border-radius: 14px; padding: 16px;
+  background: linear-gradient(#241c14, #16120d);
+  border: 1px solid var(--gold-matt);
+  box-shadow: 0 18px 60px rgba(0,0,0,.75), inset 0 0 0 2px var(--kf, #555);
+}
+#kartenschau .kskopf { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; margin-bottom: 8px; }
+#kartenschau .ksname { font-size: 20px; font-weight: 700; }
+#kartenschau .ksformel { font-size: 14px; color: var(--gold-hell); }
+#kartenschau .ksklasse {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .09em;
+  color: #fff; background: var(--kf, #555); border-radius: 4px; padding: 1px 6px;
+}
+#kartenschau .kslp { margin-left: auto; font-size: 15px; font-weight: 700; }
+#kartenschau .ksbild {
+  width: 100%; aspect-ratio: 4/3; border-radius: 10px; overflow: hidden;
+  background: #0d0b08; margin-bottom: 10px;
+  box-shadow: inset 0 0 0 1px rgba(200,162,74,.3);
+}
+#kartenschau .ksbild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#kartenschau .ksbild .emoji { width: 100%; height: 100%; display: grid; place-items: center; font-size: 56px; }
+#kartenschau .ksabschnitt { margin: 10px 0 0; }
+#kartenschau .kstitel {
+  font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 4px;
+}
+#kartenschau .kseffekt { font-size: 11.5px; color: var(--leise); line-height: 1.5; margin: 2px 0 6px 4px; }
+#kartenschau .ksflavor { font-size: 11.5px; color: #8a7d66; font-style: italic; margin-top: 12px; line-height: 1.5; }
+#kartenschau .ksfuss { display: flex; gap: 8px; margin-top: 14px; }
+#kartenschau .ksfuss .knopf { flex: 1 1 auto; }
+
+/* ============================================================
+   3 · Bewegung – vier Angriffe, ein Aufprall, eine Zahl
+   ============================================================ */
+#flug { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+
+.geschoss {
+  position: absolute; width: 20px; height: 20px; border-radius: 50%;
+  margin: -10px 0 0 -10px;
+  background: radial-gradient(circle at 35% 35%, #fff, var(--tf, #c0392b) 55%, transparent 72%);
+  box-shadow: 0 0 22px 4px var(--tf, #c0392b);
+}
+.geschoss.t-Wucht { border-radius: 3px; background: linear-gradient(140deg, #fff, var(--tf) 60%); }
+.geschoss.t-Gas   { filter: blur(2px); width: 30px; height: 30px; margin: -15px 0 0 -15px; opacity: .85; }
+.geschoss.t-Ätz   { border-radius: 50% 50% 55% 45%; }
+
+.aufprall {
+  position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px;
+  border-radius: 50%; border: 2px solid var(--tf, #c0392b);
+  animation: aufprallen .45s ease-out forwards;
+}
+@keyframes aufprallen {
+  from { transform: scale(.3); opacity: 1; }
+  to   { transform: scale(7);  opacity: 0; }
+}
+
+.zahlflug {
+  position: absolute; transform: translate(-50%, -50%);
+  font-size: 30px; font-weight: 800; letter-spacing: -.02em;
+  text-shadow: 0 2px 10px rgba(0,0,0,.9), 0 0 20px currentColor;
+  animation: zahlhoch 1.1s ease-out forwards;
+}
+.zahlflug.minus { color: #ff8f7a; }
+.zahlflug.plus  { color: #8de08f; }
+@keyframes zahlhoch {
+  0%   { opacity: 0; transform: translate(-50%, -20%) scale(.6); }
+  18%  { opacity: 1; transform: translate(-50%, -60%) scale(1.15); }
+  70%  { opacity: 1; transform: translate(-50%, -95%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -140%) scale(.95); }
+}
+
+.ruf {
+  position: absolute; left: 50%; transform: translate(-50%, -50%);
+  font-size: 15px; font-weight: 700; padding: 4px 14px; border-radius: 20px;
+  background: rgba(16,13,9,.94); border: 1px solid currentColor;
+  animation: rufen 1.3s ease-out forwards; white-space: nowrap;
+}
+@keyframes rufen {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.8); }
+  15%  { opacity: 1; transform: translate(-50%,-50%) scale(1.06); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%,-160%) scale(1); }
+}
+
+.getroffen { animation: zucken .38s ease-out; }
+@keyframes zucken {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(3px); }
+}
+
+/* ============================================================
+   4 · Die Synthese-Bühne
+      Der Höhepunkt des Spiels bekommt die aufwendigste
+      Inszenierung – aber sie VERLANGT nichts. Der Testlauf am
+      12.08.2026 hat gezeigt, dass abgefragt wird, was am Tisch
+      abgelehnt wurde. Also: Wortgleichung groß zeigen, die
+      Massenbilanz aufgehen lassen, den LP-Sprung feiern.
+   ============================================================ */
+#buehne {
+  position: fixed; inset: 0; z-index: 60; display: none;
+  place-items: center; padding: 20px;
+  background: radial-gradient(circle at 50% 45%, rgba(60,45,20,.94), rgba(8,7,5,.97));
+  backdrop-filter: blur(3px);
+}
+#buehne.an { display: grid; }
+#buehne .kasten {
+  width: 100%; max-width: 560px; text-align: center;
+  border: 1px solid var(--gold-matt); border-radius: 16px;
+  background: linear-gradient(#231c14, #16120d);
+  box-shadow: 0 18px 60px rgba(0,0,0,.75), inset 0 0 0 1px rgba(200,162,74,.16);
+  padding: 20px 18px;
+}
+#buehne .ueber {
+  font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 12px;
+}
+#buehne .glstoffe { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+#buehne .glstoff {
+  width: 62px; border-radius: 8px; overflow: hidden; background: var(--karte);
+  box-shadow: inset 0 0 0 1px var(--kf, #555), 0 3px 10px rgba(0,0,0,.6);
+}
+#buehne .glstoff .b { width: 100%; aspect-ratio: 1/1; overflow: hidden; background: #0d0b08; }
+#buehne .glstoff .b img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#buehne .glstoff .b .emoji { width: 100%; height: 100%; display: grid; place-items: center; font-size: 26px; }
+#buehne .glstoff .n { font-size: 8.5px; padding: 2px 1px; line-height: 1.15; }
+#buehne .glzeichen { font-size: 26px; color: var(--gold); }
+#buehne .glstoff.produkt { width: 84px; box-shadow: inset 0 0 0 2px var(--gold), 0 0 26px rgba(200,162,74,.55); }
+
+#wortgleichung {
+  font-size: clamp(15px, 4.6vw, 24px); font-weight: 700; line-height: 1.45;
+  color: var(--gold-hell); margin: 0 0 10px;
+}
+#bilanz {
+  font-size: clamp(12px, 3.4vw, 15px); color: var(--text);
+  font-variant-numeric: tabular-nums; margin: 0 0 4px; min-height: 1.4em;
+}
+#bilanz .gleich { color: var(--gruen); font-weight: 700; }
+#bilanzerklaerung { font-size: 12px; color: var(--leise); margin: 0 0 14px; line-height: 1.5; }
+#lpsprung { font-size: 14px; margin: 0 0 4px; min-height: 1.5em; }
+#lpsprung b { font-size: 20px; color: #8de08f; }
+#exotherm { font-size: 13px; color: #ffb08e; min-height: 1.4em; margin: 0 0 14px; }
+#buehne .weiter { margin-top: 4px; }
+#buehne .tipp { font-size: 11px; color: #6d6455; margin-top: 10px; }
+
+.aufblenden { animation: aufblenden .5s ease-out both; }
+@keyframes aufblenden { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ============================================================
+   5 · Vorhang (Hot-Seat) und Ende
+   ============================================================ */
+#vorhang, #ende {
+  position: fixed; inset: 0; z-index: 70; display: none;
+  place-items: center; text-align: center; padding: 24px;
+  background: linear-gradient(rgba(10,8,6,.97), rgba(16,13,9,.99));
+}
+#vorhang.an, #ende.an { display: grid; }
+#vorhang .gross { font-size: clamp(22px, 6vw, 34px); font-weight: 700; color: var(--gold-hell); margin-bottom: 6px; }
+#vorhang p, #ende p { color: var(--leise); max-width: 30em; line-height: 1.6; margin: 0 auto 18px; }
+#ende .titel { font-size: clamp(26px, 8vw, 46px); font-weight: 800; color: var(--gold-hell); margin-bottom: 4px; }
+#ende .zahlen { font-size: 13px; color: var(--leise); margin-bottom: 20px; line-height: 1.7; }
+#ende .knopfreihe { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ============================================================
+   5b · Kurze Schirme (360×640: die schwächsten Schul-Tablets)
+        Es wird enger gesetzt, aber nichts weggelassen. Die
+        Eigenschaften und der Rechenweg der Attacke sind der
+        fachliche Kern – die dürfen nie die ersten sein, die
+        dem Platzmangel geopfert werden.
+   ============================================================ */
+@media (max-height: 720px) {
+  #brett { gap: 3px; }
+  .haelfte { gap: 3px; }
+  .leiste { min-height: 18px; font-size: 11px; }
+  .kampfplatz { gap: 6px; }
+  .k-arena .kname { font-size: clamp(10px, 3vw, 13px); }
+  .eigen span { font-size: 9px; }
+  .attacke { padding: 2px 6px; }
+  .attacke .an { font-size: 11.5px; }
+  /* Nicht schmaler machen, um Höhe zu sparen: Auf 360×640 waren die
+     Bankkarten 41 px breit, und „Wasserstoff" brach zu „Wassersto/ff".
+     Breite ist dort reichlich da (drei Karten in 344 px), knapp ist
+     nur die Höhe — und die kostet eine breitere Karte nur um den
+     Faktor 1,4. Der Name ist es wert. */
+  .k-bank { width: clamp(50px, 14vw, 58px); }
+  .k-hand { width: clamp(58px, 17vw, 74px); }
+  #linie { height: 20px; }
+}
+
+/* ============================================================
+   6 · Querformat – Bank rückt neben die Arena
+   ============================================================ */
+@media (orientation: landscape) and (min-width: 700px) {
+  /* Im Querformat ist Höhe knapp und Breite reichlich: Die Bank
+     rückt neben die Arena, die Hand neben meine Leiste. Über
+     Rasterbereiche, damit die Reihenfolge im Quelltext – und damit
+     für Vorlesehilfen – dieselbe bleibt. Die beiden Arenen sind
+     auch hier zweimal 1fr, also gleich hoch. */
+  #brett {
+    max-width: 1100px;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "lg lg"
+      "bg ag"
+      "ln ln"
+      "bi ai"
+      "li hi";
+    column-gap: 8px; row-gap: 4px;
+  }
+  #leiste-gegen { grid-area: lg; }
+  #bank-gegen   { grid-area: bg; }
+  #arena-gegen  { grid-area: ag; }
+  #linie        { grid-area: ln; }
+  #bank-ich     { grid-area: bi; }
+  #arena-ich    { grid-area: ai; }
+  #leiste-ich   { grid-area: li; }
+  #hand-ich     { grid-area: hi; padding-top: 0; }
+  .bank { flex-direction: column; justify-content: center; }
+}
+
+/* ============================================================
+   7 · Ruhemodus – derselbe Schalter wie in der Sammlung
+      Schwache Schul-Tablets und Kinder, die auf ständige
+      Bewegung empfindlich reagieren. Die INFORMATION bleibt
+      vollständig, nur die Bewegung geht weg.
+   ============================================================ */
+body.ruhig .geschoss, body.ruhig .aufprall { display: none; }
+body.ruhig .zahlflug, body.ruhig .ruf { animation-duration: .35s; }
+body.ruhig .getroffen { animation: none; }
+body.ruhig .lpbalken i { transition: none; }
+body.ruhig .aufblenden { animation: none; }
+body.ruhig .handkarte { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Prüfausgabe für kopflose Läufe – im Spiel unsichtbar. */
+#probe { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     Vorspiel
+     ============================================================ -->
+<div id="vorspiel">
+  <h1>⚔ Elemental-Duell</h1>
+  <p class="unter">Zwei Teams, ein Brett. Es gelten dieselben Regeln wie auf dem
+     gedruckten Blatt – <span id="fassungshinweis"></span></p>
+
+  <div class="wahlblock">
+    <h2>Gespielt wird bis</h2>
+    <select id="regionwahl" aria-label="Region und Meisterstufe"></select>
+    <div class="merk">
+      <input type="checkbox" id="nurgefunden">
+      <label for="nurgefunden">Nur Karten aus meiner Sammlung <span id="sammlungszahl"></span></label>
+    </div>
+    <div id="deckvorschau"></div>
+    <div class="wahlreihe" style="margin-top:10px">
+      <button class="knopf" id="deckoeffnen">🃏 Deck zusammenstellen</button>
+    </div>
+  </div>
+
+  <div class="wahlblock">
+    <h2>Gegner</h2>
+    <div class="wahlreihe">
+      <button class="wahl" id="g-computer" aria-pressed="true">
+        <b>Gegen den Computer</b>
+        <span>Zum Üben. Spielt genau die Logik, mit der das Spiel ausbalanciert wurde.</span>
+      </button>
+      <button class="wahl" id="g-hotseat" aria-pressed="false">
+        <b>Zu zweit an einem Gerät</b>
+        <span>Reihum. Zwischen den Zügen deckt ein Vorhang die Handkarten zu.</span>
+      </button>
+      <button class="wahl" id="g-netz" aria-pressed="false">
+        <b>Zu zweit übers Netz</b>
+        <span>Zwei Geräte, ein Raumcode. Jeder bringt sein eigenes Deck mit.</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="wahlblock" id="netzblock" hidden>
+    <h2>Übers Netz</h2>
+    <label class="netzlabel" for="netzadresse">Vermittler</label>
+    <input type="url" id="netzadresse" placeholder="https://…workers.dev" autocomplete="off"
+           spellcheck="false" inputmode="url">
+    <p class="netzhilfe">Einmal je Gerät eintragen. Wie dieser Dienst entsteht, steht in
+       <code>Worker\LIESMICH-worker.md</code> — fünfzehn Minuten im Browser, ohne Installation.</p>
+    <div class="wahlreihe" style="margin-top:8px">
+      <button class="wahl" id="raum-neu"><b>Raum eröffnen</b><span>Du bekommst einen Code.</span></button>
+      <button class="wahl" id="raum-dazu"><b>Raum beitreten</b><span>Code eintippen.</span></button>
+    </div>
+    <div id="raumzeile" hidden>
+      <label class="netzlabel" for="raumcode">Raumcode</label>
+      <input type="text" id="raumcode" maxlength="9" autocomplete="off" spellcheck="false"
+             autocapitalize="characters">
+    </div>
+    <p id="netzlage"></p>
+  </div>
+
+  <p id="vorspielmeldung"></p>
+  <button class="knopf haupt" id="losgehts">Duell beginnen</button>
+  <p class="fusszeile"><a href="sammlung.html">← zurück zur Sammlung</a></p>
+</div>
+
+<!-- ============================================================
+     Das Brett
+     ============================================================ -->
+<!-- Acht Zonen unmittelbar im Raster, ohne Hälften-Kästen: Nur so
+     sind BEIDE Arena-Zeilen gleich hoch (zweimal 1fr). Mit
+     geschachtelten Flexboxen wurde meine Arena-Karte kleiner als
+     die des Gegners, weil auf meiner Seite zusätzlich die Hand
+     liegt – und ein Duell, in dem der Gegner die größere Karte
+     hat, sieht falsch aus, bevor man den Grund kennt. -->
+<div id="brett">
+  <div class="leiste gegen" id="leiste-gegen"></div>
+  <div class="bank gegen"   id="bank-gegen"></div>
+  <div class="arena gegen"  id="arena-gegen"></div>
+
+  <div id="linie"><div class="raute"></div><div class="sage" id="sage"></div></div>
+
+  <div class="arena ich"  id="arena-ich"></div>
+  <div class="bank ich"   id="bank-ich"></div>
+  <div class="leiste ich" id="leiste-ich"></div>
+  <div class="hand"       id="hand-ich"></div>
+</div>
+
+<div id="flug"></div>
+
+<!-- Die ganze Karte, wenn man sie sehen will -->
+<div id="kartenschau">
+  <div class="blatt" id="ksblatt"></div>
+</div>
+
+<!-- Das Deck zusammenstellen -->
+<div id="deckschirm">
+  <div class="dkopf">
+    <h2>Dein Deck</h2>
+    <div class="dregion" id="deckregion"></div>
+  </div>
+  <div id="deckstand"></div>
+  <div id="deckliste"></div>
+  <div id="deckfuss">
+    <button class="knopf" id="deckvorschlag">Vorschlag</button>
+    <button class="knopf" id="deckleeren">Leeren</button>
+    <button class="knopf haupt" id="deckfertig">Übernehmen</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     Synthese-Bühne
+     ============================================================ -->
+<div id="buehne">
+  <div class="kasten">
+    <div class="ueber">Reaktion</div>
+    <div class="glstoffe" id="glstoffe"></div>
+    <p id="wortgleichung"></p>
+    <p id="bilanz"></p>
+    <p id="bilanzerklaerung"></p>
+    <p id="lpsprung"></p>
+    <p id="exotherm"></p>
+    <button class="knopf haupt weiter" id="buehneweiter">Weiter</button>
+    <p class="tipp">Irgendwo tippen überspringt.</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     Vorhang und Ende
+     ============================================================ -->
+<div id="vorhang">
+  <div>
+    <div class="gross" id="vorhangwer"></div>
+    <p>Gerät weitergeben. Erst antippen, wenn niemand sonst auf den Bildschirm sieht –
+       die Handkarten liegen dahinter offen.</p>
+    <button class="knopf haupt" id="vorhangauf">Ich bin dran</button>
+  </div>
+</div>
+
+<div id="ende">
+  <div>
+    <div class="titel" id="endetitel"></div>
+    <p id="endegrund"></p>
+    <div class="zahlen" id="endezahlen"></div>
+    <div class="knopfreihe">
+      <button class="knopf haupt" id="nochmal">Noch ein Duell</button>
+      <button class="knopf" id="zurueck">Zur Sammlung</button>
+    </div>
+  </div>
+</div>
+
+<div id="probe"></div>
+
+<script src="../Karten/karten-daten.js"></script>
+<script src="kern/kartenstil.js"></script>
+<script src="kern/regeln.js"></script>
+<script src="kern/engine.js"></script>
+<script src="kern/ki.js"></script>
+<script src="kern/kanal.js"></script>
+<script>
+"use strict";
+
+// ============================================================
+//  Daten und Abhängigkeiten
+// ============================================================
+var DATEN = window.KARTEN_DATEN, STIL = window.KARTENSTIL, R = window.REGELN,
+    E = window.ENGINE, KI = window.KI, KANAL = window.KANAL;
+
+if (!DATEN || !STIL || !R || !E || !KI || !KANAL) {
+  document.getElementById("vorspiel").innerHTML =
+    '<p style="padding:30px;line-height:1.7;max-width:34em"><b>Es fehlen Dateien.</b><br>' +
+    "Diese Seite braucht <code>..\\Karten\\karten-daten.js</code> sowie aus <code>App\\kern\\</code> " +
+    "die Dateien <code>kartenstil.js</code>, <code>regeln.js</code>, <code>engine.js</code>, " +
+    "<code>ki.js</code> und <code>kanal.js</code>. Der Ordner <b>App</b> muss neben <b>Karten</b> liegen.</p>";
+  throw new Error("Abhängigkeit fehlt");
+}
+
+var KARTEN = DATEN.karten;
+var PARAM = new URLSearchParams(location.search);
+
+// Kopfloser Probelauf: keine Wartezeiten, keine Bewegung. Sonst
+// hängt eine Prüfung an Animationen, die dort niemand sieht.
+// ?schnell=1 macht dasselbe, OHNE ein Duell zu starten – so lässt
+// sich der Netzverkehr prüfen, ohne die Animationszeiten mitzuprüfen.
+var SCHNELL = !!PARAM.get("probe") || !!PARAM.get("schnell");
+
+// Ein Fehler in der Anzeige darf beim Prüfen nicht lautlos bleiben.
+// Er landet sichtbar im Titel – den liest --dump-dom mit.
+window.onerror = function (nachricht, datei, zeile) {
+  var p = document.getElementById("probe");
+  if (p) p.textContent = "FEHLER: " + nachricht + " (" + datei + ":" + zeile + ")";
+  document.title = "FEHLER: " + nachricht;
+};
+
+// ============================================================
+//  Kleine Helfer – bewusst dieselben wie in sammlung.html
+// ============================================================
+function el(tag, klasse, text) {
+  var e = document.createElement(tag);
+  if (klasse) e.className = klasse;
+  if (text !== undefined && text !== null) e.textContent = text;
+  return e;
+}
+function regionVon(k) { return k.region || "Feuerlande"; }
+function urbildPfad(k) { return "../Karten/" + k.bild; }
+function bildPfad(k, gross) {
+  var datei = String(k.bild).split("/").pop().replace(/\.[^.]+$/, ".jpg");
+  return "../Karten/bilder-app/" + (gross ? "gross" : "klein") + "/" + datei;
+}
+function hatBild(k) { return !!(k.bild && k.bild.indexOf(".") >= 0); }
+
+function bildIn(ziel, k, gross) {
+  if (hatBild(k)) {
+    var img = document.createElement("img");
+    img.src = bildPfad(k, gross);
+    img.alt = "";
+    img.decoding = "async";
+    img.onerror = function () { this.onerror = null; this.src = urbildPfad(k); };
+    ziel.appendChild(img);
+  } else {
+    ziel.appendChild(el("div", "emoji", k.bild || "❔"));
+  }
+  return ziel;
+}
+
+// --- Ruhemodus: derselbe Schlüssel wie in der Sammlung --------
+var SPEICHER_EFFEKTE = "elementia.effekte";
+function systemWillRuhe() {
+  return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+function ruheSetzen() {
+  var gemerkt = null;
+  try { gemerkt = localStorage.getItem(SPEICHER_EFFEKTE); } catch (e) { }
+  var an = gemerkt === null ? !systemWillRuhe() : gemerkt === "an";
+  document.body.classList.toggle("ruhig", !an);
+}
+function istRuhig() { return document.body.classList.contains("ruhig"); }
+
+// --- Sammelstand: welche Karten hat dieses Gerät gefunden? ----
+var SPEICHER_STAND = "elementia.sammlung", STAND_FASSUNG = 1;
+var gefundene = {};
+function schluessel(k) { return regionVon(k) + "|" + k.name; }
+function standLaden() {
+  gefundene = {};
+  try {
+    var roh = localStorage.getItem(SPEICHER_STAND);
+    if (!roh) return;
+    var d = JSON.parse(roh);
+    if (!d || !d.karten || d.fassung !== STAND_FASSUNG) return;
+    for (var i = 0; i < d.karten.length; i++) gefundene[d.karten[i]] = true;
+  } catch (e) { /* unlesbar oder gesperrt: als leer behandeln */ }
+}
+function istGefunden(k) { return gefundene[schluessel(k)] === true; }
+
+// ============================================================
+//  Zustand einer Partie
+// ============================================================
+var duell = null;          // ENGINE.Duell
+var kanal = null;          // woher kommen die Züge des Gegners
+var ansichtSeite = 0;      // wer wird UNTEN gezeigt
+var auswahl = null;        // erstes Antippen: {art, index}
+var ereignisse = [];       // was die Engine im letzten Zug gemeldet hat
+var spielLaeuft = false;
+var gegnerArt = "computer";
+var letzteEinstellung = null;
+
+// ============================================================
+//  Vorspiel
+// ============================================================
+var regionwahl = document.getElementById("regionwahl");
+var meldung = document.getElementById("vorspielmeldung");
+
+document.getElementById("fassungshinweis").textContent =
+  "Regelwerk Fassung " + R.fassung + ".";
+
+(function regionenFuellen() {
+  var regionen = DATEN.meta.regionen;
+  for (var i = 0; i < regionen.length; i++) {
+    var name = regionen[i], stufe = R.regionStufe[name];
+    if (!stufe) continue;
+    var satz = R.meisterstufen[stufe];
+    var o = document.createElement("option");
+    o.value = name;
+    o.textContent = name + " · Meisterstufe " + stufe + " · Team " + satz.team;
+    regionwahl.appendChild(o);
+  }
+  regionwahl.value = PARAM.get("bis") || "Feuerlande";
+})();
+
+// ?gegner=hotseat|computer – erspart beim Prüfen und beim
+// Weitergeben eines fertigen Aufbaus das Durchklicken des Vorspiels.
+if (PARAM.get("gegner") === "hotseat") gegnerSetzen("hotseat");
+
+function gegnerSetzen(art) {
+  gegnerArt = art;
+  ["computer", "hotseat", "netz"].forEach(function (a) {
+    var b = document.getElementById("g-" + a);
+    if (b) b.setAttribute("aria-pressed", a === art ? "true" : "false");
+  });
+  var block = document.getElementById("netzblock");
+  if (block) block.hidden = art !== "netz";
+  var los = document.getElementById("losgehts");
+  if (los) {
+    los.textContent = art === "netz" ? "Bereit — Deck abschicken" : "Duell beginnen";
+  }
+}
+document.getElementById("g-computer").addEventListener("click", function () { gegnerSetzen("computer"); vorschau(); });
+document.getElementById("g-hotseat").addEventListener("click", function () { gegnerSetzen("hotseat"); vorschau(); });
+document.getElementById("g-netz").addEventListener("click", function () { gegnerSetzen("netz"); vorschau(); });
+
+// ============================================================
+//  Das Netzduell
+//
+//  Beide Seiten schicken einmal ihren Aufbau (Rolle, Deck, und
+//  der Eröffner zusätzlich Stufe und Saat). Sobald BEIDE Aufbauten
+//  da sind, baut jedes Gerät daraus dasselbe Duell — ohne dass ein
+//  Spielstand übertragen wird.
+// ============================================================
+var SPEICHER_NETZ = "elementia.netz.adresse";
+var netzkanal = null, meinAufbau = null, fremdAufbau = null, netzGestartet = false;
+
+var netzblock = document.getElementById("netzblock");
+var netzadresse = document.getElementById("netzadresse");
+var raumzeile = document.getElementById("raumzeile");
+var raumfeld = document.getElementById("raumcode");
+var netzlage = document.getElementById("netzlage");
+
+try { netzadresse.value = localStorage.getItem(SPEICHER_NETZ) || ""; } catch (e) { }
+netzadresse.addEventListener("change", function () {
+  try { localStorage.setItem(SPEICHER_NETZ, netzadresse.value.trim()); } catch (e) { }
+});
+
+function netzMelden(text, art) {
+  netzlage.textContent = text;
+  netzlage.className = art || "";
+}
+
+function netzVerbinden(eroeffner) {
+  var adresse = netzadresse.value.trim();
+  if (!adresse) { netzMelden("Erst die Adresse des Vermittlers eintragen.", "warte"); return; }
+  try { localStorage.setItem(SPEICHER_NETZ, adresse); } catch (e) { }
+
+  if (eroeffner) raumfeld.value = KANAL.raumcode();
+  var code = raumfeld.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (code.length < 3) { netzMelden("Der Raumcode ist zu kurz.", "warte"); return; }
+  raumfeld.value = code;
+  raumzeile.hidden = false;
+
+  if (netzkanal) netzkanal.schliessen();
+  meinAufbau = null; fremdAufbau = null; netzGestartet = false;
+
+  netzkanal = KANAL.netz({
+    adresse: adresse,
+    code: code,
+    eroeffner: eroeffner,
+    beiLage: function (text, verbunden) { netzMelden(text, verbunden ? "gut" : "warte"); },
+    beiPartner: function (anzahl) {
+      if (anzahl >= 2) {
+        netzMelden(eroeffner
+          ? "Beide da. Raumcode " + code + " — jetzt „Duell beginnen“."
+          : "Beide da. Warte auf den Eröffner …", "gut");
+        if (eroeffner === false) netzAufbauSchicken();
+      } else {
+        netzMelden(eroeffner
+          ? "Raumcode " + code + " — dem anderen durchsagen und warten."
+          : "Warte auf den anderen …", "warte");
+      }
+    },
+    beiAufbau: function (aufbau) {
+      fremdAufbau = aufbau;
+      netzVersuchenZuStarten();
+    },
+    beiZug: null
+  });
+  gegnerSetzen("netz");
+  vorschau();
+}
+
+// Der eigene Aufbau: mein Deck als Kartennamen. Der Eröffner legt
+// zusätzlich Stufe und Saat fest — irgendwer muss es tun, und zwei
+// Zufallszahlen wären zwei verschiedene Duelle.
+function netzAufbauSchicken() {
+  if (!netzkanal || meinAufbau) return;
+  var region = regionwahl.value;
+  var stufe = KI.stufeZu(region);
+  var satz = R.meisterstufen[stufe];
+  var vorrat = KI.vorratAufteilen(poolFuerSpiel());
+  if (vorrat.elementals.length < satz.team) {
+    netzMelden("Für diese Region reichen die Karten nicht.", "warte");
+    return;
+  }
+  deckLaden(region);
+  var meines;
+  if (deck.elementals.length === satz.team) {
+    meines = { elementals: deck.elementals.slice(),
+               verbindungen: deck.verbindungen.slice(),
+               ausruestung: deck.ausruestung.slice() };
+  } else {
+    var gebaut = KI.deckBauen(vorrat, satz, E.zufallsQuelle(Date.now() & 0x7fffffff), null);
+    meines = {
+      elementals: gebaut.elementals.map(function (k) { return k.name; }),
+      verbindungen: gebaut.verbindungen.map(function (k) { return k.name; }),
+      ausruestung: gebaut.ausruestung.map(function (k) { return k.name; })
+    };
+  }
+
+  meinAufbau = {
+    rolle: netzkanal.meineSeite === 0 ? "a" : "b",
+    region: region,
+    stufe: stufe,
+    deck: meines
+  };
+  if (netzkanal.meineSeite === 0) {
+    meinAufbau.saat = Math.floor(Math.random() * 1e9);
+  }
+  netzkanal.sendeAufbau(meinAufbau);
+  netzVersuchenZuStarten();
+}
+
+function netzVersuchenZuStarten() {
+  if (netzGestartet || !meinAufbau || !fremdAufbau) return;
+  // Region und Stufe kommen vom Eröffner – sonst spielten beide
+  // mit verschiedenen Kartenpools und das Duell liefe auseinander.
+  var eroeffner = meinAufbau.rolle === "a" ? meinAufbau : fremdAufbau;
+  var aufbauA = meinAufbau.rolle === "a" ? meinAufbau : fremdAufbau;
+  var aufbauB = meinAufbau.rolle === "a" ? fremdAufbau : meinAufbau;
+  if (eroeffner.saat === undefined || eroeffner.saat === null) return;
+
+  netzGestartet = true;
+  netzMelden("Duell läuft.", "gut");
+  starten({
+    region: eroeffner.region,
+    stufe: eroeffner.stufe,
+    saat: eroeffner.saat,
+    gegner: "netz",
+    deckA: aufbauA.deck,
+    deckB: aufbauB.deck
+  });
+}
+
+document.getElementById("raum-neu").addEventListener("click", function () { netzVerbinden(true); });
+document.getElementById("raum-dazu").addEventListener("click", function () {
+  raumzeile.hidden = false;
+  if (raumfeld.value.trim().length >= 3) netzVerbinden(false);
+  else { raumfeld.focus(); netzMelden("Den Code des anderen eintippen und noch einmal drücken.", "warte"); }
+});
+
+// --- Welche Karten stehen zur Verfügung? ---------------------
+// Der Sinn der 94 gedruckten Stationscodes ist, dass eine Karte
+// erst nach dem Fund spielbar ist. Gegen den Computer bleibt der
+// volle Pool offen: Üben soll niemand verwehrt sein, und der
+// Computer belohnt niemanden.
+function poolFuerSpiel() {
+  var pool = KI.poolBis(KARTEN, regionwahl.value);
+  if (document.getElementById("nurgefunden").checked) {
+    pool = pool.filter(istGefunden);
+  }
+  return pool;
+}
+
+function vorschau() {
+  var region = regionwahl.value;
+  var stufe = KI.stufeZu(region);
+  var satz = R.meisterstufen[stufe];
+  var vorrat = KI.vorratAufteilen(poolFuerSpiel());
+  var v = document.getElementById("deckvorschau");
+  v.innerHTML = "";
+  v.appendChild(el("div", null,
+    "Team " + satz.team + " Elementals · Hand " + satz.handVerbindungen +
+    " Verbindungen + " + satz.handAusruestung + " Ausrüstung"));
+
+  deckLaden(region);
+  if (deck.elementals.length === satz.team) {
+    var mein = el("div");
+    mein.innerHTML = "Dein Deck: <b>" + deck.elementals.join(", ") + "</b>" +
+      (deck.verbindungen.length ? " → <b>" + deck.verbindungen.join(", ") + "</b>" : "");
+    v.appendChild(mein);
+    var urteil = eduktZuordnung(deck.elementals, deck.verbindungen);
+    var offen = deck.verbindungen.filter(function (n, i) { return !urteil[i].baubar; });
+    if (offen.length) {
+      v.appendChild(el("div", null, "⚠ Nicht baubar: " + offen.join(", ") +
+        " — im Deckbildschirm steht, woran es liegt."));
+    }
+  } else {
+    var zeile = el("div");
+    zeile.innerHTML = "Kein eigenes Deck — es wird eines vorgeschlagen. Im Vorrat: <b>" +
+      vorrat.elementals.length + "</b> Elementals, <b>" + vorrat.verbindungen.length +
+      "</b> Verbindungen, <b>" + vorrat.ausruestung.length + "</b> Ausrüstung";
+    v.appendChild(zeile);
+  }
+
+  meldung.textContent = "";
+  var knopf = document.getElementById("losgehts");
+  if (vorrat.elementals.length < satz.team) {
+    meldung.textContent = "Für ein Team von " + satz.team + " reichen " +
+      vorrat.elementals.length + " Elementals nicht. " +
+      (document.getElementById("nurgefunden").checked
+        ? "Entweder den Haken bei „nur aus meiner Sammlung“ wegnehmen oder erst mehr Karten finden."
+        : "Eine spätere Region wählen.");
+    knopf.disabled = true;
+  } else {
+    knopf.disabled = false;
+  }
+}
+
+(function sammlungAnzeigen() {
+  standLaden();
+  var n = Object.keys(gefundene).length;
+  document.getElementById("sammlungszahl").textContent = "(" + n + " von " + KARTEN.length + " gefunden)";
+  if (n === 0) document.getElementById("nurgefunden").disabled = true;
+})();
+
+regionwahl.addEventListener("change", vorschau);
+document.getElementById("nurgefunden").addEventListener("change", vorschau);
+document.getElementById("losgehts").addEventListener("click", function () {
+  // Beim Netzduell startet nicht dieses Gerät das Duell, sondern
+  // beide gemeinsam – sobald jeder seinen Aufbau geschickt hat.
+  if (gegnerArt === "netz") {
+    if (!netzkanal) { netzMelden("Erst einen Raum eröffnen oder beitreten.", "warte"); return; }
+    netzAufbauSchicken();
+    return;
+  }
+  starten();
+});
+document.getElementById("nochmal").addEventListener("click", function () {
+  document.getElementById("ende").classList.remove("an");
+  starten();
+});
+document.getElementById("zurueck").addEventListener("click", function () {
+  location.href = "sammlung.html";
+});
+
+// ============================================================
+//  DAS DECK
+//
+//  Regelwerk, Abschnitt 1: „Weil nicht gezogen wird, entscheidest
+//  du das Duell schon beim Zusammenstellen." Also braucht das
+//  Zusammenstellen einen eigenen Bildschirm – und der muss die
+//  eine Frage beantworten, um die es dabei geht:
+//  Gehen meine Reaktionen auf?
+// ============================================================
+var SPEICHER_DECK = "elementia.deck.";
+var deck = { elementals: [], verbindungen: [], ausruestung: [] };
+
+function deckLaden(region) {
+  deck = { elementals: [], verbindungen: [], ausruestung: [] };
+  try {
+    var roh = localStorage.getItem(SPEICHER_DECK + region);
+    if (!roh) return;
+    var d = JSON.parse(roh);
+    if (!d) return;
+    ["elementals", "verbindungen", "ausruestung"].forEach(function (feld) {
+      deck[feld] = (d[feld] || []).filter(function (n) { return !!NACH_NAMEN[n]; });
+    });
+  } catch (e) { /* unlesbar oder gesperrt: leeres Deck */ }
+}
+
+function deckSichern(region) {
+  try { localStorage.setItem(SPEICHER_DECK + region, JSON.stringify(deck)); } catch (e) { }
+}
+
+function deckIstLeer() {
+  return !deck.elementals.length && !deck.verbindungen.length && !deck.ausruestung.length;
+}
+
+// Ein über das Netz gekommenes Deck (nur Namen) in die Form
+// bringen, die die Engine erwartet. Unbekannte Namen fliegen
+// heraus – lieber ein kleineres Team als ein Absturz.
+function namenZuDeck(d) {
+  function karten(liste) {
+    return (liste || []).map(kartenNachNamen).filter(Boolean);
+  }
+  return {
+    name: "",
+    elementals: karten(d && d.elementals),
+    verbindungen: karten(d && d.verbindungen),
+    ausruestung: karten(d && d.ausruestung)
+  };
+}
+
+// Karten des Decks als Objekte, in der Form, die die Engine erwartet.
+function deckObjekt(name) {
+  return {
+    name: name,
+    elementals: deck.elementals.map(kartenNachNamen),
+    verbindungen: deck.verbindungen.map(kartenNachNamen),
+    ausruestung: deck.ausruestung.map(kartenNachNamen)
+  };
+}
+
+// ------------------------------------------------------------
+//  Gehen die gewählten Reaktionen auf?
+//
+//  Das ist eine ZUORDNUNG, keine Zählung. Zwei Verbindungen, die
+//  beide Sauerstoff brauchen, sind mit einem Sauerstoff im Team
+//  nicht beide baubar – obwohl jede für sich es wäre. Dieselbe
+//  Prüfung macht moeglicheSynthesen() in engine.js zur Spielzeit;
+//  hier wird sie vorgezogen, damit man es VOR dem Duell sieht.
+//
+//  Erst wird versucht, ALLE unterzubringen (mit Zurücksetzen).
+//  Klappt das nicht, wird jede einzeln geprüft: Wer allein ginge,
+//  scheitert an einer anderen Verbindung – wer auch allein nicht
+//  geht, dem fehlt ein Edukt. Zwei verschiedene Sätze, zwei
+//  verschiedene Ursachen.
+// ------------------------------------------------------------
+function eduktZuordnung(teamNamen, verbindungsNamen) {
+  var vorrat = teamNamen.slice();
+  var reihen = verbindungsNamen.map(function (n) {
+    var k = kartenNachNamen(n);
+    return (k && k.synthese && k.synthese.edukte) ? k.synthese.edukte.slice() : [];
+  });
+
+  var belegt = new Array(vorrat.length);
+  var geloest = null;
+
+  function versuche(i) {
+    if (i >= reihen.length) { geloest = belegt.slice(); return true; }
+    return setze(i, 0);
+  }
+  function setze(i, e) {
+    if (e >= reihen[i].length) return versuche(i + 1);
+    for (var t = 0; t < vorrat.length; t++) {
+      if (belegt[t] === undefined && vorrat[t] === reihen[i][e]) {
+        belegt[t] = i;
+        if (setze(i, e + 1)) return true;
+        belegt[t] = undefined;          // zurücksetzen und weitersuchen
+      }
+    }
+    return false;
+  }
+
+  if (versuche(0)) {
+    return verbindungsNamen.map(function () { return { baubar: true }; });
+  }
+
+  // Nicht alle gehen. Jetzt jede einzeln, um die Ursache zu benennen.
+  return verbindungsNamen.map(function (n, i) {
+    var edukte = reihen[i], rest = teamNamen.slice(), fehlend = [];
+    edukte.forEach(function (name) {
+      var pos = rest.indexOf(name);
+      if (pos === -1) fehlend.push(name); else rest.splice(pos, 1);
+    });
+    if (fehlend.length) return { baubar: false, fehlend: fehlend };
+    // Allein ginge es – also nimmt eine andere Verbindung ein Edukt weg.
+    var andere = verbindungsNamen.filter(function (m, j) {
+      if (j === i) return false;
+      return reihen[j].some(function (e) { return edukte.indexOf(e) !== -1; });
+    });
+    return { baubar: false, streit: andere };
+  });
+}
+
+// Braucht diese Verbindung Aktivierungsenergie?
+function brauchtZuendung(name) {
+  var k = kartenNachNamen(name);
+  return !!(k && k.synthese && k.synthese.aktivierung);
+}
+
+// ============================================================
+//  Partie aufbauen
+// ============================================================
+function starten(einstellung) {
+  einstellung = einstellung || letzteEinstellung || {
+    region: regionwahl.value,
+    nurGefunden: document.getElementById("nurgefunden").checked,
+    gegner: gegnerArt
+  };
+  einstellung.region = einstellung.region || regionwahl.value;
+  letzteEinstellung = einstellung;
+
+  // Beim Netzduell gibt der Eröffner die Stufe vor. Sonst spielten
+  // zwei Geräte mit verschiedenen Meisterstufen – und dieselbe
+  // Zugfolge ergäbe zwei verschiedene Spiele.
+  var stufe = einstellung.stufe || KI.stufeZu(einstellung.region);
+  var satz = R.meisterstufen[stufe];
+  var pool = KI.poolBis(KARTEN, einstellung.region);
+  if (einstellung.nurGefunden) pool = pool.filter(istGefunden);
+  var vorrat = KI.vorratAufteilen(pool);
+
+  if (einstellung.gegner !== "netz" && vorrat.elementals.length < satz.team) {
+    vorschau();
+    return;
+  }
+
+  // Die Saat macht die Partie wiederholbar. Über das Netz wird
+  // genau diese Zahl mitgeschickt – dann bauen beide Geräte
+  // dasselbe Duell, ohne dass ein Spielstand übertragen wird.
+  var saat = einstellung.saat || (PARAM.get("saat")
+    ? parseInt(PARAM.get("saat"), 10)
+    : Math.floor(Math.random() * 1e9));
+  einstellung.saat = saat;
+  var zufall = E.zufallsQuelle(saat);
+
+  // Mein Deck, wenn eines zusammengestellt wurde und es vollständig
+  // ist – sonst der Vorschlag. Der Gegner bekommt immer ein gebautes;
+  // sein eigenes Deck bringt er erst mit, wenn er über das Netz kommt.
+  deckLaden(einstellung.region);
+  var deckA, deckB;
+  if (einstellung.gegner === "netz") {
+    // Beide Decks kommen aus dem Aufbau, den die zwei Geräte
+    // ausgetauscht haben – als Kartennamen. Beide bauen daraus
+    // dieselben Objekte, also dasselbe Duell.
+    deckA = namenZuDeck(einstellung.deckA);
+    deckB = namenZuDeck(einstellung.deckB);
+    kanal = netzkanal;
+  } else {
+    if (!PARAM.get("probe") && deck.elementals.length === satz.team) {
+      deckA = deckObjekt("Du");
+    } else {
+      deckA = KI.deckBauen(vorrat, satz, zufall, null);
+    }
+    deckB = KI.deckBauen(vorrat, satz, zufall, null);
+    kanal = einstellung.gegner === "hotseat"
+      ? KANAL.hotseat(["Spieler 1", "Spieler 2"])
+      : KANAL.computer(PARAM.get("strategie") || "vorsichtig",
+                       PARAM.get("probe") ? 0 : 750);
+  }
+  deckA.name = kanal.namen[0];
+  deckB.name = kanal.namen[1];
+
+  duell = new E.Duell(deckA, deckB, { stufe: stufe, saat: saat });
+  lauschen(duell);
+
+  ansichtSeite = (kanal.meineSeite === null) ? duell.amZug : kanal.meineSeite;
+  auswahl = null;
+  spielLaeuft = true;
+  ruheSetzen();
+  document.body.classList.add("spielt");
+  document.getElementById("vorspiel").style.display = "none";
+  document.getElementById("ende").classList.remove("an");
+
+  zeichne();
+  amZugPruefen(true);
+}
+
+// Alles, was die Engine meldet, wird hier eingesammelt – mit
+// SCHNAPPSCHUSS, nicht als Verweis: Die Objekte der Engine ändern
+// sich noch im selben Zug weiter, und abgespielt wird erst danach.
+function lauschen(d) {
+  d.bei("angriff", function (x) {
+    ereignisse.push({ was: "angriff", seite: x.spieler.index, ziel: x.ziel.index,
+      attacke: x.attacke, faktor: x.berechnung.faktor, gruende: x.berechnung.gruende.slice(),
+      angreifer: x.spieler.arena ? x.spieler.arena.karte.name : "" });
+  });
+  d.bei("nach-schaden", function (x) {
+    ereignisse.push({ was: "schaden", seite: x.ziel.index, schaden: x.schaden,
+      restLp: Math.max(0, x.restLp), maxLp: x.instanz.maxLp, name: x.instanz.karte.name });
+  });
+  d.bei("wirkung", function (x) {
+    ereignisse.push({ was: "wirkung", seite: x.spieler.index, wirkung: x.wirkung,
+      dauerhaft: !!x.dauerhaft,
+      karte: x.spieler.arena ? x.spieler.arena.karte.name : "" });
+  });
+  d.bei("wechsel", function (x) {
+    ereignisse.push({ was: "wechsel", seite: x.spieler.index,
+      name: x.instanz.karte.name, erzwungen: x.erzwungen });
+  });
+  d.bei("ausruestung-gespielt", function (x) {
+    ereignisse.push({ was: "ausruestung", seite: x.spieler.index,
+      karte: x.karte, wirkung: x.wirkung,
+      zielName: x.instanz ? x.instanz.karte.name : null,
+      zielSeite: x.ziel ? x.ziel.seite : null });
+  });
+  d.bei("geheilt", function (x) {
+    ereignisse.push({ was: "geheilt", seite: x.spieler.index, wert: x.wert,
+      restLp: x.restLp, maxLp: x.instanz.maxLp, name: x.instanz.karte.name,
+      inArena: x.spieler.arena === x.instanz });
+  });
+  d.bei("schutz-gewirkt", function (x) {
+    ereignisse.push({ was: "schutz", seite: x.ziel.index, quelle: x.quelle,
+      vorher: x.vorher, nachher: x.nachher, name: x.instanz.karte.name });
+  });
+  d.bei("blick", function (x) {
+    ereignisse.push({ was: "blick", seite: x.spieler.index, umfang: x.umfang,
+      hand: x.gegner.hand.verbindungen.map(function (k) { return k.name; })
+        .concat(x.umfang === "hand"
+          ? x.gegner.hand.ausruestung.map(function (k) { return k.name; }) : []) });
+  });
+  d.bei("elemental-erschöpft", function (x) {
+    ereignisse.push({ was: "erschoepft", seite: x.spieler.index, name: x.instanz.karte.name });
+  });
+  d.bei("synthese-gelungen", function (x) {
+    ereignisse.push({ was: "synthese", seite: x.spieler.index, verbindung: x.verbindung,
+      edukte: (x.verbindung.synthese.edukte || []).slice(), inArena: x.inArena });
+  });
+  d.bei("synthese-misslungen", function (x) {
+    ereignisse.push({ was: "synthese-weg", seite: x.spieler.index, grund: x.grund });
+  });
+  d.bei("duell-ende", function (x) {
+    ereignisse.push({ was: "ende", sieger: x.sieger ? x.sieger.index : null,
+      grund: x.grund, zuege: x.zuege });
+  });
+}
+
+// ============================================================
+//  Zeichnen
+// ============================================================
+function ichSpieler()   { return duell.spieler[ansichtSeite]; }
+function gegenSpieler() { return duell.spieler[1 - ansichtSeite]; }
+function darfBedienen() {
+  return spielLaeuft && !duell.vorbei &&
+         duell.amZug === ansichtSeite && kanal.steuert(ansichtSeite);
+}
+
+function zeichne() {
+  if (!duell) return;
+  zeichneLeiste(document.getElementById("leiste-gegen"), gegenSpieler(), true);
+  zeichneLeiste(document.getElementById("leiste-ich"), ichSpieler(), false);
+  zeichneBank(document.getElementById("bank-gegen"), gegenSpieler(), true);
+  zeichneBank(document.getElementById("bank-ich"), ichSpieler(), false);
+  zeichneArena(document.getElementById("arena-gegen"), gegenSpieler(), true);
+  zeichneArena(document.getElementById("arena-ich"), ichSpieler(), false);
+  zeichneHand();
+  sagen(null);
+}
+
+function zeichneLeiste(ziel, spieler, istGegner) {
+  ziel.innerHTML = "";
+  ziel.appendChild(el("span", "wer", spieler.name));
+  if (duell.amZug === spieler.index && !duell.vorbei) {
+    ziel.appendChild(el("span", "marke amzug", "am Zug"));
+  }
+  var hand = spieler.hand.ausruestung.length + spieler.hand.verbindungen.length;
+  if (istGegner) {
+    ziel.appendChild(el("span", "marke", "🂠 " + hand + " auf der Hand"));
+  }
+  var imTeam = (spieler.arena ? 1 : 0) + spieler.bank.length;
+  ziel.appendChild(el("span", "marke",
+    "▣ " + imTeam + (imTeam === 1 ? " Elemental" : " Elementals")));
+
+  var schub = el("span", "schub");
+  ziel.appendChild(schub);
+  var ablage = el("button", "ablage");
+  ablage.innerHTML = "<span><b>" + spieler.ablage.length + "</b></span>";
+  ablage.title = "Ablagestapel: " + spieler.ablage.length + " Karten";
+  ablage.setAttribute("aria-label", "Ablagestapel ansehen, " + spieler.ablage.length + " Karten");
+  ablage.disabled = spieler.ablage.length === 0;
+  ablage.addEventListener("click", function () { zeigeAblage(spieler); });
+  ziel.appendChild(ablage);
+}
+
+function zeichneBank(ziel, spieler, istGegner) {
+  ziel.innerHTML = "";
+  var satz = duell.regelsatz;
+  for (var i = 0; i < satz.team - 1; i++) {
+    var instanz = spieler.bank[i];
+    if (!instanz) { ziel.appendChild(el("div", "bankplatz")); continue; }
+    ziel.appendChild(baueBankkarte(instanz, i, istGegner));
+  }
+}
+
+function baueBankkarte(instanz, index, istGegner) {
+  var b = baueSpielkarte(instanz, "bank", {
+    beschreibung: istGegner ? "auf der Bank des Gegners" : "auf meiner Bank"
+  });
+
+  // Edukt der gerade gewählten Reaktion – sichtbar, bevor bestätigt wird.
+  if (!istGegner && auswahl && auswahl.art === "synthese" && auswahl.edukteImTeam &&
+      auswahl.edukteImTeam.indexOf(instanz) !== -1) {
+    b.classList.add("edukt");
+  }
+
+  // Ziel einer gewählten Ausrüstung – auch auf der Bank. Der
+  // Erlenmeyerkolben schützt genau das Elemental, auf das er
+  // gespielt wird, und das kann eines von der Bank sein.
+  if (istZielVonAuswahl(instanz)) {
+    b.classList.add("ziel");
+    b.addEventListener("click", function () { zielWaehlen(instanz); });
+    return b;
+  }
+
+  if (istGegner) {
+    b.addEventListener("click", function () { kartenschauZeigen(instanz.karte, instanz); });
+    return b;
+  }
+
+  if (darfBedienen() && ichSpieler().bank[index] === instanz) {
+    b.classList.add("waehlbar");
+    if (auswahl && auswahl.art === "wechsel" && auswahl.index === index) b.classList.add("gewaehlt");
+    b.addEventListener("click", function () { antippen({ art: "wechsel", index: index }); });
+  } else {
+    b.addEventListener("click", function () { kartenschauZeigen(instanz.karte, instanz); });
+  }
+  return b;
+}
+
+// ------------------------------------------------------------
+//  Die eine Kartenbauform
+//
+//  groesse: "arena" | "bank" | "hand"
+//  Auf der Karte stehen Bild, Name, Formel und Lebenspunkte –
+//  mehr passt im Hochformat nicht, und mehr braucht man auf einen
+//  Blick auch nicht. Alles Übrige zeigt die Kartenschau.
+//
+//  Die LP stehen als Zahl UND als Balken darunter. Der Balken
+//  allein wäre Farbe als einzige Information (rot-grün-blind),
+//  die Zahl allein wäre aus zwei Metern nicht ablesbar.
+// ------------------------------------------------------------
+function baueSpielkarte(instanz, groesse, zusatz) {
+  zusatz = zusatz || {};
+  var k = instanz.karte ? instanz.karte : instanz;      // Instanz oder nackte Karte
+  var lp = instanz.karte ? instanz.lp : k.lp;
+  var maxLp = instanz.karte ? instanz.maxLp : k.lp;
+
+  var b = el("button", "spielkarte k-" + groesse);
+  b.style.setProperty("--kf", STIL.farbe(k.klasse));
+
+  var bild = bildIn(el("div", "kbild"), k, groesse === "arena");
+  bild.appendChild(el("div", "kkante"));
+
+  if (lp !== null && lp !== undefined) {
+    var lpz = el("div", "klp");
+    lpz.innerHTML = lp + "<small>/" + maxLp + "</small>";
+    bild.appendChild(lpz);
+  }
+
+  var band = el("div", "knamensband");
+  // Lange Stoffnamen (Erlenmeyerkolben, Kohlenstoffdioxid) bekommen
+  // eine Stufe kleinere Schrift, statt mitten im Wort umzubrechen.
+  var laenge = k.name.length > 14 ? " lang" : k.name.length > 10 ? " mittel" : "";
+  band.appendChild(el("span", "kname" + laenge, k.name));
+  if (k.formel) band.appendChild(el("span", "kformel", k.formel));
+  bild.appendChild(band);
+
+  if (zusatz.art) bild.appendChild(el("div", "kart", zusatz.art));
+  b.appendChild(bild);
+
+  if (lp !== null && lp !== undefined) {
+    var anteil = maxLp ? lp / maxLp : 0;
+    var balken = el("div", "klpbalken" + (anteil <= .25 ? " wenig" : anteil <= .55 ? " mittel" : ""));
+    var fuellung = el("i");
+    fuellung.style.width = Math.max(0, Math.min(100, anteil * 100)) + "%";
+    balken.appendChild(fuellung);
+    b.appendChild(balken);
+  }
+
+  b.setAttribute("aria-label", k.name + ", " + k.klasse +
+    (lp !== null && lp !== undefined ? ", " + lp + " von " + maxLp + " Lebenspunkten" : "") +
+    (zusatz.beschreibung ? ", " + zusatz.beschreibung : ""));
+  return b;
+}
+
+// Der Kampfplatz: die Karte hochkant, daneben was sie kann.
+// Die Breite neben einer 164-px-Karte ist der Platz, den die
+// Attacken im Hochformat auf der Karte selbst nicht hätten.
+function zeichneArena(ziel, spieler, istGegner) {
+  ziel.innerHTML = "";
+  var platz = el("div", "kampfplatz");
+
+  if (!spieler.arena) {
+    platz.appendChild(el("div", "leerplatz", "Kein Elemental in der Arena"));
+    ziel.appendChild(platz);
+    return;
+  }
+
+  var instanz = spieler.arena, k = instanz.karte;
+  var karte = baueSpielkarte(instanz, "arena");
+  karte.id = istGegner ? "arena-karte-gegen" : "arena-karte-ich";
+
+  // Ist dieses Elemental Edukt der gerade gewählten Reaktion, wird es
+  // grün umrandet. Es verschwindet gleich vom Feld – das muss man
+  // VOR dem Bestätigen sehen, nicht danach.
+  if (!istGegner && auswahl && auswahl.art === "synthese" && auswahl.edukteImTeam &&
+      auswahl.edukteImTeam.indexOf(instanz) !== -1) {
+    karte.classList.add("edukt");
+  }
+
+  // Die zweite Hälfte der Kampfgeste: Ist eine Attacke gewählt,
+  // trägt die gegnerische Karte den Zielring und führt beim
+  // Antippen aus. Wie bei Gwent – erst der Angreifer, dann das Ziel.
+  // Genauso wählt eine Ausrüstung ihr Ziel.
+  if (istGegner && auswahl && auswahl.art === "angriff") {
+    karte.classList.add("ziel");
+    karte.addEventListener("click", function () { antippen(auswahl); });
+  } else if (istZielVonAuswahl(instanz)) {
+    karte.classList.add("ziel");
+    karte.addEventListener("click", function () { zielWaehlen(instanz); });
+  } else {
+    karte.addEventListener("click", function () { kartenschauZeigen(k, instanz); });
+  }
+  platz.appendChild(karte);
+
+  var info = el("div", "kampfinfo" + (istGegner ? " gegen" : ""));
+
+  // Eigenschaften: die, auf die eine Regel greift, farbig markiert.
+  // Genau daran hängt der halbe Unterricht – „brennbar“ ist keine
+  // Verzierung, sondern der Grund für doppelten Schaden.
+  var eigen = el("div", "eigen");
+  if (k.masse) eigen.appendChild(el("span", null, k.masse + " u"));
+  (k.eigenschaften || []).forEach(function (name) {
+    var s = el("span", null, name);
+    if (regelBetrifft(name)) s.className = "gefahr";
+    eigen.appendChild(s);
+  });
+  info.appendChild(eigen);
+
+  var att = el("div", "attacken");
+  (k.attacken || []).forEach(function (a, i) {
+    att.appendChild(baueAttacke(a, i, istGegner));
+  });
+  info.appendChild(att);
+
+  var schau = el("button", "schau", "ganze Karte ansehen");
+  schau.addEventListener("click", function () { kartenschauZeigen(k, instanz); });
+  info.appendChild(schau);
+
+  platz.appendChild(info);
+  ziel.appendChild(platz);
+}
+
+// Steht diese Eigenschaft in der Typen-Matrix, kann sie also
+// Schaden verdoppeln oder halbieren?
+function regelBetrifft(eigenschaft) {
+  return R.typenMatrix.some(function (r) { return r.zielEigenschaft === eigenschaft; });
+}
+
+function baueAttacke(a, index, istGegner) {
+  var b = el("button", "attacke");
+  b.style.setProperty("--tf", STIL.typfarbe(a.typ));
+  b.appendChild(el("span", "typ", a.typ));
+  b.appendChild(el("span", "an", a.name));
+
+  // Was diese Attacke gegen das aktuelle Ziel WIRKLICH macht.
+  // Der Rechenweg der Engine, sichtbar gemacht: Grundschaden,
+  // Faktor, Ergebnis. Das ist die Regel, die verstanden werden soll.
+  var gegenueber = istGegner ? ichSpieler() : gegenSpieler();
+  var sch = el("span", "sch");
+  var marke = null;
+  if (gegenueber.arena) {
+    var rechnung = E.schadenBerechnen(a, gegenueber.arena.karte);
+    sch.innerHTML = rechnung.schaden + (rechnung.faktor !== 1
+      ? " <small>(" + a.schaden + "×" + (rechnung.faktor === 0.5 ? "½" : rechnung.faktor) + ")</small>"
+      : "");
+    if (rechnung.faktor > 1) marke = el("span", "wirkt hoch", "▲");
+    else if (rechnung.faktor < 1) marke = el("span", "wirkt tief", "▼");
+    if (rechnung.gruende.length) {
+      b.title = rechnung.gruende.map(function (g) { return g.begruendung; }).join(" ");
+      b.setAttribute("aria-label", a.name + ", " + a.typ + ", " + rechnung.schaden +
+        " Schaden. " + b.title);
+    }
+  } else {
+    sch.textContent = a.schaden;
+  }
+  b.appendChild(sch);
+  if (marke) b.appendChild(marke);
+
+  if (istGegner || !darfBedienen()) { b.disabled = true; return b; }
+  b.classList.add("waehlbar");
+  if (auswahl && auswahl.art === "angriff" && auswahl.index === index) b.classList.add("gewaehlt");
+  b.addEventListener("click", function () { antippen({ art: "angriff", index: index }); });
+  return b;
+}
+
+function zeichneHand() {
+  var ziel = document.getElementById("hand-ich");
+  ziel.innerHTML = "";
+  var spieler = ichSpieler();
+  var moegliche = darfBedienen() ? duell.moeglicheSynthesen(spieler) : [];
+  var items = darfBedienen() ? duell.moeglicheAusruestung(spieler) : [];
+
+  spieler.hand.verbindungen.forEach(function (k, i) {
+    var eintrag = null;
+    for (var m = 0; m < moegliche.length; m++) if (moegliche[m].index === i) eintrag = moegliche[m];
+    ziel.appendChild(baueHandkarte(k, "Verbindung", eintrag, i));
+  });
+  spieler.hand.ausruestung.forEach(function (k, i) {
+    var eintrag = null;
+    for (var m = 0; m < items.length; m++) if (items[m].index === i) eintrag = items[m];
+    ziel.appendChild(baueHandkarte(k, E.istEnergie(k) ? "Energie" : "Ausrüstung", eintrag, i, true));
+  });
+
+  if (!spieler.hand.verbindungen.length && !spieler.hand.ausruestung.length) {
+    ziel.appendChild(el("div", null, ""));
+  }
+}
+
+// Ist diese Instanz ein Ziel des gerade gewählten Ausrüstungszuges?
+function istZielVonAuswahl(instanz) {
+  if (!auswahl || auswahl.art !== "ausruestung" || !auswahl.ziele) return false;
+  for (var i = 0; i < auswahl.ziele.length; i++) {
+    if (duell.instanzAn(auswahl.ziele[i]) === instanz) return true;
+  }
+  return false;
+}
+
+// Warum lässt sich diese Ausrüstung nicht spielen? Auch hier gilt:
+// ein Knopf, der nichts tut und nichts sagt, ist der schlechteste.
+function ausruestungHindernis(spieler, karte) {
+  var w = karte.wirkung;
+  if (!w) {
+    return karte.name + " wirkt noch nicht im Programm — ihr Text auf der Karte gilt am Tisch. " +
+           "Antippen zeigt ihn.";
+  }
+  if (w.kostetEnergie) {
+    var energie = spieler.hand.ausruestung.filter(function (a) {
+      return a !== karte && E.istEnergie(a);
+    }).length;
+    if (!energie) {
+      return karte.name + " muss zusammen mit einer ⚡-Energiekarte abgelegt werden — " +
+             "auf der Hand ist keine.";
+    }
+  }
+  if (w.bedingung) {
+    var b = w.bedingung;
+    var was = b.name ? b.name : (b.klasse ? "eine Karte der Klasse „" + b.klasse + "“"
+                                          : "ein Elemental mit „" + b.eigenschaft + "“");
+    return karte.name + " wirkt nur auf " + was + " — dafür steht gerade kein Ziel bereit.";
+  }
+  return karte.name + " lässt sich gerade nicht spielen.";
+}
+
+function baueHandkarte(k, art, eintrag, index, istItem) {
+  var b = baueSpielkarte(k, "hand", {
+    art: art,
+    beschreibung: art + (eintrag ? (istItem ? ", spielbar" : ", Reaktion ist möglich") : "")
+  });
+  var zugArt = istItem ? "ausruestung" : "synthese";
+
+  if (eintrag) {
+    b.classList.add("bereit");
+    if (auswahl && auswahl.art === zugArt && auswahl.index === index) b.classList.add("gewaehlt");
+    b.addEventListener("click", function () { antippen(eintrag); });
+    return b;
+  }
+
+  // Nicht möglich – aber SAGEN, warum. Das ist der Unterschied
+  // zwischen einem stummen grauen Knopf und einer Erklärung.
+  b.classList.add("stumpf");
+  if (darfBedienen()) {
+    b.addEventListener("click", function () {
+      auswahl = null;
+      sagen(istItem ? ausruestungHindernis(ichSpieler(), k)
+                    : syntheseHindernis(ichSpieler(), k), 5000);
+      zeichne();
+    });
+  } else {
+    b.addEventListener("click", function () { kartenschauZeigen(k, null); });
+  }
+  return b;
+}
+
+// ============================================================
+//  Der Deckbildschirm
+// ============================================================
+function deckSchirmOeffnen() {
+  var region = regionwahl.value;
+  deckLaden(region);
+  if (deckIstLeer()) deckVorschlagen();
+  document.getElementById("deckregion").textContent =
+    region + " · Meisterstufe " + KI.stufeZu(region) +
+    (document.getElementById("nurgefunden").checked ? " · nur gefundene Karten" : "");
+  document.getElementById("deckschirm").classList.add("an");
+  deckZeichnen();
+}
+
+function deckSchirmSchliessen(uebernehmen) {
+  if (uebernehmen) deckSichern(regionwahl.value);
+  document.getElementById("deckschirm").classList.remove("an");
+  vorschau();
+}
+
+function deckVorschlagen() {
+  var region = regionwahl.value;
+  var satz = R.meisterstufen[KI.stufeZu(region)];
+  var vorrat = KI.vorratAufteilen(poolFuerSpiel());
+  if (vorrat.elementals.length < satz.team) return;
+  var vorschlag = KI.deckBauen(vorrat, satz, E.zufallsQuelle(Date.now() & 0x7fffffff), null);
+  deck = {
+    elementals: vorschlag.elementals.map(function (k) { return k.name; }),
+    verbindungen: vorschlag.verbindungen.map(function (k) { return k.name; }),
+    ausruestung: vorschlag.ausruestung.map(function (k) { return k.name; })
+  };
+}
+
+function deckZeichnen() {
+  var region = regionwahl.value;
+  var satz = R.meisterstufen[KI.stufeZu(region)];
+  var vorrat = KI.vorratAufteilen(poolFuerSpiel());
+
+  deckStandZeichnen(satz);
+
+  var liste = document.getElementById("deckliste");
+  liste.innerHTML = "";
+
+  // Die Verbindungen stehen OBEN. Sie sind das Ziel des Spiels, und
+  // von ihnen aus geht das Deckbauen am schnellsten: eine Verbindung
+  // wählen, "Edukte ins Team", fertig ist die Hälfte des Teams.
+  liste.appendChild(el("h3", null, "Verbindungen · " + deck.verbindungen.length + " von " + satz.handVerbindungen));
+  liste.appendChild(el("p", "erklaerung",
+    "Sie kommen nicht ins Team, sondern auf die Hand — gebaut werden sie im Duell aus " +
+    "ihren Edukten. Wähle zuerst hier: „Edukte ins Team“ legt beide Ausgangsstoffe auf einmal dazu."));
+  liste.appendChild(deckRaster(vorrat.verbindungen, "verbindungen", satz.handVerbindungen, satz));
+
+  liste.appendChild(el("h3", null, "Team · " + deck.elementals.length + " von " + satz.team));
+  liste.appendChild(el("p", "erklaerung",
+    "Genau " + satz.team + " Elementals. Eines steht in der Arena, die übrigen auf der Bank."));
+  liste.appendChild(deckRaster(vorrat.elementals, "elementals", satz.team, satz));
+
+  liste.appendChild(el("h3", null, "Ausrüstung · " + deck.ausruestung.length + " von " + satz.handAusruestung));
+  liste.appendChild(el("p", "erklaerung",
+    "Ausrüstung mit dem Schlagwort „" + R.energieMerkmal + "“ liefert die Aktivierungsenergie ⚡ — " +
+    "ohne sie springt eine ⚡-Reaktion nicht an."));
+  liste.appendChild(deckRaster(vorrat.ausruestung, "ausruestung", satz.handAusruestung, satz));
+
+  liste.appendChild(el("p", "erklaerung",
+    "Dieses Deck gilt für dich. Der Gegner spielt mit einem zusammengestellten Deck aus " +
+    "derselben Region — bis er über das Netz kommt und sein eigenes mitbringt."));
+}
+
+function deckRaster(karten, feld, hoechstens, satz) {
+  var raster = el("div", "kartenraster");
+  karten.forEach(function (k) {
+    var eintrag = el("div", "wahlkarte");
+    var drin = deck[feld].indexOf(k.name) !== -1;
+    var karte = baueSpielkarte(k, "hand", { beschreibung: drin ? "im Deck" : "nicht im Deck" });
+    if (drin) karte.classList.add("drin");
+
+    karte.addEventListener("click", function () {
+      var pos = deck[feld].indexOf(k.name);
+      if (pos !== -1) { deck[feld].splice(pos, 1); deckZeichnen(); return; }
+      // Doppelte Karten sind erst ab Meisterstufe III erlaubt
+      // (Koeffizienten: 2 Mg + O₂ → 2 MgO). Hier greift die Regel
+      // gar nicht, weil jede Karte nur einmal im Raster steht —
+      // die Voll-Meldung ist trotzdem nötig.
+      if (deck[feld].length >= hoechstens) {
+        deckMeldung("Es passen nur " + hoechstens + " Karten in diesen Teil des Decks. " +
+          "Erst eine herausnehmen.");
+        return;
+      }
+      deck[feld].push(k.name);
+      deckZeichnen();
+    });
+    eintrag.appendChild(karte);
+
+    // Der schnelle Weg: von der Verbindung zu ihren Edukten.
+    if (feld === "verbindungen" && k.synthese && k.synthese.edukte) {
+      var knopf = el("button", "eduktknopf", "Edukte ins Team");
+      var fehlt = k.synthese.edukte.filter(function (n) {
+        return deck.elementals.indexOf(n) === -1;
+      });
+      if (!fehlt.length) { knopf.textContent = "Edukte sind im Team"; knopf.disabled = true; }
+      knopf.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        var platz = satz.team - deck.elementals.length;
+        if (fehlt.length > platz) {
+          deckMeldung("Für " + fehlt.join(" und ") + " ist im Team kein Platz mehr — " +
+            "erst ein anderes Elemental herausnehmen.");
+          return;
+        }
+        fehlt.forEach(function (n) { deck.elementals.push(n); });
+        if (deck.verbindungen.indexOf(k.name) === -1 &&
+            deck.verbindungen.length < satz.handVerbindungen) {
+          deck.verbindungen.push(k.name);
+        }
+        deckZeichnen();
+      });
+      eintrag.appendChild(knopf);
+    }
+    raster.appendChild(eintrag);
+  });
+  return raster;
+}
+
+var deckMeldungZeit = null;
+function deckMeldung(text) {
+  var stand = document.getElementById("deckstand");
+  var zeile = stand.querySelector(".meldung");
+  if (!zeile) { zeile = el("div", "zeile nein meldung"); stand.appendChild(zeile); }
+  zeile.textContent = text;
+  if (deckMeldungZeit) clearTimeout(deckMeldungZeit);
+  deckMeldungZeit = setTimeout(function () { if (zeile.parentNode) zeile.remove(); }, 6000);
+}
+
+// Die Statuszeile: Quoten, und darunter für jede gewählte Verbindung
+// eine Zeile, die sagt, ob sie aufgeht – und wenn nicht, warum.
+function deckStandZeichnen(satz) {
+  var stand = document.getElementById("deckstand");
+  stand.innerHTML = "";
+
+  var quoten = el("div", "quoten");
+  [["Team", deck.elementals.length, satz.team],
+   ["Verbindungen", deck.verbindungen.length, satz.handVerbindungen],
+   ["Ausrüstung", deck.ausruestung.length, satz.handAusruestung]
+  ].forEach(function (q) {
+    var s = el("span", q[1] >= q[2] ? "voll" : null);
+    s.innerHTML = q[0] + " <b>" + q[1] + "/" + q[2] + "</b>";
+    quoten.appendChild(s);
+  });
+  stand.appendChild(quoten);
+
+  if (!deck.verbindungen.length) {
+    stand.appendChild(el("div", "zeile", "Noch keine Verbindung gewählt. " +
+      "Ohne Verbindung kann im Duell keine Reaktion gelingen — und darum geht es."));
+    return;
+  }
+
+  var urteil = eduktZuordnung(deck.elementals, deck.verbindungen);
+  var energie = deck.ausruestung.filter(function (n) {
+    return E.istEnergie(kartenNachNamen(n));
+  }).length;
+  var mitZuendung = deck.verbindungen.filter(brauchtZuendung).length;
+
+  var streitFall = false;
+  deck.verbindungen.forEach(function (name, i) {
+    var u = urteil[i];
+    var zeile = el("div", "zeile " + (u.baubar ? "ja" : "nein"));
+    var edukte = (kartenNachNamen(name).synthese.edukte || []).join(" + ");
+    if (u.baubar) {
+      // Geschütztes Leerzeichen: sonst rutscht das ⚡ allein in die
+      // nächste Zeile und sieht aus wie ein Fehler.
+      zeile.textContent = "✓ " + name + " — " + edukte + " im Team" +
+        (brauchtZuendung(name) ? ", braucht ⚡" : "");
+    } else if (u.fehlend) {
+      zeile.textContent = "✗ " + name + " braucht " + edukte + " — im Team " +
+        (u.fehlend.length > 1 ? "fehlen " : "fehlt ") + u.fehlend.join(" und ") + ".";
+    } else {
+      // Der lehrreiche Fall: Es reicht für sich, aber nicht zusammen.
+      streitFall = true;
+      zeile.textContent = "✗ " + name + " braucht " + edukte + " — davon steckt schon etwas in " +
+        (u.streit || []).join(" und ") + ".";
+    }
+    stand.appendChild(zeile);
+  });
+
+  // Die Begründung steht EINMAL darunter, nicht hinter jeder Zeile.
+  if (streitFall) {
+    stand.appendChild(el("div", "zeile merke",
+      "Jedes Edukt braucht ein eigenes Exemplar. Dieselbe Karte zweimal ins Deck zu legen " +
+      "ist erst ab Meisterstufe III erlaubt (Koeffizienten: 2 Mg + O₂ → 2 MgO). " +
+      "In Feuerlande heißt das: ein Oxid und ein Sulfid, nicht zwei Oxide."));
+  }
+
+  if (mitZuendung > energie) {
+    var m = el("div", "zeile merke");
+    m.textContent = mitZuendung === 1
+      ? "⚡ Diese Reaktion braucht Aktivierungsenergie — eine Ausrüstung mit dem Schlagwort „" +
+        R.energieMerkmal + "“ fehlt noch."
+      : "⚡ " + mitZuendung + " Reaktionen brauchen Aktivierungsenergie, im Deck sind " +
+        energie + " Energie-Karten. Jede ⚡-Reaktion verbraucht eine.";
+    stand.appendChild(m);
+  } else if (mitZuendung > 0 && mitZuendung === satz.handAusruestung) {
+    stand.appendChild(el("div", "zeile merke",
+      "⚡ Beide Reaktionen brauchen Energie — die zwei Energie-Karten belegen damit beide " +
+      "Ausrüstungsplätze. Für Löschdecke oder Schutzbrille bleibt kein Platz."));
+  }
+}
+
+document.getElementById("deckoeffnen").addEventListener("click", deckSchirmOeffnen);
+document.getElementById("deckfertig").addEventListener("click", function () { deckSchirmSchliessen(true); });
+document.getElementById("deckvorschlag").addEventListener("click", function () {
+  deckVorschlagen(); deckZeichnen();
+});
+document.getElementById("deckleeren").addEventListener("click", function () {
+  deck = { elementals: [], verbindungen: [], ausruestung: [] };
+  deckZeichnen();
+});
+
+// ============================================================
+//  Die Kartenschau
+//
+//  Auf dem Brett steht nur, was für die Entscheidung nötig ist.
+//  Hier steht ALLES, was auch gedruckt auf der Karte steht:
+//  Attacken mit Effekttext, Synthese samt Wortgleichung und
+//  Massenbilanz, Besonderheit, Flavor, Fundort. Beim Gegner ist
+//  das die einzige Stelle, an der man nachliest, was er kann –
+//  und deshalb ist sie beim Gegner besonders wichtig.
+// ============================================================
+function kartenschauZeigen(k, instanz) {
+  var blatt = document.getElementById("ksblatt");
+  blatt.innerHTML = "";
+  blatt.style.setProperty("--kf", STIL.farbe(k.klasse));
+
+  var kopf = el("div", "kskopf");
+  kopf.appendChild(el("span", "ksname", k.name));
+  if (k.formel) kopf.appendChild(el("span", "ksformel", k.formel));
+  kopf.appendChild(el("span", "ksklasse", k.klasse));
+  if (k.lp !== null && k.lp !== undefined) {
+    kopf.appendChild(el("span", "kslp",
+      "♥ " + (instanz ? instanz.lp + " / " + instanz.maxLp : k.lp)));
+  }
+  blatt.appendChild(kopf);
+
+  blatt.appendChild(bildIn(el("div", "ksbild"), k, true));
+
+  var steckbrief = [];
+  if (k.oz) steckbrief.push("Ordnungszahl " + k.oz);
+  if (k.masse) steckbrief.push("Masse " + k.masse + " u");
+  var eigen = el("div", "eigen");
+  steckbrief.concat(k.eigenschaften || []).forEach(function (name) {
+    var s = el("span", null, name);
+    if (regelBetrifft(name)) s.className = "gefahr";
+    eigen.appendChild(s);
+  });
+  blatt.appendChild(eigen);
+
+  if ((k.attacken || []).length) {
+    var ab = el("div", "ksabschnitt");
+    ab.appendChild(el("div", "kstitel", "Attacken"));
+    k.attacken.forEach(function (a) {
+      var z = el("div", "attacke");
+      z.style.setProperty("--tf", STIL.typfarbe(a.typ));
+      z.appendChild(el("span", "typ", a.typ));
+      z.appendChild(el("span", "an", a.name));
+      z.appendChild(el("span", "sch", String(a.schaden)));
+      ab.appendChild(z);
+      if (a.effekt) ab.appendChild(el("div", "kseffekt", a.effekt));
+    });
+    blatt.appendChild(ab);
+  }
+
+  if (k.synthese) {
+    var s = k.synthese;
+    var sb = el("div", "ksabschnitt");
+    sb.appendChild(el("div", "kstitel", "Synthese" + (s.aktivierung ? " ⚡" : "") +
+      (s.exotherm ? " · exotherm " + s.exotherm : "")));
+    sb.appendChild(el("div", null, s.wortgleichung || ""));
+    if (s.bilanz) sb.appendChild(el("div", "kseffekt", s.bilanz));
+    blatt.appendChild(sb);
+  }
+
+  if (k.besonderheit) {
+    var bb = el("div", "ksabschnitt");
+    bb.appendChild(el("div", "kstitel", "Besonderheit"));
+    bb.appendChild(el("div", "kseffekt", k.besonderheit));
+    blatt.appendChild(bb);
+  }
+
+  if (k.flavor) blatt.appendChild(el("div", "ksflavor", k.flavor));
+
+  var fuss = el("div", "ksfuss");
+  var zu = el("button", "knopf haupt", "Schließen");
+  zu.addEventListener("click", kartenschauSchliessen);
+  fuss.appendChild(zu);
+  blatt.appendChild(fuss);
+
+  document.getElementById("kartenschau").classList.add("an");
+}
+
+function kartenschauSchliessen() {
+  document.getElementById("kartenschau").classList.remove("an");
+}
+document.getElementById("kartenschau").addEventListener("click", function (ev) {
+  if (ev.target.id === "kartenschau") kartenschauSchliessen();
+});
+document.addEventListener("keydown", function (ev) {
+  if (ev.key === "Escape") kartenschauSchliessen();
+});
+
+// Warum geht diese Reaktion (noch) nicht? Beantwortet in der
+// Reihenfolge, in der die Engine prüft.
+function syntheseHindernis(spieler, verbindung) {
+  var s = verbindung.synthese;
+  if (!s || !s.edukte || !s.edukte.length) return verbindung.name + " ist keine Verbindung mit Reaktion.";
+  var team = duell.team(spieler), belegt = [], fehlend = [];
+  s.edukte.forEach(function (name) {
+    var gefunden = -1;
+    for (var t = 0; t < team.length; t++) {
+      if (team[t].karte.name === name && belegt.indexOf(t) === -1) { gefunden = t; break; }
+    }
+    if (gefunden === -1) fehlend.push(name); else belegt.push(gefunden);
+  });
+  if (fehlend.length) {
+    return verbindung.name + " braucht " + s.edukte.join(" + ") + " — im Team fehlt " +
+           fehlend.join(" und ") + ".";
+  }
+  if (!duell.regelsatz.syntheseKetten) {
+    var kette = belegt.some(function (t) { return team[t].karte.synthese; });
+    if (kette) return "Auf Meisterstufe " + duell.stufe +
+      " darf eine Verbindung noch nicht Edukt der nächsten Reaktion sein.";
+  }
+  if (s.aktivierung && !spieler.hand.ausruestung.some(E.istEnergie)) {
+    return "⚡ " + verbindung.name + " braucht Aktivierungsenergie — eine Ausrüstung mit dem " +
+           "Schlagwort „" + R.energieMerkmal + "“ auf der Hand.";
+  }
+  if (duell.zusatzaktionVerbraucht) return "In diesem Zug wurde schon eine Reaktion durchgeführt.";
+  return verbindung.name + " lässt sich gerade nicht bilden.";
+}
+
+// Was jetzt zu tun ist – abhängig davon, ob der gewählte Zug noch
+// ein Ziel braucht. Ein Hinweis, der zum falschen Antippen auffordert,
+// ist schlimmer als gar keiner.
+function hinweisZurAuswahl() {
+  if (!auswahl) return "Du bist am Zug.";
+  if (auswahl.art === "angriff") {
+    return "Gegnerische Karte antippen — oder die Attacke noch einmal.";
+  }
+  if (auswahl.art === "ausruestung" && auswahl.ziele && auswahl.ziele.length > 1) {
+    return "Ziel antippen — die möglichen sind rot umrandet.";
+  }
+  return "Nochmal antippen, dann wird es ausgeführt.";
+}
+
+var sageZeit = null;
+function sagen(text, dauer) {
+  var s = document.getElementById("sage");
+  if (sageZeit) { clearTimeout(sageZeit); sageZeit = null; }
+  if (!text) {
+    if (duell && !duell.vorbei) {
+      var dran = duell.spieler[duell.amZug];
+      s.textContent = darfBedienen()
+        ? (auswahl ? hinweisZurAuswahl() : "Du bist am Zug.")
+        : dran.name + " überlegt …";
+    } else { s.textContent = ""; }
+    return;
+  }
+  s.textContent = text;
+  if (dauer) sageZeit = setTimeout(function () { sagen(null); }, dauer);
+}
+
+// ============================================================
+//  Bedienung: antippen wählt, nochmal antippen führt aus
+// ============================================================
+function antippen(zug) {
+  if (!darfBedienen()) return;
+  if (auswahl && auswahl.art === zug.art && auswahl.index === zug.index) {
+    // Zweites Antippen führt aus – außer die Karte hat mehrere Ziele
+    // zur Auswahl. Dann muss erst eines angetippt werden, sonst
+    // entscheidet das Programm still über den Zug des Spielers.
+    if (zug.art === "ausruestung" && zug.ziele && zug.ziele.length > 1 && !zug.ziel) {
+      sagen("Erst ein Ziel antippen — die möglichen sind umrandet.", 4000);
+      return;
+    }
+    var gewaehlt = auswahl;
+    auswahl = null;
+    ausfuehren(gewaehlt);
+    return;
+  }
+  auswahl = zug;
+  zeichne();
+  sagen(zugBeschreiben(zug) + " — " + hinweisZurAuswahl().toLowerCase(), 5000);
+}
+
+// Zweiter Teil der Geste bei Ausrüstung: das Ziel antippen.
+function zielWaehlen(instanz) {
+  if (!auswahl || auswahl.art !== "ausruestung") return;
+  for (var i = 0; i < auswahl.ziele.length; i++) {
+    if (duell.instanzAn(auswahl.ziele[i]) === instanz) {
+      var zug = { art: "ausruestung", index: auswahl.index, ziel: auswahl.ziele[i] };
+      auswahl = null;
+      ausfuehren(zug);
+      return;
+    }
+  }
+}
+
+function zugBeschreiben(zug) {
+  var spieler = ichSpieler();
+  if (zug.art === "angriff") {
+    var a = spieler.arena.karte.attacken[zug.index];
+    return a.name + " (" + a.typ + ")";
+  }
+  if (zug.art === "wechsel") return "Wechsel zu " + spieler.bank[zug.index].karte.name;
+  if (zug.art === "synthese") {
+    var v = spieler.hand.verbindungen[zug.index];
+    return "Reaktion zu " + v.name;
+  }
+  if (zug.art === "ausruestung") {
+    var k = spieler.hand.ausruestung[zug.index];
+    return k ? k.name : "Ausrüstung";
+  }
+  return "Zug";
+}
+
+// Jeder Zug – eigener wie fremder – geht durch dieselbe Prüfung:
+// Steht er in moeglicheZuege? Damit kann über das Netz kein
+// unmöglicher Zug hereinkommen, ohne dass es dafür einen Server
+// braucht. Und der zurückgegebene Zug ist der der ENGINE, samt
+// der Edukt-Instanzen einer Synthese.
+function zielSchluessel(z) {
+  return z ? (z.seite + ":" + z.ort + ":" + (z.pos || 0)) : "";
+}
+
+function zugPruefen(spieler, zug) {
+  var moeglich = duell.moeglicheZuege(spieler);
+  for (var i = 0; i < moeglich.length; i++) {
+    var m = moeglich[i];
+    if (m.art !== zug.art || m.index !== zug.index) continue;
+    if (zug.art !== "ausruestung") return m;
+    // Bei Ausrüstung muss auch das Ziel eines der erlaubten sein –
+    // sonst käme über das Netz eine Heilung auf ein gegnerisches
+    // Elemental durch.
+    if (!zug.ziel) return (m.ziel || !m.ziele.length) ? m : null;
+    for (var z = 0; z < m.ziele.length; z++) {
+      if (zielSchluessel(m.ziele[z]) === zielSchluessel(zug.ziel)) {
+        return { art: m.art, index: m.index, ziele: m.ziele, ziel: m.ziele[z] };
+      }
+    }
+    return null;
+  }
+  return null;
+}
+
+// vonAussen = der Zug kam über das Netz herein. Dann darf er NICHT
+// wieder hinausgehen: Sonst wirft jede Seite der anderen deren
+// eigenen Zug zurück, die Zugnummern geraten durcheinander und das
+// Duell bricht nach dem ersten Zug ab. Genau so ist es passiert –
+// und die Zugnummern haben es gefangen, statt es zu verschlucken.
+function ausfuehren(zug, erwartetePruefsumme, vonAussen) {
+  if (!spielLaeuft || duell.vorbei) return;
+  var spieler = duell.spieler[duell.amZug];
+  var echt = zugPruefen(spieler, zug);
+  if (!echt) {
+    // Über das Netz ist das die Stelle, an der Schummeln endet:
+    // Ein Zug, der nicht in moeglicheZuege steht, wird verworfen –
+    // ganz ohne Schiedsrichter auf der Gegenseite.
+    sagen("Dieser Zug ist gerade nicht möglich.", 3000);
+    zeichne();
+    return;
+  }
+
+  ereignisse = [];
+  spielLaeuft = false;                 // während des Abspielens keine Eingabe
+  duell.fuehreAus(echt);
+
+  var summe = KANAL.pruefsumme(duell);
+  if (erwartetePruefsumme !== undefined && erwartetePruefsumme !== null &&
+      erwartetePruefsumme !== summe) {
+    auseinandergelaufen("Die Spielstände stimmen nicht mehr überein.");
+    return;
+  }
+
+  // Der eigene Zug geht als {art, index, ziel} hinaus – mehr braucht
+  // die Gegenseite nicht, sie rechnet dasselbe Duell. Die Prüfsumme
+  // reist mit, damit ein Auseinanderlaufen sofort auffällt.
+  if (!vonAussen) {
+    kanal.sendeZug(duell.zugZaehler,
+      { art: echt.art, index: echt.index, ziel: echt.ziel || null }, summe);
+  }
+
+  abspielen(ereignisse, function () {
+    spielLaeuft = true;
+    if (duell.vorbei) { zeigeEnde(); return; }
+    amZugPruefen(false);
+  });
+}
+
+// Zwei Geräte, die unbemerkt verschiedene Spiele zeigen, wären das
+// Schlimmste, was passieren kann. Also wird es gesagt.
+function auseinandergelaufen(grund) {
+  spielLaeuft = false;
+  if (netzkanal) netzkanal.schliessen();
+  var t = document.getElementById("endetitel");
+  var g = document.getElementById("endegrund");
+  t.textContent = "Duell abgebrochen";
+  g.textContent = grund + " Damit zeigen beide Geräte nicht mehr dasselbe Spiel — " +
+    "das Duell wird beendet, statt zwei verschiedene weiterzurechnen. " +
+    "Ein neuer Raum löst es.";
+  document.getElementById("endezahlen").textContent = "";
+  document.getElementById("ende").classList.add("an");
+}
+
+// ============================================================
+//  Wer ist dran?
+// ============================================================
+function amZugPruefen(ersterZug) {
+  if (!duell || duell.vorbei) { if (duell) zeigeEnde(); return; }
+  var index = duell.amZug;
+
+  // Hot-Seat: Das Brett dreht sich auf den, der dran ist, und
+  // davor kommt der Vorhang. Beim allerersten Zug auch – sonst
+  // sieht der Zweite die Hand des Ersten, bevor es losgeht.
+  if (kanal.vorhang && (ansichtSeite !== index || ersterZug)) {
+    ansichtSeite = index;
+    auswahl = null;
+    zeichne();
+    zeigeVorhang(duell.spieler[index].name);
+    return;
+  }
+
+  if (kanal.steuert(index)) { auswahl = null; zeichne(); sagen(null); return; }
+
+  zeichne();
+  sagen(duell.spieler[index].name + " überlegt …");
+  kanal.fordereZug(duell, duell.spieler[index], function (zug, nummer, pruefsumme) {
+    if (!duell || duell.vorbei) return;
+    // Beim Netzduell trägt jeder Zug seine Nummer. Kommt eine, die
+    // nicht an der Reihe ist, wäre etwas verlorengegangen – dann
+    // lieber halten als weiterrechnen.
+    if (nummer !== undefined && nummer !== null && nummer !== duell.zugZaehler + 1) {
+      auseinandergelaufen("Ein Zug ist verlorengegangen (erwartet " +
+        (duell.zugZaehler + 1) + ", bekommen " + nummer + ").");
+      return;
+    }
+    ausfuehren(zug, pruefsumme, true);
+  });
+}
+
+function zeigeVorhang(name) {
+  document.getElementById("vorhangwer").textContent = name + " ist am Zug";
+  document.getElementById("vorhang").classList.add("an");
+}
+document.getElementById("vorhangauf").addEventListener("click", function () {
+  document.getElementById("vorhang").classList.remove("an");
+  auswahl = null;
+  zeichne();
+  sagen(null);
+});
+
+// ============================================================
+//  Abspielen: was die Engine gemeldet hat, der Reihe nach zeigen
+//
+//  Die Engine rechnet einen ganzen Zug in einem Wimpernschlag
+//  durch. Gezeigt werden muss er in Schritten, sonst springt der
+//  Bildschirm und niemand sieht, WARUM etwas passiert ist.
+// ============================================================
+function abspielen(liste, fertig) {
+  var i = 0;
+  function weiter() {
+    if (i >= liste.length) { zeichne(); fertig(); return; }
+    spieleEreignis(liste[i++], weiter);
+  }
+  weiter();
+}
+
+function pause(ms, dann) {
+  setTimeout(dann, SCHNELL ? 0 : (istRuhig() ? Math.min(ms, 120) : ms));
+}
+
+function mitteVon(id) {
+  var e = document.getElementById(id);
+  if (!e) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  var r = e.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+function arenaId(seite) { return seite === ansichtSeite ? "arena-karte-ich" : "arena-karte-gegen"; }
+
+function spieleEreignis(e, weiter) {
+  if (e.was === "angriff") {
+    var von = mitteVon(arenaId(e.seite)), nach = mitteVon(arenaId(e.ziel));
+    sagen(e.angreifer + " setzt " + e.attacke.name + " ein");
+    if (e.faktor !== 1) {
+      var grund = e.gruende.length ? e.gruende[0] : null;
+      rufen(e.faktor > 1 ? "×2 " + (grund ? grund.zielEigenschaft : "") : "½ " + (grund ? grund.zielEigenschaft : ""),
+            e.faktor > 1 ? "#ff9b86" : "#86b0ff", nach);
+    }
+    geschoss(e.attacke.typ, von, nach, weiter);
+    return;
+  }
+
+  if (e.was === "schaden") {
+    var ort = mitteVon(arenaId(e.seite));
+    if (e.schaden > 0) {
+      zahl("−" + e.schaden, "minus", ort);
+      zuckeln(arenaId(e.seite));
+    }
+    lpNachziehen(e.seite, e.restLp, e.maxLp);
+    pause(620, weiter);
+    return;
+  }
+
+  if (e.was === "wirkung") {
+    sagen(e.karte + (e.dauerhaft ? " reagiert weiter" : " nimmt selbst Schaden"));
+    pause(420, weiter);
+    return;
+  }
+
+  if (e.was === "erschoepft") {
+    rufen(e.name + " ist erschöpft", "#d4513f", mitteVon(arenaId(e.seite)));
+    pause(760, weiter);
+    return;
+  }
+
+  if (e.was === "wechsel") {
+    zeichne();
+    sagen(e.erzwungen ? e.name + " rückt nach" : "Wechsel zu " + e.name);
+    pause(520, weiter);
+    return;
+  }
+
+  if (e.was === "ausruestung") {
+    zeichne();
+    sagen(e.karte.name + (e.zielName ? " auf " + e.zielName : "") + " gespielt");
+    rufen(e.karte.name, "#ecd9a0", mitteVon(arenaId(e.seite)));
+    pause(760, weiter);
+    return;
+  }
+
+  if (e.was === "geheilt") {
+    if (e.inArena) {
+      zahl("+" + e.wert, "plus", mitteVon(arenaId(e.seite)));
+      lpNachziehen(e.seite, e.restLp, e.maxLp);
+    }
+    sagen(e.name + " wird um " + e.wert + " LP geheilt");
+    pause(620, weiter);
+    return;
+  }
+
+  if (e.was === "schutz") {
+    // Der Grund, warum ein Angriff nichts gemacht hat, muss gesagt
+    // werden – sonst sieht es nach einem Fehler aus.
+    rufen(e.quelle + (e.nachher === 0 ? ": kein Schaden" : ": weniger Schaden"),
+          "#86b0ff", mitteVon(arenaId(e.seite)));
+    sagen(e.quelle + " fängt den Angriff auf " + e.name + " ab: " +
+          e.vorher + " → " + e.nachher);
+    pause(820, weiter);
+    return;
+  }
+
+  if (e.was === "blick") {
+    sagen(e.hand.length ? "Auf der Hand des Gegners: " + e.hand.join(", ")
+                        : "Der Gegner hat keine Handkarten mehr.", 7000);
+    pause(900, weiter);
+    return;
+  }
+
+  if (e.was === "synthese") { syntheseZeigen(e, weiter); return; }
+
+  if (e.was === "synthese-weg") {
+    sagen("Die Reaktion misslingt: " +
+      (e.grund === "keine-aktivierungsenergie" ? "keine Aktivierungsenergie" : e.grund), 2500);
+    pause(900, weiter);
+    return;
+  }
+
+  if (e.was === "ende") { weiter(); return; }
+  weiter();
+}
+
+// Die Anzeige wird während des Abspielens nachgezogen, ohne neu zu
+// zeichnen: Ein Neuaufbau mitten in der Animation würde die Karte
+// wegreißen, an der gerade der Einschlag klebt.
+function lpNachziehen(seite, lp, maxLp) {
+  var karte = document.getElementById(arenaId(seite));
+  if (!karte) return;
+  var balken = karte.querySelector(".klpbalken");
+  var fuellung = karte.querySelector(".klpbalken i");
+  var zahl = karte.querySelector(".klp");
+  if (!fuellung) return;
+  var anteil = maxLp ? lp / maxLp : 0;
+  fuellung.style.width = Math.max(0, Math.min(100, anteil * 100)) + "%";
+  balken.className = "klpbalken" + (anteil <= .25 ? " wenig" : anteil <= .55 ? " mittel" : "");
+  if (zahl) zahl.innerHTML = lp + "<small>/" + maxLp + "</small>";
+}
+
+function zuckeln(id) {
+  var e = document.getElementById(id);
+  if (!e || istRuhig()) return;
+  e.classList.remove("getroffen");
+  void e.offsetWidth;
+  e.classList.add("getroffen");
+}
+
+// --- Vier Angriffe, ein Baukasten ------------------------------
+// Eine Animation je Attackentyp, eingefärbt in der Typfarbe aus
+// kartenstil.js. Der große Baukasten (Teilchenform, Bahn, Aufprall
+// je Attacke) kommt erst, wenn das Duell im Unterricht war – vier
+// Animationen kosten einen Nachmittag, hundertfünfzig einen Monat.
+function geschoss(typ, von, nach, fertig) {
+  if (SCHNELL || istRuhig()) { pause(160, fertig); return; }
+  var flug = document.getElementById("flug");
+  var g = el("div", "geschoss t-" + typ);
+  g.style.setProperty("--tf", STIL.typfarbe(typ));
+  g.style.left = von.x + "px";
+  g.style.top = von.y + "px";
+  flug.appendChild(g);
+
+  // Gas steigt, Wucht fliegt gerade, Feuer und Ätz beschreiben
+  // einen leichten Bogen. Reine Anzeige, keine Regel.
+  var bogen = typ === "Gas" ? -60 : typ === "Wucht" ? 0 : -26;
+  var dauer = typ === "Gas" ? 620 : typ === "Wucht" ? 300 : 420;
+
+  var bahn = [
+    { transform: "translate(0,0) scale(.7)", opacity: .2 },
+    { transform: "translate(" + ((nach.x - von.x) / 2) + "px," + ((nach.y - von.y) / 2 + bogen) + "px) scale(1.15)", opacity: 1, offset: .55 },
+    { transform: "translate(" + (nach.x - von.x) + "px," + (nach.y - von.y) + "px) scale(.9)", opacity: 1 }
+  ];
+  var lauf = null;
+  try {
+    if (g.animate) lauf = g.animate(bahn, { duration: dauer, easing: "cubic-bezier(.35,0,.4,1)" });
+  } catch (e) { lauf = null; }
+
+  // WICHTIG: Es wird IMMER auch ein Wecker gestellt.
+  //
+  // Meldet die Animation nicht zurück, stünde das Duell sonst für
+  // immer still – der Bildschirm wartet auf ein onfinish, das nie
+  // kommt. Genau das ist beim Prüfen passiert (unter Chromes
+  // virtueller Zeit laufen Web Animations nicht ab), und dasselbe
+  // kann ein Gerät tun, das Animationen abschaltet. Eine Verzierung
+  // darf ein Spiel niemals aufhalten. Was zuerst kommt, gewinnt;
+  // gezählt wird nur einmal.
+  var schonFertig = false;
+  function ende() {
+    if (schonFertig) return;
+    schonFertig = true;
+    g.remove();
+    var a = el("div", "aufprall");
+    a.style.setProperty("--tf", STIL.typfarbe(typ));
+    a.style.left = nach.x + "px";
+    a.style.top = nach.y + "px";
+    flug.appendChild(a);
+    setTimeout(function () { a.remove(); }, 460);
+    fertig();
+  }
+  if (lauf) lauf.onfinish = ende;
+  setTimeout(ende, dauer + 250);
+}
+
+function zahl(text, klasse, ort) {
+  var flug = document.getElementById("flug");
+  var z = el("div", "zahlflug " + klasse, text);
+  z.style.left = ort.x + "px";
+  z.style.top = ort.y + "px";
+  flug.appendChild(z);
+  setTimeout(function () { z.remove(); }, 1200);
+}
+
+function rufen(text, farbe, ort) {
+  var flug = document.getElementById("flug");
+  var r = el("div", "ruf", text);
+  r.style.color = farbe;
+  r.style.left = ort.x + "px";
+  r.style.top = (ort.y - 40) + "px";
+  flug.appendChild(r);
+  setTimeout(function () { r.remove(); }, 1400);
+}
+
+// ============================================================
+//  Die Synthese-Bühne
+//
+//  ZEIGEN, NICHT VERLANGEN. Der Testlauf am Tisch (12.08.2026)
+//  hat ergeben, dass das laute Vorlesen der Wortgleichung eher
+//  abgelehnt wurde – gespielt werden wollte. Ein Mitspieler drückt
+//  dabei ein Auge zu, ein Programm nicht; digital wäre dieselbe
+//  Reibung härter. Also: Die Gleichung steht groß da, die
+//  Massenbilanz geht sichtbar auf, der LP-Sprung passiert vor
+//  Augen – abgefragt wird nichts.
+// ============================================================
+var buehneWeiter = null;
+function syntheseZeigen(e, fertig) {
+  var v = e.verbindung, s = v.synthese;
+  var buehne = document.getElementById("buehne");
+
+  var stoffe = document.getElementById("glstoffe");
+  stoffe.innerHTML = "";
+  e.edukte.forEach(function (name, i) {
+    if (i) stoffe.appendChild(el("div", "glzeichen", "+"));
+    stoffe.appendChild(baueGlStoff(kartenNachNamen(name), false));
+  });
+  stoffe.appendChild(el("div", "glzeichen", "→"));
+  stoffe.appendChild(baueGlStoff(v, true));
+
+  document.getElementById("wortgleichung").textContent = s.wortgleichung || (e.edukte.join(" + ") + " → " + v.name);
+  document.getElementById("bilanz").textContent = "";
+  document.getElementById("bilanzerklaerung").textContent = "";
+  document.getElementById("lpsprung").textContent = "";
+  document.getElementById("exotherm").textContent = "";
+  buehne.classList.add("an");
+
+  var schritte = [];
+  if (s.bilanz) {
+    schritte.push(function (dann) {
+      var b = document.getElementById("bilanz");
+      b.className = "aufblenden";
+      b.innerHTML = String(s.bilanz).replace(/=/, '<span class="gleich">=</span>');
+      document.getElementById("bilanzerklaerung").textContent =
+        "Kein Edukt bleibt übrig — alle Ausgangsstoffe stecken jetzt im Produkt. " +
+        "Das ist die Massenbilanz.";
+      pause(900, dann);
+    });
+  }
+  schritte.push(function (dann) {
+    var l = document.getElementById("lpsprung");
+    l.className = "aufblenden";
+    l.innerHTML = v.name + " tritt an mit <b>" + v.lp + " LP</b> — voll, egal wie angeschlagen die Edukte waren.";
+    pause(800, dann);
+  });
+  if (s.exotherm) {
+    schritte.push(function (dann) {
+      var x = document.getElementById("exotherm");
+      x.className = "aufblenden";
+      x.textContent = "🔥 Exotherm: Die frei werdende Energie trifft den Gegner mit " +
+        s.exotherm + " Schaden.";
+      pause(700, dann);
+    });
+  }
+
+  // Zwei Zustände, mehr braucht es nicht:
+  //   "laeuft"  – die Schritte blenden nacheinander auf.
+  //               Tippen springt ans Ende, ohne etwas auszulassen.
+  //   "fertig"  – alles steht da. Tippen macht das Duell weiter.
+  var lage = "laeuft";
+
+  function alleszeigen() {
+    // Auch beim Überspringen wird ALLES gezeigt. Was hier steht, ist
+    // Fachinhalt; er darf nicht der Ungeduld zum Opfer fallen.
+    if (s.bilanz) {
+      document.getElementById("bilanz").innerHTML =
+        String(s.bilanz).replace(/=/, '<span class="gleich">=</span>');
+      document.getElementById("bilanzerklaerung").textContent =
+        "Kein Edukt bleibt übrig — alle Ausgangsstoffe stecken jetzt im Produkt. " +
+        "Das ist die Massenbilanz.";
+    }
+    document.getElementById("lpsprung").innerHTML =
+      v.name + " tritt an mit <b>" + v.lp + " LP</b> — voll, egal wie angeschlagen die Edukte waren.";
+    if (s.exotherm) {
+      document.getElementById("exotherm").textContent =
+        "🔥 Exotherm: Die frei werdende Energie trifft den Gegner mit " + s.exotherm + " Schaden.";
+    }
+  }
+
+  function schrittWeiter(index) {
+    if (lage !== "laeuft") return;
+    if (index >= schritte.length) { lage = "fertig"; return; }
+    schritte[index](function () { schrittWeiter(index + 1); });
+  }
+
+  function tippen() { buehneWeiter && buehneWeiter(); }
+
+  buehneWeiter = function () {
+    if (lage === "laeuft") { lage = "fertig"; alleszeigen(); return; }
+    buehne.classList.remove("an");
+    buehne.removeEventListener("click", tippen);
+    buehneWeiter = null;
+    zeichne();
+    fertig();
+  };
+  buehne.addEventListener("click", tippen);
+
+  schrittWeiter(0);
+}
+
+function baueGlStoff(k, istProdukt) {
+  var d = el("div", "glstoff" + (istProdukt ? " produkt" : ""));
+  if (k) {
+    d.style.setProperty("--kf", STIL.farbe(k.klasse));
+    d.appendChild(bildIn(el("div", "b"), k, false));
+    d.appendChild(el("div", "n", k.name));
+  } else {
+    d.appendChild(el("div", "b"));
+    d.appendChild(el("div", "n", "?"));
+  }
+  return d;
+}
+
+var NACH_NAMEN = (function () {
+  var raus = {};
+  for (var i = 0; i < KARTEN.length; i++) if (!raus[KARTEN[i].name]) raus[KARTEN[i].name] = KARTEN[i];
+  return raus;
+})();
+function kartenNachNamen(name) { return NACH_NAMEN[name] || null; }
+
+document.getElementById("buehneweiter").addEventListener("click", function (ev) {
+  ev.stopPropagation();
+  buehneWeiter && buehneWeiter();
+});
+
+// ============================================================
+//  Ablagestapel ansehen
+// ============================================================
+function zeigeAblage(spieler) {
+  if (!spieler.ablage.length) return;
+  var namen = {};
+  spieler.ablage.forEach(function (k) { namen[k.name] = (namen[k.name] || 0) + 1; });
+  var text = Object.keys(namen).map(function (n) {
+    return namen[n] > 1 ? n + " ×" + namen[n] : n;
+  }).join(", ");
+  sagen("Ablage " + spieler.name + ": " + text, 6000);
+}
+
+// ============================================================
+//  Ende
+// ============================================================
+function zeigeEnde() {
+  if (!duell || !duell.vorbei) return;
+  spielLaeuft = false;
+  var sieger = duell.sieger;
+  var t = document.getElementById("endetitel");
+  var g = document.getElementById("endegrund");
+
+  if (!sieger) {
+    t.textContent = "Unentschieden";
+    g.textContent = "Das Duell hat die Zugbegrenzung erreicht. Am Tisch gibt es die nicht – " +
+                    "sie ist nur eine Sicherung gegen endloses Rechnen.";
+  } else {
+    var ichGewinne = kanal.meineSeite !== null && sieger.index === kanal.meineSeite;
+    t.textContent = kanal.meineSeite === null
+      ? sieger.name + " gewinnt"
+      : (ichGewinne ? "Gewonnen" : "Verloren");
+    g.textContent = duell.grund === "keine-elementals"
+      ? sieger.name + " hat das letzte Elemental der Gegenseite erschöpft."
+      : "Duell beendet.";
+  }
+
+  var zahlen = document.getElementById("endezahlen");
+  zahlen.innerHTML = "";
+  zahlen.appendChild(el("div", null, duell.zugZaehler + " Züge · Meisterstufe " + duell.stufe +
+    " · Team " + duell.regelsatz.team));
+  duell.spieler.forEach(function (p) {
+    var uebrig = (p.arena ? 1 + p.bank.length : p.bank.length);
+    zahlen.appendChild(el("div", null, p.name + ": " +
+      uebrig + (uebrig === 1 ? " Elemental" : " Elementals") + " übrig, " +
+      p.ablage.length + " auf der Ablage"));
+  });
+
+  document.getElementById("ende").classList.add("an");
+  probeSchreiben();
+}
+
+// ============================================================
+//  Kopfloses Prüfen
+//
+//  ?probe=1        Duell startet sofort, ohne Denkpause
+//  &auto=1         auch die eigene Seite spielt die KI – damit ein
+//                  vollständiges Duell ohne Anzeige durchläuft und
+//                  sich gegen die Simulation stellen lässt
+//  &saat=…&bis=…   damit dabei genau dasselbe Duell entsteht
+// ============================================================
+function probeSchreiben() {
+  if (!PARAM.get("probe")) return;
+  var p = document.getElementById("probe");
+  p.textContent = JSON.stringify({
+    saat: letzteEinstellung ? letzteEinstellung.saat : null,
+    stufe: duell.stufe,
+    zuege: duell.zugZaehler,
+    sieger: duell.sieger ? duell.sieger.index : null,
+    grund: duell.grund,
+    pruefsumme: KANAL.pruefsumme(duell)
+  });
+  document.title = "Probe: " + p.textContent;
+}
+
+if (PARAM.get("probe")) {
+  document.getElementById("nurgefunden").checked = false;
+  vorschau();
+  starten();
+  if (PARAM.get("auto")) {
+    // Die eigene Seite mitspielen lassen. Läuft über denselben Weg
+    // wie ein Antippen, damit wirklich der Bildschirm geprüft wird
+    // und nicht die Engine an ihm vorbei.
+    setInterval(function () {
+      if (!duell) return;
+      // Die Bühne ZUERST wegtippen: Während sie steht, läuft das
+      // Abspielen noch, spielLaeuft ist also false. Stünde die
+      // Abfrage weiter unten, würde der Automatiklauf genau hier
+      // für immer stehen bleiben – und zwar erst beim ersten Duell
+      // mit einer Synthese, also nicht bei jedem Probelauf.
+      if (document.getElementById("buehne").classList.contains("an")) {
+        buehneWeiter && buehneWeiter();
+        return;
+      }
+      if (duell.vorbei || !spielLaeuft) return;
+      if (duell.amZug !== ansichtSeite || !kanal.steuert(ansichtSeite)) return;
+      ausfuehren(KI.entscheide(duell, duell.spieler[duell.amZug], "vorsichtig"));
+    }, 30);
+  }
+} else {
+  vorschau();
+}
+
+ruheSetzen();
+window.addEventListener("resize", function () { if (duell) zeichne(); });
+</script>
+</body>
+</html>

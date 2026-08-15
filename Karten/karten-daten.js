@@ -364,6 +364,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Energie"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schadensbonus", "wert": 5, "typ": "Feuer", "ziel": "keines" },
       "besonderheit": "Lege den Gasbrenner ab, um eine ⚡-Synthese zu zünden ODER deine nächste Feuer-Attacke um 5 Schaden zu verstärken.",
       "flavor": "Wer die rauschende Flamme beherrscht, dem öffnet sich die Kunst der Verwandlung.",
       "quest": "Quest 2b – Brenner (Brennerführerschein)", "bild": "bilder/gasbrenner.jpg"
@@ -382,6 +383,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Aufbewahrung"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schutz", "gegen": "alle", "faktor": 0, "ziel": "eigenesElemental", "bedingung": { "eigenschaft": "gasförmig" } },
       "besonderheit": "Spiele den Erlenmeyerkolben auf ein gasförmiges Elemental: Es erleidet bis zu deinem nächsten Zug keinen Schaden – im engen Hals des Kolbens ist es sicher verwahrt.",
       "flavor": "Aus dem Kolbenwald: ein Glas, das den flüchtigsten Wesen ein sicheres Zuhause gibt.",
       "quest": "Quest 2 – Kolbenwald", "bild": "bilder/erlenmeyerkolben.jpg"
@@ -391,6 +393,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Fest der Funken"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schadensbonus", "wert": 5, "gegnerMalus": 5, "ziel": "keines" },
       "besonderheit": "Lege ab: Die nächste Attacke deines aktiven Elementals macht +5 Schaden, und der geblendete Gegner macht bei seiner nächsten Attacke 5 Schaden weniger.",
       "flavor": "Beim Lichterfest von Kerzing regnet es kalte Sterne.",
       "quest": "Quest 5 – Kerzing", "bild": "bilder/wunderkerze.jpg"
@@ -438,6 +441,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Energie"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schadensbonus", "wert": 5, "typ": "Feuer", "ziel": "keines" },
       "besonderheit": "Lege den Glutkern ab, um eine ⚡-Synthese zu zünden ODER deiner nächsten Feuer-Attacke +5 Schaden zu geben.",
       "flavor": "Ein Stück ewiger Glut aus der Großen Esse von Energenium.",
       "quest": "Nebenquest – Kaldors Truhe (Energenium)", "bild": "bilder/glutkern.jpg"
@@ -447,6 +451,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Schutz"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 0, "ziel": "eigenesElemental", "bedingung": { "eigenschaft": "metallisch" } },
       "besonderheit": "Spiele Rostschutz-Öl auf eine deiner Metall-Karten: Sie erleidet bis zu deinem nächsten Zug keinen Schaden durch Ätz-Attacken (Rost).",
       "flavor": "Ein dünner Film gegen den langsamen Feind.",
       "quest": "Quest 11 – Feuerfurt 2", "bild": "bilder/rostschutz-oel.jpg"
@@ -476,7 +481,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Federleicht: das leichteste aller Metalle – es schwimmt auf Wasser, und mit nur 7 u Masse beginnt Lithium fast jedes Duell.",
       "flavor": "Man kann es mit dem Messer schneiden. Unterschätze es trotzdem nicht.",
-      "quest": "Periodika – Alkali", "bild": "🧈"
+      "quest": "Periodika – Alkali", "bild": "bilder/lithium.jpg"
     },
     {
       "name": "Natrium", "formel": "Na", "region": "Periodika", "klasse": "Alkalimetall", "oz": 11, "lp": 30, "masse": 23,
@@ -488,7 +493,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Familienbande: Sitzt ein weiteres Alkalimetall auf deiner Bank, machen Natriums Attacken +5 Schaden.",
       "flavor": "Gleiche Familie, gleiches Feuer – nur wilder als der kleine Bruder.",
-      "quest": "Periodika – Alkali", "bild": "💛"
+      "quest": "Periodika – Alkali", "bild": "bilder/natrium.jpg"
     },
     {
       "name": "Kalium", "formel": "K", "region": "Periodika", "klasse": "Alkalimetall", "oz": 19, "lp": 30, "masse": 39,
@@ -500,7 +505,7 @@ window.KARTEN_DATEN = {
       "wirkung": { "ausloeser": "zugende", "art": "selbstschaden", "wert": 5 },
       "besonderheit": "Stürmisch: Kalium verliert am Ende jedes deiner Züge 5 LP – es reagiert schon mit der Luft. Je tiefer in der Familie, desto wilder!",
       "flavor": "Das wildeste der drei Geschwister. Selbst die Luft ist ihm nicht geheuer.",
-      "quest": "Periodika – Alkali", "bild": "💜"
+      "quest": "Periodika – Alkali", "bild": "bilder/kalium.jpg"
     },
 
     // ---------- ERDALKALIMETALLE (Ort: Erdalkali) ----------
@@ -514,7 +519,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Familienbande: Sitzt ein weiteres Erdalkalimetall auf deiner Bank, machen Calciums Attacken +5 Schaden.",
       "flavor": "Es steckt in deinen Knochen, in Muscheln und in den Mauern von Erdalkali.",
-      "quest": "Periodika – Erdalkali", "bild": "🦴"
+      "quest": "Periodika – Erdalkali", "bild": "bilder/calcium.jpg"
     },
     {
       "name": "Barium", "formel": "Ba", "region": "Periodika", "klasse": "Erdalkalimetall", "oz": 56, "legendaer": true, "lp": 30, "masse": 137,
@@ -677,6 +682,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Aufbewahrung"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schutz", "gegen": "alle", "faktor": 0, "ziel": "eigenesElemental", "bedingung": { "klasse": "Alkalimetall" } },
       "besonderheit": "Spiele das Petroleumglas auf eines deiner Alkalimetalle: Es erleidet bis zu deinem nächsten Zug keinen Schaden – sicher unter Petroleum, so lagert man Alkalimetalle.",
       "flavor": "Was mit Luft und Wasser streitet, schläft ruhig unter Öl.",
       "quest": "Periodika – Alkali", "bild": "🫙"
@@ -821,6 +827,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Nachweis"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "direktschaden", "wert": 5, "ziel": "gegnerArena", "bedingung": { "name": "Sauerstoff" } },
       "besonderheit": "Spiele den Glimmspan, wenn der Gegner Sauerstoff (O₂) in die Arena bringt: Der Span flammt auf – O₂ erleidet sofort 5 Schaden (nachgewiesen). Die Glimmspanprobe lügt nie.",
       "flavor": "Ein glimmender Span. Flammt er auf, ist Sauerstoff im Spiel.",
       "quest": "Aerosol – Oxigen", "bild": "🕯️"
@@ -839,6 +846,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Schutz"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 0, "nurEinmal": true, "ziel": "eigenesElemental" },
       "besonderheit": "Spiele die Gasmaske auf eines deiner Elementals (auch außerhalb deines Zuges): Die nächste Gas-Attacke gegen dieses Elemental macht 0 Schaden.",
       "flavor": "Wer in Aerosol reist, geht auf Nummer sicher.",
       "quest": "Aerosol – Fähre nach Aerosol", "bild": "😷"
@@ -898,6 +906,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Heilung"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "heilung", "wert": 5, "ziel": "eigenesElemental" },
       "besonderheit": "Lege die Feldflasche ab: Heile eines deiner Elementals um 5 LP – ein Schluck frisches Wasser hilft in der Not.",
       "flavor": "Wasser ist Leben. Ein voller Feldflaschen-Schluck rettet manchen Kampf.",
       "quest": "Aquaria – Schiffreise", "bild": "🥤"
@@ -1062,6 +1071,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Heilung"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "heilung", "wert": 5, "ziel": "eigenesElemental" },
       "besonderheit": "Lege das Salzsäckchen ab: Heile eines deiner Elementals um 5 LP – eine Prise Salz stärkt und konserviert.",
       "flavor": "Einst wurde man mit Salz bezahlt. Ein Säckchen davon ist mehr wert, als es aussieht.",
       "quest": "Salzküste – Kochsalz", "bild": "👝"
@@ -1080,6 +1090,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Nachweis"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "direktschaden", "wert": 5, "ziel": "gegnerArena", "bedingung": { "klasse": "Salz" } },
       "besonderheit": "Halte den Leitfähigkeitsprüfer an ein aktives gegnerisches Salz: Ist es gelöst (in der Arena aktiv), „leuchtet“ es auf und erleidet sofort 5 Schaden – als Ion entlarvt.",
       "flavor": "Die Lampe leuchtet nur, wenn die Ionen frei schwimmen. Sie lügt nie.",
       "quest": "Salzküste – Hydratis", "bild": "💡"
@@ -1089,6 +1100,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Nachweis", "Bauteil"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "direktschaden", "wert": 5, "ziel": "gegnerArena", "bedingung": { "klasse": "Salz" } },
       "besonderheit": "Lege den Detektor ab: Sieh dir die Handkarten des Gegners an ODER weise ein gegnerisches Salz nach (es erleidet 5 Schaden). Das dritte Bauteil, dem Feind entrissen.",
       "flavor": "Er macht das Unsichtbare sichtbar. Jedes Ion verrät sich – und jeder Verräter auch.",
       "quest": "Salzküste – Detekta", "bild": "📡"
@@ -1214,6 +1226,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Reduktion", "Energie"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "direktschaden", "wert": 5, "ziel": "gegnerArena", "bedingung": { "klasse": "Oxid" }, "kostetEnergie": true },
       "besonderheit": "Lege den Schmelztiegel mit einer ⚡-Energie ab: Entziehe einem gegnerischen Oxid-Elemental mit Kohle den Sauerstoff (Reduktion) – es verliert seine Oxid-Besonderheit und erleidet 5 Schaden.",
       "flavor": "Ein wenig Kohle, viel Feuer – und aus totem Erz wird lebendiges Metall.",
       "quest": "Erdhügel – Cupper", "bild": "🫕"
@@ -1223,6 +1236,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Korrosionsschutz"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 0, "ziel": "eigenesElemental", "bedingung": { "eigenschaft": "metallisch" } },
       "besonderheit": "Lege die Opferanode auf ein Metall-Elemental: Ein unedleres Metall opfert sich – das Elemental erleidet bis zu deinem nächsten Zug keinen Ätz-/Rost-Schaden (die Anode rostet an seiner Stelle).",
       "flavor": "Ein Stück Zink, das für das Eisen stirbt. Zusammen stärker als allein.",
       "quest": "Erdhügel – Korrosion", "bild": "⛓️"
@@ -1278,7 +1292,7 @@ window.KARTEN_DATEN = {
       "name": "Schwefelsäure", "formel": "H₂SO₄", "region": "Acidia", "klasse": "Säure", "lp": 40, "masse": 98,
       "eigenschaften": ["flüssig", "ätzend", "sauer", "stark", "wasserziehend"],
       "attacken": [
-        { "name": "Vitriolguss", "typ": "Ätz", "schaden": 12, "effekt": "" }
+        { "name": "Vitriolguss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "synthese": null,
       "besonderheit": "Das „Vitriol“: Schwefelsäure entzieht anderen Stoffen das Wasser. Solange sie in der Arena steht, können Wasser- und Lösungs-Ausrüstungen des Gegners nicht gespielt werden. Entsteht in zwei Schritten: Schwefel verbrennen, das Oxid in Wasser leiten.",
@@ -1338,6 +1352,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Nachweis"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "blick", "umfang": "hand", "ziel": "keines" },
       "besonderheit": "Lege den Universalindikator ab: Der Gegner muss alle Handkarten mit den Tags „sauer“ oder „alkalisch“ offen vorzeigen. Sie können sich nicht verstecken – der Indikator verrät sie durch die Farbe.",
       "flavor": "Rot bei Säure, grün bei neutral, blau bei Lauge. Färbermeister Lakmus lügt nie.",
       "quest": "Acidia – Indikatoria", "bild": "🌈"
@@ -1347,6 +1362,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Nachweis", "natürlich"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "blick", "umfang": "hand", "ziel": "keines" },
       "besonderheit": "Lege den Rotkohlsaft ab: Sieh dir die oberste Karte des gegnerischen Decks an. Der Indikator aus der Küche – er kann alles, was der teure aus der Akademie kann.",
       "flavor": "Ein Kohlkopf, ein Topf, und die halbe Chemie wird sichtbar.",
       "quest": "Acidia – Indikatoria", "bild": "🥬"
@@ -1356,6 +1372,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Nachweis", "Messung"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "dauerbonus", "wert": 5, "typ": "Ätz", "ziel": "keines" },
       "besonderheit": "Bleibt liegen: Solange der pH-Kompass ausliegt, machen deine Ätz-Attacken 5 Schaden mehr – du triffst genau die Stelle, an der es wirkt.",
       "flavor": "Vierzehn Tore, von 0 bis 14. Wer nicht weiß, hinter welchem die Gefahr wartet, überlebt hier keine Woche.",
       "quest": "Acidia – Neutralis", "bild": "🧭"
@@ -1420,7 +1437,7 @@ window.KARTEN_DATEN = {
       "name": "Octan", "formel": "C₈H₁₈", "region": "Organica", "teil": 1, "klasse": "Alkan", "lp": 40, "masse": 114,
       "eigenschaften": ["flüssig", "brennbar", "C8-Stamm"],
       "attacken": [
-        { "name": "Superzündung", "typ": "Feuer", "schaden": 12, "effekt": "" }
+        { "name": "Superzündung", "typ": "Feuer", "schaden": 10, "effekt": "" }
       ],
       "synthese": null,
       "besonderheit": "Klopffest: Octan zündet erst, wenn es zünden soll – Feuer-Attacken gegen Octan machen 5 Schaden weniger.",
@@ -1445,7 +1462,7 @@ window.KARTEN_DATEN = {
       "name": "Ethin", "formel": "C₂H₂", "region": "Organica", "teil": 1, "klasse": "Alkin", "lp": 40, "masse": 26,
       "eigenschaften": ["gasförmig", "brennbar", "ungesättigt", "C2-Stamm"],
       "attacken": [
-        { "name": "Schweißflamme", "typ": "Feuer", "schaden": 12, "effekt": "" }
+        { "name": "Schweißflamme", "typ": "Feuer", "schaden": 10, "effekt": "" }
       ],
       "synthese": null,
       "besonderheit": "Dreifachbindung unter Spannung: Die heißeste Flamme der Sümpfe (über 3000 °C) – geboren aus Karbid und Wasser.",
@@ -1459,6 +1476,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Licht"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "blick", "umfang": "verbindungen", "ziel": "keines" },
       "besonderheit": "Lege die Laterne ab: Sieh dir die verdeckten Handkarten (Verbindungen) deines Gegners an – ihr Licht leuchtet durch Nebel und Lügen.",
       "flavor": "Sie hing über der Tür des Fährhauses, so lange sich das Schilf erinnert.",
       "quest": "Organica – Fährhaus im Schilf", "bild": "🏮"
@@ -1468,6 +1486,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Hitze"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "zwangswechsel", "ziel": "gegnerArena", "bedingung": { "eigenschaft": "gasförmig" } },
       "besonderheit": "Lege das Siedeglas ab: Ein gegnerisches Elemental mit dem Tag „gasförmig“ muss sofort auf die Bank wechseln – es verdampft aus der Arena (schwache Van-der-Waals-Kräfte!).",
       "flavor": "Die Siedemutter füllte es an ihrer Quelle: Wer leicht ist, bleibt nicht lange.",
       "quest": "Organica – Siedequell", "bild": "🌡️"
@@ -1477,6 +1496,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Haftung"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schutz", "gegen": "alle", "faktor": 0, "nurEinmal": true, "ziel": "eigeneArena" },
       "besonderheit": "Lege die Handschuhe auf dein aktives Elemental: Es weicht der nächsten Attacke aus – Millionen feinster Härchen tragen es die Wand hinauf.",
       "flavor": "Keine Krallen, kein Leim. Nur die heimlichen Kräfte zwischen den Molekülen.",
       "quest": "Organica – Geckofels", "bild": "🧤"
@@ -1486,6 +1506,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Katalyse"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "freieAktivierung", "anzahl": 1, "ziel": "keines" },
       "besonderheit": "Bleibt liegen: Einmal pro Duell gelingt dir eine ⚡-Synthese ohne Energie-Item – der Katalysator senkt die Aktivierungsenergie und wird dabei nicht verbraucht.",
       "flavor": "Ein Splitter des legendären Platins. Jetzt weißt du, wofür der Feind es wollte.",
       "quest": "Organica – Flammensumpf", "bild": "⚙️"
@@ -1638,6 +1659,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Tensid", "Schutz"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 0, "nurEinmal": true, "ziel": "eigeneArena" },
       "besonderheit": "Lege die Seifenblase auf dein aktives Elemental: Die nächste Ätz-Attacke gegen es macht 0 Schaden – der Tensid-Film umschließt den Angriff wie ein Fetttröpfchen in einer Micelle.",
       "flavor": "Polarer Kopf, unpolarer Schwanz. Sie bringt zusammen, was sich nicht mag.",
       "quest": "Organica – Seifensiederei", "bild": "🫧"
@@ -1647,6 +1669,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Tarnung"],
       "attacken": [],
       "synthese": null,
+      "wirkung": { "art": "angriffsperre", "ziel": "keines" },
       "besonderheit": "Lege die Duftphiole ab: Der Gegner kann in seinem nächsten Zug nicht angreifen – wer nach Obstgarten riecht, riecht nicht nach Sumpf.",
       "flavor": "Birne, Rum, Ananas. Damit sind vier Kinder durch das Tor von Entropolis gegangen.",
       "quest": "Organica – Tor von Entropolis", "bild": "🧪"

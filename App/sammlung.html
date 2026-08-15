@@ -96,6 +96,19 @@
   }
   #scanknopf:hover { background: #5a4d36; }
 
+  /* Der Weg ins Duell. Sieht aus wie der Scanknopf, ist aber ein Link:
+     Das Duell ist eine eigene Seite, und ein Link lässt sich in einem
+     zweiten Tab öffnen und auf den Startbildschirm legen. */
+  #duellknopf {
+    flex: 0 0 auto; text-decoration: none;
+    background: #4a3520; color: #f0dcb0;
+    border: 1px solid #8a6a2e; border-radius: 8px;
+    padding: 7px 13px; font-size: 13px;
+    min-height: 38px; white-space: nowrap;
+    display: inline-flex; align-items: center;
+  }
+  #duellknopf:hover { background: #5e4426; border-color: #c8a24a; }
+
   /* Auf dem Handy ein Raster, damit nichts über den Rand hinausläuft –
      "Alle Klassen" abgeschnitten zu sehen ist schlimmer, als eine Zeile
      mehr zu brauchen. Ab Tabletbreite passt alles in eine Zeile. */
@@ -662,6 +675,7 @@
 <header id="leiste">
   <div id="kopfzeile">
     <h1>⚗ Elementia · Sammlung <span class="zaehler" id="zaehler"></span></h1>
+    <a id="duellknopf" href="duell.html" title="Elemental-Duell spielen">⚔ Duell</a>
     <button id="scanknopf" title="Stationscode einlesen">📷 Scannen</button>
   </div>
   <div id="filter">
