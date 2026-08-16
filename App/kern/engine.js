@@ -94,8 +94,10 @@
         gruende.push(regel);
       }
     }
-    // Aufgerundet wird auf die Fünferleiter (R.rundungsSchritt), damit jeder
-    // Punktestand auf der Drehscheibe am Tisch anzeigbar bleibt.
+    // Aufgerundet wird auf R.rundungsSchritt – seit Fassung VIII auf die
+    // ganze Zahl, weil der neue Punktezähler (zwei Scheiben, Zehner und
+    // Einer) jede Zahl von 0 bis 79 anzeigt. Halbe Lebenspunkte gäbe es
+    // auf keiner Scheibe, deshalb wird überhaupt gerundet.
     const schritt = R.rundungsSchritt || 1;
     return {
       basis: attacke.schaden,
@@ -122,6 +124,12 @@
     this.stufe = optionen.stufe || "I";
     this.regelsatz = R.meisterstufen[this.stufe];
     this.zufall = optionen.zufall || zufallsQuelle(optionen.saat || 1);
+
+    // Volltreffer: NUR in der App, und nur wenn ausdruecklich verlangt.
+    // Vorgabe ist aus – sonst waeren die Regeltests nicht mehr
+    // wiederholbar und das gedruckte Spiel braeuchte einen Wuerfel.
+    this.volltreffer = (optionen.volltreffer === true && R.appZusatz)
+      ? R.appZusatz.volltreffer : null;
     this.zuhoerer = {};
     this.zugZaehler = 0;
     this.vorbei = false;
@@ -166,10 +174,12 @@
       },
       ablage: [],
       // Was Ausruestung hinterlaesst: Schadensboni (Wunderkerze,
-      // pH-Kompass), eine geschenkte Aktivierungsenergie
-      // (Platin-Katalysator) und die Angriffssperre (Duftphiole).
+      // pH-Kompass), erlaubte Zweitsynthesen (Gasbrenner einmalig,
+      // Platin-Katalysator dauerhaft) und die Angriffssperre
+      // (Duftphiole).
       boni: [],
-      freieAktivierung: 0,
+      zweiteSynthese: 0,
+      zweiteSyntheseDauerhaft: false,
       angriffGesperrt: false
     };
   };
@@ -198,6 +208,15 @@
     return (spieler.arena ? [spieler.arena] : []).concat(spieler.bank);
   };
 
+  // Darf dieser Spieler in der geschenkten Aktion noch eine zweite
+  // Synthese durchfuehren? Der Gasbrenner zaehlt herunter, der
+  // Platin-Katalysator bleibt liegen (ein Katalysator wird nicht
+  // verbraucht) und gilt deshalb in jedem Zug.
+  Duell.prototype.darfZweiteSynthese = function (spieler) {
+    return spieler.zweiteSyntheseDauerhaft === true ||
+           (spieler.zweiteSynthese || 0) > 0;
+  };
+
   // ------------------------------------------------------------
   //  Moegliche Zuege – genau eine Aktion pro Zug (Abschnitt 4)
   // ------------------------------------------------------------
@@ -221,8 +240,11 @@
 
     // Synthese – aber nie zweimal im selben Zug. Ist die Synthese eine
     // freie Aktion, darf die geschenkte Aktion keine weitere sein
-    // (Abschnitt 6: eine Synthese pro Zug).
-    if (!this.zusatzaktionVerbraucht) {
+    // (Abschnitt 6: eine Synthese pro Zug). Ausnahme sind Gasbrenner
+    // und Platin-Katalysator: Sie erlauben genau eine zweite. Eine
+    // dritte kann daraus nicht werden – nach der zweiten ist die
+    // Zusatzaktion aufgebraucht und der Zug wechselt (fuehreAus).
+    if (!this.zusatzaktionVerbraucht || this.darfZweiteSynthese(spieler)) {
       const synthesen = this.moeglicheSynthesen(spieler);
       for (let i = 0; i < synthesen.length; i++) zuege.push(synthesen[i]);
     }
@@ -252,16 +274,6 @@
       const karte = spieler.hand.ausruestung[i];
       const w = karte.wirkung;
       if (!w) continue;
-
-      // Manche Karten kosten zusaetzlich eine Energiequelle
-      // (Schmelztiegel: "mit einer ⚡-Energie ablegen").
-      if (w.kostetEnergie) {
-        let hat = false;
-        for (let j = 0; j < spieler.hand.ausruestung.length; j++) {
-          if (j !== i && istEnergie(spieler.hand.ausruestung[j])) { hat = true; break; }
-        }
-        if (!hat) continue;
-      }
 
       const ziele = this.moeglicheZiele(spieler, w);
       if (w.ziel && w.ziel !== "keines" && !ziele.length) continue;
@@ -313,11 +325,9 @@
     const R = window.REGELN;
     const ergebnis = [];
     const team = this.team(spieler);
-    // Der Platin-Katalysator senkt die Aktivierungsenergie und wird
-    // dabei nicht verbraucht – dann geht eine ⚡-Synthese auch ohne
-    // Energiekarte auf der Hand.
-    const hatEnergie = spieler.hand.ausruestung.some(istEnergie) ||
-                       (spieler.freieAktivierung || 0) > 0;
+    // Seit Fassung IX kostet ⚡ nichts mehr (R.zuendungNoetig: false).
+    // Die Pruefung steht nur noch fuer die Variante "zuendung-pflicht".
+    const hatEnergie = !R.zuendungNoetig || spieler.hand.ausruestung.some(istEnergie);
 
     for (let i = 0; i < spieler.hand.verbindungen.length; i++) {
       const verbindung = spieler.hand.verbindungen[i];
@@ -416,6 +426,24 @@
       berechnung.bonus = bonus.wert;
       berechnung.bonusQuelle = bonus.quellen;
       berechnung.schaden = Math.max(0, berechnung.schaden + bonus.wert);
+    }
+
+    // Volltreffer – zuletzt, aus demselben Grund wie der Bonus davor:
+    // Er verstaerkt den fertigen Schaden, nicht die Verdopplung der
+    // Typen-Matrix. Attacken ohne Schaden (reine Effektkarten wie
+    // Zinkpanzer) koennen keinen Volltreffer landen.
+    //
+    // Gezogen wird aus this.zufall, dem gesaeten Generator des Duells –
+    // NIE aus Math.random. Im Netzspiel ueberträgt kanal.js nur die Zuege,
+    // beide Geraete rechnen denselben Verlauf nach; ein ungesaeter Wurf
+    // liesse sie auseinanderlaufen.
+    if (this.volltreffer && berechnung.schaden > 0 &&
+        this.zufall() < this.volltreffer.chance) {
+      const schritt = window.REGELN.rundungsSchritt || 1;
+      berechnung.volltreffer = true;
+      berechnung.vorVolltreffer = berechnung.schaden;
+      berechnung.schaden =
+        Math.ceil(berechnung.schaden * this.volltreffer.faktor / schritt) * schritt;
     }
 
     this.melde("angriff", {
@@ -575,12 +603,6 @@
     spieler.hand.ausruestung.splice(zug.index, 1);
     spieler.ablage.push(karte);
 
-    // Karten, die zusaetzlich Energie kosten (Schmelztiegel).
-    if (w.kostetEnergie) {
-      const pos = spieler.hand.ausruestung.findIndex(istEnergie);
-      if (pos !== -1) spieler.ablage.push(spieler.hand.ausruestung.splice(pos, 1)[0]);
-    }
-
     this.melde("ausruestung-gespielt", {
       spieler: spieler, karte: karte, wirkung: w,
       ziel: zug.ziel || null, instanz: zielInstanz
@@ -637,8 +659,12 @@
     } else if (w.art === "angriffsperre") {
       this.gegner(spieler).angriffGesperrt = true;
 
-    } else if (w.art === "freieAktivierung") {
-      spieler.freieAktivierung = (spieler.freieAktivierung || 0) + (w.anzahl || 1);
+    } else if (w.art === "zweiteSynthese") {
+      // Der Gasbrenner wird abgelegt und erlaubt EINE zweite Synthese.
+      // Der Platin-Katalysator bleibt liegen – ein Katalysator wird
+      // chemisch nicht verbraucht, also gilt er in jedem Zug.
+      if (w.dauerhaft) spieler.zweiteSyntheseDauerhaft = true;
+      else spieler.zweiteSynthese = (spieler.zweiteSynthese || 0) + (w.anzahl || 1);
 
     } else if (w.art === "blick") {
       // Reine Anzeigewirkung: Die Engine deckt nichts auf, sie sagt
@@ -661,8 +687,8 @@
 
     this.melde("synthese-versuch", { spieler: spieler, verbindung: verbindung });
 
-    // Aktivierungsenergie ablegen
-    if (synthese.aktivierung) {
+    // Aktivierungsenergie ablegen – nur noch unter "zuendung-pflicht".
+    if (R.zuendungNoetig && synthese.aktivierung) {
       const pos = spieler.hand.ausruestung.findIndex(istEnergie);
       if (pos === -1) {
         this.melde("synthese-misslungen", {
@@ -671,6 +697,14 @@
         return;
       }
       spieler.ablage.push(spieler.hand.ausruestung.splice(pos, 1)[0]);
+    }
+
+    // Ist die Zusatzaktion schon verbraucht, ist DIES die zweite
+    // Synthese des Zuges – sie geht auf das Konto des Gasbrenners.
+    // Der Platin-Katalysator (dauerhaft) zaehlt nicht herunter.
+    // Erst hier, damit eine misslungene Synthese nichts kostet.
+    if (this.zusatzaktionVerbraucht && !spieler.zweiteSyntheseDauerhaft) {
+      spieler.zweiteSynthese = (spieler.zweiteSynthese || 0) - 1;
     }
 
     // Welche Edukte verbraucht werden, entscheidet R.eduktVerbrauch.

@@ -21,7 +21,11 @@
 //                 | Alkan | Alken | Alkin | Alkanol | Aldehyd
 //                 | Carbonsäure | Ester | Legendär (Organica)
 //   oz            Ordnungszahl (nur Elemente; wird auf der Karte gezeigt)
-//   lp            Lebenspunkte: Element 30 | Verbindung 40 | Legendär 50
+//   lp            Lebenspunkte: Element 30 | Verbindung 50 | Legendär 60
+//                 (Fassung VIII, 15.08.2026 – vorher 30/40/50. Bei 40 LP
+//                 war die Synthese ein Verlustgeschäft: zwei Elemente à 30
+//                 hinein, eines mit 40 heraus. Begründung und Meßwerte in
+//                 App\kern\regeln.js.)
 //   masse         Teilchenmasse in u (gerundet) – Steckbrief-Wert; sie
 //                 entscheidet, wer das Duell beginnt (der Leichtere)
 //   eigenschaften Stoffeigenschafts-Tags (steuern Stärken/Schwächen)
@@ -91,7 +95,7 @@ window.KARTEN_DATEN = {
       "name": "Kupfer", "formel": "Cu", "klasse": "Metall", "lp": 30, "masse": 64,
       "eigenschaften": ["fest", "metallisch", "rotglänzend"],
       "attacken": [
-        { "name": "Blankhieb", "typ": "Wucht", "schaden": 10, "effekt": "" },
+        { "name": "Blankhieb", "typ": "Wucht", "schaden": 12, "effekt": "" },
         { "name": "Grüne Flamme", "typ": "Feuer", "schaden": 10, "effekt": "" }
       ],
       "synthese": null,
@@ -103,7 +107,7 @@ window.KARTEN_DATEN = {
       "name": "Zink", "formel": "Zn", "klasse": "Metall", "lp": 30, "masse": 65,
       "eigenschaften": ["fest", "metallisch", "bläulich"],
       "attacken": [
-        { "name": "Wuchtstoß", "typ": "Wucht", "schaden": 10, "effekt": "" },
+        { "name": "Wuchtstoß", "typ": "Wucht", "schaden": 12, "effekt": "" },
         { "name": "Zinkpanzer", "typ": "Wucht", "schaden": 0, "effekt": "Zink erleidet bis zu deinem nächsten Zug nur halben Schaden." }
       ],
       "synthese": null,
@@ -173,10 +177,10 @@ window.KARTEN_DATEN = {
 
     // ---------- OXIDE ----------
     {
-      "name": "Magnesiumoxid", "formel": "MgO", "klasse": "Oxid", "lp": 40, "masse": 40,
+      "name": "Magnesiumoxid", "formel": "MgO", "klasse": "Oxid", "lp": 50, "masse": 40,
       "eigenschaften": ["fest", "weiß"],
       "attacken": [
-        { "name": "Weißglanz-Schlag", "typ": "Wucht", "schaden": 10, "effekt": "" },
+        { "name": "Weißglanz-Schlag", "typ": "Wucht", "schaden": 13, "effekt": "" },
         { "name": "Basenbiss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "synthese": {
@@ -190,11 +194,11 @@ window.KARTEN_DATEN = {
       "quest": "Quest 7 – Oxide", "bild": "bilder/magnesiumoxid.jpg"
     },
     {
-      "name": "Kohlenstoffdioxid", "formel": "CO₂", "klasse": "Oxid", "lp": 40, "masse": 44,
+      "name": "Kohlenstoffdioxid", "formel": "CO₂", "klasse": "Oxid", "lp": 50, "masse": 44,
       "eigenschaften": ["gasförmig", "erstickend"],
       "attacken": [
         { "name": "Erstickungswolke", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner darf in seinem nächsten Zug keine Feuer-Attacke einsetzen." },
-        { "name": "Schwerer Fall", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Schwerer Fall", "typ": "Wucht", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Kohlenstoff + Sauerstoff → Kohlenstoffdioxid",
@@ -207,11 +211,11 @@ window.KARTEN_DATEN = {
       "quest": "Quest 7 – Oxide", "bild": "bilder/kohlenstoffdioxid.jpg"
     },
     {
-      "name": "Eisenoxid", "formel": "FeO", "klasse": "Oxid", "lp": 40, "masse": 72,
+      "name": "Eisenoxid", "formel": "FeO", "klasse": "Oxid", "lp": 50, "masse": 72,
       "eigenschaften": ["fest", "dunkel"],
       "attacken": [
         { "name": "Rostbiss", "typ": "Ätz", "schaden": 10, "effekt": "" },
-        { "name": "Zunderbrocken", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Zunderbrocken", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Eisen + Sauerstoff → Eisenoxid",
@@ -224,10 +228,10 @@ window.KARTEN_DATEN = {
       "quest": "Quest 7 – Oxide", "bild": "bilder/eisenoxid.jpg"
     },
     {
-      "name": "Kupferoxid", "formel": "CuO", "klasse": "Oxid", "lp": 40, "masse": 80,
+      "name": "Kupferoxid", "formel": "CuO", "klasse": "Oxid", "lp": 50, "masse": 80,
       "eigenschaften": ["fest", "schwarz"],
       "attacken": [
-        { "name": "Schwarzmantel", "typ": "Wucht", "schaden": 10, "effekt": "" },
+        { "name": "Schwarzmantel", "typ": "Wucht", "schaden": 15, "effekt": "" },
         { "name": "Sauerstoffgabe", "typ": "Feuer", "schaden": 10, "effekt": "" }
       ],
       "synthese": {
@@ -241,11 +245,11 @@ window.KARTEN_DATEN = {
       "quest": "Quest 7 – Oxide", "bild": "bilder/kupferoxid.jpg"
     },
     {
-      "name": "Zinkoxid", "formel": "ZnO", "klasse": "Oxid", "lp": 40, "masse": 81,
+      "name": "Zinkoxid", "formel": "ZnO", "klasse": "Oxid", "lp": 50, "masse": 81,
       "eigenschaften": ["fest", "weiß"],
       "attacken": [
         { "name": "Weißer Rauch", "typ": "Gas", "schaden": 10, "effekt": "" },
-        { "name": "Pulverstoß", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Pulverstoß", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Zink + Sauerstoff → Zinkoxid",
@@ -258,11 +262,11 @@ window.KARTEN_DATEN = {
       "quest": "Quest 7 – Oxide", "bild": "bilder/zinkoxid.jpg"
     },
     {
-      "name": "Wasser", "formel": "H₂O", "klasse": "Oxid", "lp": 40, "masse": 18,
+      "name": "Wasser", "formel": "H₂O", "klasse": "Oxid", "lp": 50, "masse": 18,
       "eigenschaften": ["flüssig", "löschend"],
       "attacken": [
-        { "name": "Dampfstoß", "typ": "Wucht", "schaden": 10, "effekt": "" },
-        { "name": "Heißer Dampf", "typ": "Gas", "schaden": 10, "effekt": "" }
+        { "name": "Dampfstoß", "typ": "Wucht", "schaden": 8, "effekt": "" },
+        { "name": "Heißer Dampf", "typ": "Gas", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Wasserstoff + Sauerstoff → Wasser (Knallgas-Reaktion!)",
@@ -275,10 +279,10 @@ window.KARTEN_DATEN = {
       "quest": "Quest 10 – Massenhall", "bild": "bilder/wasser.jpg"
     },
     {
-      "name": "Schwefeldioxid", "formel": "SO₂", "klasse": "Oxid", "lp": 40, "masse": 64,
+      "name": "Schwefeldioxid", "formel": "SO₂", "klasse": "Oxid", "lp": 50, "masse": 64,
       "eigenschaften": ["gasförmig", "ätzend", "stechend"],
       "attacken": [
-        { "name": "Ätzender Atem", "typ": "Ätz", "schaden": 10, "effekt": "" },
+        { "name": "Ätzender Atem", "typ": "Ätz", "schaden": 13, "effekt": "" },
         { "name": "Stechender Geruch", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner muss sein aktives Elemental auswechseln (wenn er kann)." }
       ],
       "synthese": {
@@ -294,11 +298,11 @@ window.KARTEN_DATEN = {
 
     // ---------- SULFIDE ----------
     {
-      "name": "Eisensulfid", "formel": "FeS", "klasse": "Sulfid", "lp": 40, "masse": 88,
+      "name": "Eisensulfid", "formel": "FeS", "klasse": "Sulfid", "lp": 50, "masse": 88,
       "eigenschaften": ["fest", "grauschwarz"],
       "attacken": [
         { "name": "Glutzorn", "typ": "Feuer", "schaden": 10, "effekt": "" },
-        { "name": "Eisenschwefelhieb", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Eisenschwefelhieb", "typ": "Wucht", "schaden": 15, "effekt": "" }
 
       ],
       "synthese": {
@@ -312,11 +316,11 @@ window.KARTEN_DATEN = {
       "quest": "Quest 8 – Sulfide", "bild": "bilder/eisensulfid.jpg"
     },
     {
-      "name": "Zinksulfid", "formel": "ZnS", "klasse": "Sulfid", "lp": 40, "masse": 97,
+      "name": "Zinksulfid", "formel": "ZnS", "klasse": "Sulfid", "lp": 50, "masse": 97,
       "eigenschaften": ["fest", "nachleuchtend"],
       "attacken": [
         { "name": "Schimmerblitz", "typ": "Gas", "schaden": 5, "effekt": "Leuchtet nach: Die nächste Attacke des Gegners macht 5 Schaden weniger." },
-        { "name": "Kristallstoß", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Kristallstoß", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Zink + Schwefel → Zinksulfid",
@@ -329,10 +333,10 @@ window.KARTEN_DATEN = {
       "quest": "Quest 8 – Sulfide", "bild": "bilder/zinksulfid.jpg"
     },
     {
-      "name": "Kupfersulfid", "formel": "CuS", "klasse": "Sulfid", "lp": 40, "masse": 96,
+      "name": "Kupfersulfid", "formel": "CuS", "klasse": "Sulfid", "lp": 50, "masse": 96,
       "eigenschaften": ["fest", "blauschwarz"],
       "attacken": [
-        { "name": "Schwarzglanz", "typ": "Wucht", "schaden": 10, "effekt": "" },
+        { "name": "Schwarzglanz", "typ": "Wucht", "schaden": 15, "effekt": "" },
         { "name": "Schwefelbiss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "synthese": {
@@ -346,14 +350,19 @@ window.KARTEN_DATEN = {
       "quest": "Quest 8 – Sulfide", "bild": "bilder/kupfersulfid.jpg"
     },
     {
-      "name": "Pyrit", "formel": "FeS₂", "klasse": "Sulfid", "legendaer": true, "lp": 40, "masse": 120,
-      "eigenschaften": ["fest", "brennbar", "goldglänzend"],
+      "name": "Pyrit", "formel": "FeS₂", "klasse": "Sulfid", "legendaer": true, "lp": 50, "masse": 120,
+      "eigenschaften": ["fest", "goldglänzend"],
       "attacken": [
         { "name": "Funkenschlag", "typ": "Feuer", "schaden": 10, "effekt": "" },
-        { "name": "Kantenhieb", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Kantenhieb", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
-      "synthese": null,
-      "besonderheit": "Narrengold: Die erste Attacke jedes gegnerischen Elementals gegen Pyrit macht nur halben Schaden – es glänzt wie Gold, doch es ist keins. Aber Vorsicht: Pyrit ist brennbar – geröstet wird daraus Eisenoxid und Schwefeldioxid.",
+      "synthese": {
+        "wortgleichung": "Eisen + Schwefel → Pyrit",
+        "bilanz": "56 u + 64 u = 120 u (Fe + 2 S; zwei Schwefel-Teilchen à 32 u)",
+        "edukte": ["Eisen", "Schwefel"],
+        "aktivierung": true, "exotherm": 5
+      },
+      "besonderheit": "Narrengold: Die erste Attacke jedes gegnerischen Elementals gegen Pyrit macht nur halben Schaden – es glänzt wie Gold, doch es ist keins. Geröstet wird aus Pyrit übrigens Eisenoxid und Schwefeldioxid.",
       "flavor": "Narren hielten es für Gold. Weise schlugen Funken daraus.",
       "quest": "Quest 8 – Sulfide (legendär)", "bild": "bilder/pyrit.jpg"
     },
@@ -364,8 +373,8 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Energie"],
       "attacken": [],
       "synthese": null,
-      "wirkung": { "art": "schadensbonus", "wert": 5, "typ": "Feuer", "ziel": "keines" },
-      "besonderheit": "Lege den Gasbrenner ab, um eine ⚡-Synthese zu zünden ODER deine nächste Feuer-Attacke um 5 Schaden zu verstärken.",
+      "wirkung": { "art": "zweiteSynthese", "anzahl": 1, "ziel": "keines" },
+      "besonderheit": "Lege den Gasbrenner ab: In diesem Zug darfst du eine zweite Synthese durchführen – die rauschende Flamme hält die Reaktionen am Laufen.",
       "flavor": "Wer die rauschende Flamme beherrscht, dem öffnet sich die Kunst der Verwandlung.",
       "quest": "Quest 2b – Brenner (Brennerführerschein)", "bild": "bilder/gasbrenner.jpg"
     },
@@ -374,7 +383,8 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Energie"],
       "attacken": [],
       "synthese": null,
-      "besonderheit": "Lege das Streichholz ab, um eine ⚡-Synthese zu zünden (Aktivierungsenergie).",
+      "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigenesElemental", "bedingung": { "klasse": "Sulfid" } },
+      "besonderheit": "Lege das Streichholz ab: Heile eines deiner Sulfid-Elementals um 10 LP – aus Metall und Schwefel wird im Feuer neues Sulfid.",
       "flavor": "Ein kleiner Funke genügt – den Rest erledigt die Reaktion.",
       "quest": "Quest 2b – Brenner", "bild": "bilder/streichholz.jpg"
     },
@@ -432,7 +442,8 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Energie"],
       "attacken": [],
       "synthese": null,
-      "besonderheit": "Lege den Feuerstahl ab, um eine ⚡-Synthese zu zünden – du schlägst dir den Funken selbst (Aktivierungsenergie).",
+      "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigenesElemental", "bedingung": { "klasse": "Oxid" } },
+      "besonderheit": "Lege den Feuerstahl ab: Heile eines deiner Oxid-Elementals um 10 LP – der Funkenregen lässt das Metall neu mit Sauerstoff reagieren.",
       "flavor": "Aus dem Funkenstein von Pyrit: dein eigenes Feuer, das dir niemand nehmen kann.",
       "quest": "Quest 4 – Pyrit", "bild": "bilder/feuerstahl.jpg"
     },
@@ -442,7 +453,7 @@ window.KARTEN_DATEN = {
       "attacken": [],
       "synthese": null,
       "wirkung": { "art": "schadensbonus", "wert": 5, "typ": "Feuer", "ziel": "keines" },
-      "besonderheit": "Lege den Glutkern ab, um eine ⚡-Synthese zu zünden ODER deiner nächsten Feuer-Attacke +5 Schaden zu geben.",
+      "besonderheit": "Lege den Glutkern ab: Deine nächste Feuer-Attacke macht 5 Schaden mehr – die ewige Glut facht jede Flamme an.",
       "flavor": "Ein Stück ewiger Glut aus der Großen Esse von Energenium.",
       "quest": "Nebenquest – Kaldors Truhe (Energenium)", "bild": "bilder/glutkern.jpg"
     },
@@ -488,7 +499,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["fest", "metallisch", "weich", "reaktionsfreudig"],
       "attacken": [
         { "name": "Gelbe Lohe", "typ": "Feuer", "schaden": 10, "effekt": "" },
-        { "name": "Wasserfunken", "typ": "Wucht", "schaden": 5, "effekt": "Gegen Wasser macht diese Attacke doppelten Schaden – Natrium reagiert heftig mit Wasser!" }
+        { "name": "Wasserfunken", "typ": "Wucht", "schaden": 10, "effekt": "Gegen Wasser macht diese Attacke doppelten Schaden – Natrium reagiert heftig mit Wasser!" }
       ],
       "synthese": null,
       "besonderheit": "Familienbande: Sitzt ein weiteres Alkalimetall auf deiner Bank, machen Natriums Attacken +5 Schaden.",
@@ -526,7 +537,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["fest", "metallisch", "schwer", "giftig"],
       "attacken": [
         { "name": "Grünfeuer", "typ": "Feuer", "schaden": 10, "effekt": "" },
-        { "name": "Schwermassenschlag", "typ": "Wucht", "schaden": 15, "effekt": "" }
+        { "name": "Schwermassenschlag", "typ": "Wucht", "schaden": 14, "effekt": "" }
       ],
       "synthese": null,
       "besonderheit": "Träge Masse: Barium kann nicht ausgewechselt werden – wer es in die Arena schickt, kämpft bis zum Ende.",
@@ -610,10 +621,10 @@ window.KARTEN_DATEN = {
 
     // ---------- SALZE & VERBINDUNGEN (Synthese-Ketten!) ----------
     {
-      "name": "Natriumchlorid", "formel": "NaCl", "region": "Periodika", "klasse": "Salz", "lp": 40, "masse": 58,
+      "name": "Natriumchlorid", "formel": "NaCl", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 58,
       "eigenschaften": ["fest", "kristallin", "weiß", "würzig"],
       "attacken": [
-        { "name": "Kristallhagel", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Kristallhagel", "typ": "Wucht", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Natrium + Chlor → Natriumchlorid (Kochsalz)",
@@ -626,10 +637,10 @@ window.KARTEN_DATEN = {
       "quest": "Periodika – Halogeni", "bild": "🧂"
     },
     {
-      "name": "Kaliumchlorid", "formel": "KCl", "region": "Periodika", "klasse": "Salz", "lp": 40, "masse": 75,
+      "name": "Kaliumchlorid", "formel": "KCl", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 75,
       "eigenschaften": ["fest", "kristallin", "weiß"],
       "attacken": [
-        { "name": "Salzsplitter", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Salzsplitter", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Kalium + Chlor → Kaliumchlorid",
@@ -642,10 +653,10 @@ window.KARTEN_DATEN = {
       "quest": "Periodika – Halogeni", "bild": "🌱"
     },
     {
-      "name": "Calciumoxid", "formel": "CaO", "region": "Periodika", "klasse": "Oxid", "lp": 40, "masse": 56,
+      "name": "Calciumoxid", "formel": "CaO", "region": "Periodika", "klasse": "Oxid", "lp": 50, "masse": 56,
       "eigenschaften": ["fest", "weiß", "ätzend"],
       "attacken": [
-        { "name": "Branntkalk-Wurf", "typ": "Wucht", "schaden": 10, "effekt": "" },
+        { "name": "Branntkalk-Wurf", "typ": "Wucht", "schaden": 13, "effekt": "" },
         { "name": "Ätzstaub", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "synthese": {
@@ -659,10 +670,10 @@ window.KARTEN_DATEN = {
       "quest": "Periodika – Erdalkali", "bild": "🧱"
     },
     {
-      "name": "Calciumhydroxid", "formel": "Ca(OH)₂", "region": "Periodika", "klasse": "Hydroxid", "lp": 40, "masse": 74,
+      "name": "Calciumhydroxid", "formel": "Ca(OH)₂", "region": "Periodika", "klasse": "Hydroxid", "lp": 50, "masse": 74,
       "eigenschaften": ["fest", "weiß", "ätzend", "laugig"],
       "attacken": [
-        { "name": "Kalkmilchguss", "typ": "Ätz", "schaden": 10, "effekt": "" },
+        { "name": "Kalkmilchguss", "typ": "Ätz", "schaden": 13, "effekt": "" },
         { "name": "Mörtelpanzer", "typ": "Wucht", "schaden": 0, "effekt": "Calciumhydroxid erleidet bis zu deinem nächsten Zug 5 Schaden weniger pro Attacke." }
       ],
       "synthese": {
@@ -715,23 +726,28 @@ window.KARTEN_DATEN = {
 
     // ---------- MOLEKÜLE (Aerosol) ----------
     {
-      "name": "Ozon", "formel": "O₃", "region": "Aerosol", "klasse": "Molekül", "legendaer": true, "lp": 40, "masse": 48,
+      "name": "Ozon", "formel": "O₃", "region": "Aerosol", "klasse": "Molekül", "legendaer": true, "lp": 50, "masse": 48,
       "eigenschaften": ["gasförmig", "stechend", "bläulich"],
       "attacken": [
-        { "name": "Reizhauch", "typ": "Gas", "schaden": 10, "effekt": "" },
+        { "name": "Reizhauch", "typ": "Gas", "schaden": 13, "effekt": "" },
         { "name": "Höhenriss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Stickstoffdioxid + Sauerstoff → Ozon + Stickstoffmonoxid (Sommersmog)",
+        "bilanz": "46 u + 32 u = 48 u + 30 u (im Sonnenlicht – so entsteht Ozon in der Stadtluft)",
+        "edukte": ["Stickstoffdioxid", "Sauerstoff"],
+        "aktivierung": true, "exotherm": 0
+      },
       "wirkung": { "ausloeser": "zugende", "art": "selbstschaden", "wert": 5 },
       "besonderheit": "Schutzschild der Höhen: Die erste Attacke jedes gegnerischen Elementals gegen Ozon macht nur halben Schaden – die Ozonschicht fängt den ersten Schlag ab. Zerfall: Am Ende jedes deiner Züge verliert Ozon 5 LP – O₃ ist instabil und wird von selbst wieder zu gewöhnlichem Sauerstoff.",
       "flavor": "Dreifacher Sauerstoff. Hoch oben schützt er alles Leben vor der Sonne – tief unten reizt er die Lunge.",
       "quest": "Aerosol – Oxigen (legendär)", "bild": "🌐"
     },
     {
-      "name": "Stickstoffmonoxid", "formel": "NO", "region": "Aerosol", "klasse": "Molekül", "lp": 40, "masse": 30,
+      "name": "Stickstoffmonoxid", "formel": "NO", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 30,
       "eigenschaften": ["gasförmig", "farblos", "reaktionsfreudig"],
       "attacken": [
-        { "name": "Radikalbiss", "typ": "Ätz", "schaden": 10, "effekt": "" }
+        { "name": "Radikalbiss", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Stickstoff + Sauerstoff → Stickstoffmonoxid",
@@ -744,10 +760,10 @@ window.KARTEN_DATEN = {
       "quest": "Aerosol – Nitrogen", "bild": "⚡"
     },
     {
-      "name": "Stickstoffdioxid", "formel": "NO₂", "region": "Aerosol", "klasse": "Molekül", "lp": 40, "masse": 46,
+      "name": "Stickstoffdioxid", "formel": "NO₂", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 46,
       "eigenschaften": ["gasförmig", "braun", "stechend", "giftig"],
       "attacken": [
-        { "name": "Brauner Reizer", "typ": "Ätz", "schaden": 10, "effekt": "" },
+        { "name": "Brauner Reizer", "typ": "Ätz", "schaden": 13, "effekt": "" },
         { "name": "Stechhusten", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner darf in seinem nächsten Zug keine Gas-Attacke einsetzen." }
       ],
       "synthese": {
@@ -761,10 +777,10 @@ window.KARTEN_DATEN = {
       "quest": "Aerosol – Smogon", "bild": "🟤"
     },
     {
-      "name": "Kohlenstoffmonoxid", "formel": "CO", "region": "Aerosol", "klasse": "Molekül", "lp": 40, "masse": 28,
+      "name": "Kohlenstoffmonoxid", "formel": "CO", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 28,
       "eigenschaften": ["gasförmig", "farblos", "geruchlos", "giftig"],
       "attacken": [
-        { "name": "Stilles Gift", "typ": "Gas", "schaden": 10, "effekt": "" }
+        { "name": "Stilles Gift", "typ": "Gas", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Kohlenstoff + Sauerstoff → Kohlenstoffmonoxid (unvollständige Verbrennung)",
@@ -777,22 +793,27 @@ window.KARTEN_DATEN = {
       "quest": "Aerosol – Smogon", "bild": "💀"
     },
     {
-      "name": "Lachgas", "formel": "N₂O", "region": "Aerosol", "klasse": "Molekül", "lp": 40, "masse": 44,
+      "name": "Lachgas", "formel": "N₂O", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 44,
       "eigenschaften": ["gasförmig", "süßlich", "treibhauswirksam"],
       "attacken": [
         { "name": "Lachkrampf", "typ": "Gas", "schaden": 5, "effekt": "Betäubt: Der Gegner darf sein aktives Elemental in seinem nächsten Zug nicht auswechseln." },
-        { "name": "Treibhausdruck", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Treibhausdruck", "typ": "Wucht", "schaden": 13, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Stickstoff + Sauerstoff → Lachgas",
+        "bilanz": "56 u + 32 u = 88 u (2 N₂ + O₂; zwei Teilchen à 44 u)",
+        "edukte": ["Stickstoff", "Sauerstoff"],
+        "aktivierung": true, "exotherm": 0
+      },
       "besonderheit": "Starkes Treibhausgas: N₂O wirkt fast 300-mal so stark wie CO₂ – nicht alles, was harmlos klingt, ist es auch.",
       "flavor": "Lachgas – klingt lustig, wärmt aber die Welt wie kaum ein anderes Gas.",
       "quest": "Aerosol – Treibhus 2", "bild": "😄"
     },
     {
-      "name": "Methan", "formel": "CH₄", "region": "Aerosol", "klasse": "Molekül", "lp": 40, "masse": 16,
+      "name": "Methan", "formel": "CH₄", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 16,
       "eigenschaften": ["gasförmig", "brennbar", "farblos", "treibhauswirksam"],
       "attacken": [
-        { "name": "Sumpffeuer", "typ": "Feuer", "schaden": 10, "effekt": "" }
+        { "name": "Sumpffeuer", "typ": "Feuer", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Kohlenstoff + Wasserstoff → Methan",
@@ -805,10 +826,10 @@ window.KARTEN_DATEN = {
       "quest": "Aerosol – Molekülia 2", "bild": "⛽"
     },
     {
-      "name": "Chlorwasserstoff", "formel": "HCl", "region": "Aerosol", "klasse": "Molekül", "lp": 40, "masse": 36,
+      "name": "Chlorwasserstoff", "formel": "HCl", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 36,
       "eigenschaften": ["gasförmig", "stechend", "sauer"],
       "attacken": [
-        { "name": "Salzsäure-Spritzer", "typ": "Ätz", "schaden": 10, "effekt": "" }
+        { "name": "Salzsäure-Spritzer", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Wasserstoff + Chlor → Chlorwasserstoff",
@@ -884,10 +905,10 @@ window.KARTEN_DATEN = {
       "quest": "Aquaria – Analysia", "bild": "🌬️"
     },
     {
-      "name": "Wasser", "formel": "H₂O", "region": "Aquaria", "klasse": "Oxid", "lp": 40, "masse": 18,
+      "name": "Wasser", "formel": "H₂O", "region": "Aquaria", "klasse": "Oxid", "lp": 50, "masse": 18,
       "eigenschaften": ["flüssig", "löschend", "Dipol"],
       "attacken": [
-        { "name": "Dampfstoß", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Dampfstoß", "typ": "Wucht", "schaden": 11, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Wasserstoff + Sauerstoff → Wasser (Knallgas-Reaktion!)",
@@ -952,7 +973,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Analyse", "Energie"],
       "attacken": [],
       "synthese": null,
-      "besonderheit": "Analyse (Meisterstufe IV): Lege den Elektrolyse-Apparat mit einer ⚡-Energie ab und zerlege eine deiner Verbindungs-Karten wieder in ihre Edukt-Karten – nimm diese auf die Hand. Die Zerlegung ist endotherm.",
+      "besonderheit": "Analyse (Meisterstufe IV): Lege den Elektrolyse-Apparat ab und zerlege eine deiner Verbindungs-Karten wieder in ihre Edukt-Karten – nimm diese auf die Hand. Die Zerlegung ist endotherm.",
       "flavor": "Zwei Elektroden, ein wenig Strom – und aus Wasser werden wieder zwei Gase.",
       "quest": "Aquaria – Analysia", "bild": "🔌"
     },
@@ -961,8 +982,8 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Wissen ist Macht"],
       "attacken": [],
       "synthese": null,
-      "besonderheit": "Lege die Strichformel-Feder ab und zeichne die Strichformel deiner nächsten Verbindung richtig: Diese Synthese gelingt ohne ⚡-Aktivierungsenergie.",
-      "flavor": "Wer eine Verbindung Strich für Strich versteht, dem gelingt sie ganz ohne Funken.",
+      "besonderheit": "Lege die Strichformel-Feder ab und zeichne die Strichformel deiner nächsten Verbindung richtig: Sie kommt mit 10 zusätzlichen Lebenspunkten ins Spiel.",
+      "flavor": "Wer eine Verbindung Strich für Strich versteht, dem gerät sie fester.",
       "quest": "Aquaria – Lewisfurt", "bild": "🖋️"
     },
 
@@ -974,10 +995,10 @@ window.KARTEN_DATEN = {
 
     // ---------- SALZE (Salzküste) ----------
     {
-      "name": "Natriumsulfid", "formel": "Na₂S", "region": "Salzküste", "klasse": "Salz", "lp": 40, "masse": 78,
+      "name": "Natriumsulfid", "formel": "Na₂S", "region": "Salzküste", "klasse": "Salz", "lp": 50, "masse": 78,
       "eigenschaften": ["fest", "gelblich", "gut löslich"],
       "attacken": [
-        { "name": "Sulfidhieb", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Sulfidhieb", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Natrium + Schwefel → Natriumsulfid",
@@ -990,10 +1011,10 @@ window.KARTEN_DATEN = {
       "quest": "Salzküste – Anion", "bild": "🟡"
     },
     {
-      "name": "Magnesiumchlorid", "formel": "MgCl₂", "region": "Salzküste", "klasse": "Salz", "lp": 40, "masse": 95,
+      "name": "Magnesiumchlorid", "formel": "MgCl₂", "region": "Salzküste", "klasse": "Salz", "lp": 50, "masse": 95,
       "eigenschaften": ["fest", "bitter", "zieht Wasser an"],
       "attacken": [
-        { "name": "Bitterbiss", "typ": "Ätz", "schaden": 10, "effekt": "" }
+        { "name": "Bitterbiss", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Magnesium + Chlor → Magnesiumchlorid",
@@ -1006,10 +1027,10 @@ window.KARTEN_DATEN = {
       "quest": "Salzküste – Formalis", "bild": "🧂"
     },
     {
-      "name": "Natriumoxid", "formel": "Na₂O", "region": "Salzküste", "klasse": "Salz", "lp": 40, "masse": 62,
+      "name": "Natriumoxid", "formel": "Na₂O", "region": "Salzküste", "klasse": "Salz", "lp": 50, "masse": 62,
       "eigenschaften": ["fest", "weiß"],
       "attacken": [
-        { "name": "Gitterstoß", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Gitterstoß", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Natrium + Sauerstoff → Natriumoxid",
@@ -1022,10 +1043,10 @@ window.KARTEN_DATEN = {
       "quest": "Salzküste – Salztal", "bild": "⚪"
     },
     {
-      "name": "Calciumfluorid", "formel": "CaF₂", "region": "Salzküste", "klasse": "Salz", "lp": 40, "masse": 78,
+      "name": "Calciumfluorid", "formel": "CaF₂", "region": "Salzküste", "klasse": "Salz", "lp": 50, "masse": 78,
       "eigenschaften": ["fest", "kristallin", "fluoreszierend"],
       "attacken": [
-        { "name": "Flussspat-Schlag", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Flussspat-Schlag", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Calcium + Fluor → Calciumfluorid",
@@ -1038,21 +1059,26 @@ window.KARTEN_DATEN = {
       "quest": "Salzküste – Kristallis", "bild": "🔦"
     },
     {
-      "name": "Kupfersulfat", "formel": "CuSO₄", "region": "Salzküste", "klasse": "Salz", "lp": 40, "masse": 160,
+      "name": "Kupfersulfat", "formel": "CuSO₄", "region": "Salzküste", "klasse": "Salz", "lp": 50, "masse": 160,
       "eigenschaften": ["fest", "tiefblau", "kristallin"],
       "attacken": [
-        { "name": "Blaukristall", "typ": "Ätz", "schaden": 10, "effekt": "" }
+        { "name": "Blaukristall", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Kupfersulfid + Sauerstoff → Kupfersulfat (Rösten)",
+        "bilanz": "96 u + 64 u = 160 u (CuS + 2 O₂; zwei Sauerstoff-Teilchen à 32 u)",
+        "edukte": ["Kupfersulfid", "Sauerstoff"],
+        "aktivierung": true, "exotherm": 5
+      },
       "besonderheit": "Wasserzeiger: Weißes Kupfersulfat färbt sich mit Wasser tiefblau – der Nachweis aus Aquaria.",
       "flavor": "Der schönste Kristall der Salzküste – tiefblau und klar, aus dem eigenen Beet gezüchtet.",
       "quest": "Salzküste – Nebenquest Kristallgärtner", "bild": "🔷"
     },
     {
-      "name": "Calciumchlorid", "formel": "CaCl₂", "region": "Salzküste", "klasse": "Salz", "lp": 40, "masse": 111,
+      "name": "Calciumchlorid", "formel": "CaCl₂", "region": "Salzküste", "klasse": "Salz", "lp": 50, "masse": 111,
       "eigenschaften": ["fest", "zieht Wasser an"],
       "attacken": [
-        { "name": "Streusalz-Stoß", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Streusalz-Stoß", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Calcium + Chlor → Calciumchlorid",
@@ -1128,7 +1154,7 @@ window.KARTEN_DATEN = {
       "name": "Zinn", "formel": "Sn", "region": "Erdhügel", "klasse": "Metall", "oz": 50, "lp": 30, "masse": 119,
       "eigenschaften": ["fest", "weich", "silbrig", "korrosionsfest"],
       "attacken": [
-        { "name": "Zinnschlag", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Zinnschlag", "typ": "Wucht", "schaden": 12, "effekt": "" }
       ],
       "synthese": null,
       "besonderheit": "Legierungs-Partner: Mit Kupfer zusammengeschmolzen ergibt Zinn die harte Bronze.",
@@ -1139,7 +1165,7 @@ window.KARTEN_DATEN = {
       "name": "Silber", "formel": "Ag", "region": "Erdhügel", "klasse": "Metall", "oz": 47, "lp": 30, "masse": 108,
       "eigenschaften": ["fest", "edel", "glänzend"],
       "attacken": [
-        { "name": "Silberblitz", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Silberblitz", "typ": "Wucht", "schaden": 12, "effekt": "" }
       ],
       "synthese": null,
       "besonderheit": "Edelmetall &amp; bester Leiter: Silber erleidet durch Ätz-Attacken nur halben Schaden. Es ist der beste Stromleiter überhaupt.",
@@ -1150,7 +1176,7 @@ window.KARTEN_DATEN = {
       "name": "Gold", "formel": "Au", "region": "Erdhügel", "klasse": "Metall", "oz": 79, "lp": 30, "masse": 197,
       "eigenschaften": ["fest", "edel", "goldglänzend", "schwer"],
       "attacken": [
-        { "name": "Goldgewicht", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Goldgewicht", "typ": "Wucht", "schaden": 14, "effekt": "" }
       ],
       "synthese": null,
       "besonderheit": "Edelmetall: Gold reagiert mit nichts – Ätz-Attacken (Säure, Rost) machen 0 Schaden. Es kommt gediegen (rein) in der Natur vor.",
@@ -1158,11 +1184,11 @@ window.KARTEN_DATEN = {
       "quest": "Erdhügel – Aurum", "bild": "🥇"
     },
     {
-      "name": "Platin", "formel": "Pt", "region": "Erdhügel", "klasse": "Metall", "oz": 78, "legendaer": true, "lp": 50, "masse": 195,
+      "name": "Platin", "formel": "Pt", "region": "Erdhügel", "klasse": "Metall", "oz": 78, "legendaer": true, "lp": 60, "masse": 195,
       "eigenschaften": ["fest", "edel", "sehr wertvoll", "legendär"],
       "attacken": [
-        { "name": "Platinwucht", "typ": "Wucht", "schaden": 10, "effekt": "" },
-        { "name": "Katalyse", "typ": "Gas", "schaden": 0, "effekt": "Deine nächste ⚡-Synthese gelingt ohne Energie-Item – Platin beschleunigt die Reaktion." }
+        { "name": "Platinwucht", "typ": "Wucht", "schaden": 14, "effekt": "" },
+        { "name": "Katalyse", "typ": "Gas", "schaden": 0, "effekt": "In deinem nächsten Zug darfst du eine zweite Synthese durchführen – Platin beschleunigt die Reaktion, ohne sich zu verbrauchen." }
       ],
       "synthese": null,
       "besonderheit": "Legendäres Edelmetall: Platin erleidet durch Ätz- und Feuer-Attacken keinen Schaden. Genau dieses Elemental brauchen die Entroperianer für ihr Massenspektrometer.",
@@ -1172,10 +1198,10 @@ window.KARTEN_DATEN = {
 
     // ---------- LEGIERUNGEN (Erdhügel) ----------
     {
-      "name": "Messing", "formel": "Cu+Zn", "region": "Erdhügel", "klasse": "Legierung", "lp": 40, "masse": 129,
+      "name": "Messing", "formel": "Cu+Zn", "region": "Erdhügel", "klasse": "Legierung", "lp": 50, "masse": 129,
       "eigenschaften": ["fest", "metallisch", "goldgelb", "klangvoll"],
       "attacken": [
-        { "name": "Klangschlag", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Klangschlag", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Kupfer + Zink → Messing (Legierung)",
@@ -1188,10 +1214,10 @@ window.KARTEN_DATEN = {
       "quest": "Erdhügel – Legierung", "bild": "🎺"
     },
     {
-      "name": "Bronze", "formel": "Cu+Sn", "region": "Erdhügel", "klasse": "Legierung", "lp": 40, "masse": 183,
+      "name": "Bronze", "formel": "Cu+Sn", "region": "Erdhügel", "klasse": "Legierung", "lp": 50, "masse": 183,
       "eigenschaften": ["fest", "metallisch", "hart", "bronzefarben"],
       "attacken": [
-        { "name": "Bronzehieb", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Bronzehieb", "typ": "Wucht", "schaden": 17, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Kupfer + Zinn → Bronze (Legierung)",
@@ -1204,10 +1230,10 @@ window.KARTEN_DATEN = {
       "quest": "Erdhügel – Nebenquest Wiegemeister", "bild": "🗡️"
     },
     {
-      "name": "Stahl", "formel": "Fe+C", "region": "Erdhügel", "klasse": "Legierung", "lp": 40, "masse": 68,
+      "name": "Stahl", "formel": "Fe+C", "region": "Erdhügel", "klasse": "Legierung", "lp": 50, "masse": 68,
       "eigenschaften": ["fest", "metallisch", "hart", "zäh"],
       "attacken": [
-        { "name": "Klingenschnitt", "typ": "Wucht", "schaden": 10, "effekt": "" }
+        { "name": "Klingenschnitt", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Eisen + Kohlenstoff → Stahl (Legierung)",
@@ -1226,8 +1252,8 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Reduktion", "Energie"],
       "attacken": [],
       "synthese": null,
-      "wirkung": { "art": "direktschaden", "wert": 5, "ziel": "gegnerArena", "bedingung": { "klasse": "Oxid" }, "kostetEnergie": true },
-      "besonderheit": "Lege den Schmelztiegel mit einer ⚡-Energie ab: Entziehe einem gegnerischen Oxid-Elemental mit Kohle den Sauerstoff (Reduktion) – es verliert seine Oxid-Besonderheit und erleidet 5 Schaden.",
+      "wirkung": { "art": "direktschaden", "wert": 5, "ziel": "gegnerArena", "bedingung": { "klasse": "Oxid" } },
+      "besonderheit": "Lege den Schmelztiegel ab: Entziehe einem gegnerischen Oxid-Elemental mit Kohle den Sauerstoff (Reduktion) – es verliert seine Oxid-Besonderheit und erleidet 5 Schaden.",
       "flavor": "Ein wenig Kohle, viel Feuer – und aus totem Erz wird lebendiges Metall.",
       "quest": "Erdhügel – Cupper", "bild": "🫕"
     },
@@ -1255,10 +1281,10 @@ window.KARTEN_DATEN = {
 
     // ---------- SÄUREN (Acidia) ----------
     {
-      "name": "Kohlensäure", "formel": "H₂CO₃", "region": "Acidia", "klasse": "Säure", "lp": 40, "masse": 62,
+      "name": "Kohlensäure", "formel": "H₂CO₃", "region": "Acidia", "klasse": "Säure", "lp": 50, "masse": 62,
       "eigenschaften": ["flüssig", "ätzend", "sauer", "schwach"],
       "attacken": [
-        { "name": "Sprudelstoß", "typ": "Ätz", "schaden": 5, "effekt": "Prickeln: Die nächste Attacke des Gegners macht 5 Schaden weniger." }
+        { "name": "Sprudelstoß", "typ": "Ätz", "schaden": 8, "effekt": "Prickeln: Die nächste Attacke des Gegners macht 5 Schaden weniger." }
       ],
       "synthese": {
         "wortgleichung": "Kohlenstoffdioxid + Wasser → Kohlensäure",
@@ -1271,11 +1297,11 @@ window.KARTEN_DATEN = {
       "quest": "Acidia – Ätzfurt", "bild": "🥤"
     },
     {
-      "name": "Salzsäure", "formel": "HCl (aq)", "region": "Acidia", "klasse": "Säure", "lp": 40, "masse": 36,
+      "name": "Salzsäure", "formel": "HCl (aq)", "region": "Acidia", "klasse": "Säure", "lp": 50, "masse": 36,
       "eigenschaften": ["flüssig", "ätzend", "sauer", "stark"],
       "attacken": [
         { "name": "Ätzstrahl", "typ": "Ätz", "schaden": 10, "effekt": "" },
-        { "name": "Magensäure", "typ": "Ätz", "schaden": 15, "effekt": "Rückstoß: Salzsäure erleidet selbst 5 Schaden – wer ätzt, wird auch angegriffen.",
+        { "name": "Magensäure", "typ": "Ätz", "schaden": 18, "effekt": "Rückstoß: Salzsäure erleidet selbst 5 Schaden – wer ätzt, wird auch angegriffen.",
           "wirkung": { "art": "selbstschaden", "wert": 5 } }
       ],
       "synthese": {
@@ -1289,23 +1315,33 @@ window.KARTEN_DATEN = {
       "quest": "Acidia – Hydrochloria", "bild": "🧪"
     },
     {
-      "name": "Schwefelsäure", "formel": "H₂SO₄", "region": "Acidia", "klasse": "Säure", "lp": 40, "masse": 98,
+      "name": "Schwefelsäure", "formel": "H₂SO₄", "region": "Acidia", "klasse": "Säure", "lp": 50, "masse": 98,
       "eigenschaften": ["flüssig", "ätzend", "sauer", "stark", "wasserziehend"],
       "attacken": [
-        { "name": "Vitriolguss", "typ": "Ätz", "schaden": 10, "effekt": "" }
+        { "name": "Vitriolguss", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Schwefeldioxid + Wasser → Schwefelsäure (Kontaktverfahren)",
+        "bilanz": "64 u + 16 u + 18 u = 98 u (SO₂ + ½ O₂ + H₂O – der halbe Sauerstoff kommt aus der Luft)",
+        "edukte": ["Schwefeldioxid", "Wasser"],
+        "aktivierung": true, "exotherm": 5
+      },
       "besonderheit": "Das „Vitriol“: Schwefelsäure entzieht anderen Stoffen das Wasser. Solange sie in der Arena steht, können Wasser- und Lösungs-Ausrüstungen des Gegners nicht gespielt werden. Entsteht in zwei Schritten: Schwefel verbrennen, das Oxid in Wasser leiten.",
       "flavor": "An den Wänden der Schlucht blüht es grünlich. Die Alten nannten es Vitriol.",
       "quest": "Acidia – Vitriolschlucht", "bild": "🌫️"
     },
     {
-      "name": "Salpetersäure", "formel": "HNO₃", "region": "Acidia", "klasse": "Säure", "lp": 40, "masse": 63,
+      "name": "Salpetersäure", "formel": "HNO₃", "region": "Acidia", "klasse": "Säure", "lp": 50, "masse": 63,
       "eigenschaften": ["flüssig", "ätzend", "sauer", "stark"],
       "attacken": [
-        { "name": "Scheidewasser", "typ": "Ätz", "schaden": 10, "effekt": "Auch edle Metall-Elementals (Silber, Kupfer) erleiden vollen Schaden – Salpetersäure greift an, wo andere Säuren aufgeben." }
+        { "name": "Scheidewasser", "typ": "Ätz", "schaden": 13, "effekt": "Auch edle Metall-Elementals (Silber, Kupfer) erleiden vollen Schaden – Salpetersäure greift an, wo andere Säuren aufgeben." }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Stickstoffdioxid + Wasser → Salpetersäure + Stickstoffmonoxid (Ostwald-Verfahren)",
+        "bilanz": "138 u + 18 u = 126 u + 30 u (3 NO₂ + H₂O → 2 HNO₃ + NO)",
+        "edukte": ["Stickstoffdioxid", "Wasser"],
+        "aktivierung": false, "exotherm": 5
+      },
       "besonderheit": "Aus Galvanas versiegeltem Schrank: Salpetersäure löst sogar Silber und Kupfer. Nur Gold und Platin widerstehen ihr – deshalb hieß sie früher „Scheidewasser“.",
       "flavor": "Womit man Gold von Silber scheidet – und wovor jeder Grubenmeister den Schlüssel doppelt dreht.",
       "quest": "Acidia – Zinkgrube", "bild": "⚗️"
@@ -1313,10 +1349,10 @@ window.KARTEN_DATEN = {
 
     // ---------- LAUGEN / HYDROXIDE (Acidia) ----------
     {
-      "name": "Natronlauge", "formel": "NaOH", "region": "Acidia", "klasse": "Hydroxid", "lp": 40, "masse": 40,
+      "name": "Natronlauge", "formel": "NaOH", "region": "Acidia", "klasse": "Hydroxid", "lp": 50, "masse": 40,
       "eigenschaften": ["flüssig", "ätzend", "alkalisch", "stark"],
       "attacken": [
-        { "name": "Laugenbiss", "typ": "Ätz", "schaden": 10, "effekt": "" },
+        { "name": "Laugenbiss", "typ": "Ätz", "schaden": 13, "effekt": "" },
         { "name": "Seifensieder", "typ": "Ätz", "schaden": 5, "effekt": "Verseifung: Eine Ausrüstungskarte des Gegners wird abgelegt – Natronlauge löst Fett und Farbe." }
       ],
       "synthese": {
@@ -1330,10 +1366,10 @@ window.KARTEN_DATEN = {
       "quest": "Acidia – Seifensieden", "bild": "🧼"
     },
     {
-      "name": "Kalkwasser", "formel": "Ca(OH)₂", "region": "Acidia", "klasse": "Hydroxid", "lp": 40, "masse": 74,
+      "name": "Kalkwasser", "formel": "Ca(OH)₂", "region": "Acidia", "klasse": "Hydroxid", "lp": 50, "masse": 74,
       "eigenschaften": ["flüssig", "ätzend", "alkalisch", "Nachweis"],
       "attacken": [
-        { "name": "Kalkmilchguss", "typ": "Ätz", "schaden": 10, "effekt": "" }
+        { "name": "Kalkmilchguss", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Calciumoxid + Wasser → Calciumhydroxid (Kalkwasser)",
@@ -1398,48 +1434,68 @@ window.KARTEN_DATEN = {
 
     // ---------- ALKANE (Organica I) ----------
     {
-      "name": "Methan", "formel": "CH₄", "region": "Organica", "teil": 1, "klasse": "Alkan", "lp": 40, "masse": 16,
+      "name": "Methan", "formel": "CH₄", "region": "Organica", "teil": 1, "klasse": "Alkan", "lp": 50, "masse": 16,
       "eigenschaften": ["gasförmig", "brennbar", "C1-Stamm"],
       "attacken": [
         { "name": "Sumpfblase", "typ": "Gas", "schaden": 5, "effekt": "Die nächste Attacke des Gegners macht 5 Schaden weniger." },
-        { "name": "Irrlichtflamme", "typ": "Feuer", "schaden": 10, "effekt": "" }
+        { "name": "Irrlichtflamme", "typ": "Feuer", "schaden": 13, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Kohlenstoff + Wasserstoff → Methan",
+        "bilanz": "12 u + 4 u = 16 u – nichts geht verloren!",
+        "edukte": ["Kohlenstoff", "Wasserstoff"],
+        "aktivierung": true, "exotherm": 5
+      },
       "besonderheit": "Kohlenwasserstoff: darf direkt als Team-Elemental antreten. Das kleinste organische Molekül – 1 C, 4 H, ein perfekter Tetraeder.",
       "flavor": "Wo einst Lebendiges versank, steigt es als Blase wieder auf.",
       "quest": "Organica – Methanmoor", "bild": "💨"
     },
     {
-      "name": "Ethan", "formel": "C₂H₆", "region": "Organica", "teil": 1, "klasse": "Alkan", "lp": 40, "masse": 30,
+      "name": "Ethan", "formel": "C₂H₆", "region": "Organica", "teil": 1, "klasse": "Alkan", "lp": 50, "masse": 30,
       "eigenschaften": ["gasförmig", "brennbar", "C2-Stamm"],
       "attacken": [
-        { "name": "Kettenschlag", "typ": "Wucht", "schaden": 10, "effekt": "" },
+        { "name": "Kettenschlag", "typ": "Wucht", "schaden": 13, "effekt": "" },
         { "name": "Flammenzunge", "typ": "Feuer", "schaden": 10, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Ethen + Wasserstoff → Ethan (Hydrierung)",
+        "bilanz": "28 u + 2 u = 30 u – nichts geht verloren!",
+        "edukte": ["Ethen", "Wasserstoff"],
+        "aktivierung": true, "exotherm": 5
+      },
       "besonderheit": "Kohlenwasserstoff: darf direkt als Team-Elemental antreten. Ahnherr des großen C2-Stammbaums – aus ihm werden Ethen, Ethanol, Ethanal, Essigsäure und Ester.",
       "flavor": "Zwei Glieder nur – doch jede lange Reise beginnt mit dem zweiten Schritt.",
       "quest": "Organica – Kettenheim", "bild": "⛓️"
     },
     {
-      "name": "Butan", "formel": "C₄H₁₀", "region": "Organica", "teil": 1, "klasse": "Alkan", "lp": 40, "masse": 58,
+      "name": "Butan", "formel": "C₄H₁₀", "region": "Organica", "teil": 1, "klasse": "Alkan", "lp": 50, "masse": 58,
       "eigenschaften": ["gasförmig", "brennbar", "C4-Stamm"],
       "attacken": [
-        { "name": "Feuerzeugfunke", "typ": "Feuer", "schaden": 10, "effekt": "" },
+        { "name": "Feuerzeugfunke", "typ": "Feuer", "schaden": 13, "effekt": "" },
         { "name": "Druckstoß", "typ": "Wucht", "schaden": 10, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Ethen + Ethan → Butan (die Kette wächst)",
+        "bilanz": "28 u + 30 u = 58 u – nichts geht verloren!",
+        "edukte": ["Ethen", "Ethan"],
+        "aktivierung": true, "exotherm": 0
+      },
       "besonderheit": "Isomer-Wechsel: Einmal pro Duell weicht Butan einer Attacke aus – es war in diesem Moment iso-Butan (gleiche Formel, andere Gestalt).",
       "flavor": "Im Feuerzeug wartet es flüssig und geduldig – bis jemand den Funken ruft.",
       "quest": "Organica – Zickzackfurt", "bild": "🔥"
     },
     {
-      "name": "Octan", "formel": "C₈H₁₈", "region": "Organica", "teil": 1, "klasse": "Alkan", "lp": 40, "masse": 114,
+      "name": "Octan", "formel": "C₈H₁₈", "region": "Organica", "teil": 1, "klasse": "Alkan", "lp": 50, "masse": 114,
       "eigenschaften": ["flüssig", "brennbar", "C8-Stamm"],
       "attacken": [
-        { "name": "Superzündung", "typ": "Feuer", "schaden": 10, "effekt": "" }
+        { "name": "Superzündung", "typ": "Feuer", "schaden": 13, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Ethen + Wasserstoff → Octan (vier Bausteine werden eine Kette)",
+        "bilanz": "112 u + 2 u = 114 u (4 C₂H₄ + H₂; vier Ethen-Teilchen à 28 u)",
+        "edukte": ["Ethen", "Wasserstoff"],
+        "aktivierung": true, "exotherm": 0
+      },
       "besonderheit": "Klopffest: Octan zündet erst, wenn es zünden soll – Feuer-Attacken gegen Octan machen 5 Schaden weniger.",
       "flavor": "Aus der obersten Etage der Türme von Raffineria – das Blut der Straßen.",
       "quest": "Organica – Raffineria", "bild": "⛽"
@@ -1447,24 +1503,34 @@ window.KARTEN_DATEN = {
 
     // ---------- ALKENE / ALKINE (Organica I) ----------
     {
-      "name": "Ethen", "formel": "C₂H₄", "region": "Organica", "teil": 1, "klasse": "Alken", "lp": 40, "masse": 28,
+      "name": "Ethen", "formel": "C₂H₄", "region": "Organica", "teil": 1, "klasse": "Alken", "lp": 50, "masse": 28,
       "eigenschaften": ["gasförmig", "brennbar", "ungesättigt", "C2-Stamm"],
       "attacken": [
         { "name": "Reifehauch", "typ": "Gas", "schaden": 5, "effekt": "" },
-        { "name": "Doppelgriff", "typ": "Wucht", "schaden": 10, "effekt": "Addition: Die Doppelbindung greift zu – der Gegner kann in seinem nächsten Zug nicht wechseln." }
+        { "name": "Doppelgriff", "typ": "Wucht", "schaden": 13, "effekt": "Addition: Die Doppelbindung greift zu – der Gegner kann in seinem nächsten Zug nicht wechseln." }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Ethin + Wasserstoff → Ethen (Teilhydrierung)",
+        "bilanz": "26 u + 2 u = 28 u – nichts geht verloren!",
+        "edukte": ["Ethin", "Wasserstoff"],
+        "aktivierung": true, "exotherm": 5
+      },
       "besonderheit": "Ungesättigt und ungeduldig: An der Doppelbindung ist noch Platz – Ethen wartet nicht, es greift zu.",
       "flavor": "Ein Hauch davon, und die grünste Banane wird gelb.",
       "quest": "Organica – Ethenau", "bild": "🍌"
     },
     {
-      "name": "Ethin", "formel": "C₂H₂", "region": "Organica", "teil": 1, "klasse": "Alkin", "lp": 40, "masse": 26,
+      "name": "Ethin", "formel": "C₂H₂", "region": "Organica", "teil": 1, "klasse": "Alkin", "lp": 50, "masse": 26,
       "eigenschaften": ["gasförmig", "brennbar", "ungesättigt", "C2-Stamm"],
       "attacken": [
-        { "name": "Schweißflamme", "typ": "Feuer", "schaden": 10, "effekt": "" }
+        { "name": "Schweißflamme", "typ": "Feuer", "schaden": 13, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Kohlenstoff + Wasserstoff → Ethin (Lichtbogenverfahren)",
+        "bilanz": "24 u + 2 u = 26 u (2 C + H₂; zwei Kohlenstoff-Teilchen à 12 u)",
+        "edukte": ["Kohlenstoff", "Wasserstoff"],
+        "aktivierung": true, "exotherm": 0
+      },
       "besonderheit": "Dreifachbindung unter Spannung: Die heißeste Flamme der Sümpfe (über 3000 °C) – geboren aus Karbid und Wasser.",
       "flavor": "Drei Striche zwischen zwei Kohlenstoffen. Mehr Spannung hält kein Molekül aus.",
       "quest": "Organica – Karbidklamm", "bild": "🛠️"
@@ -1506,8 +1572,8 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["Katalyse"],
       "attacken": [],
       "synthese": null,
-      "wirkung": { "art": "freieAktivierung", "anzahl": 1, "ziel": "keines" },
-      "besonderheit": "Bleibt liegen: Einmal pro Duell gelingt dir eine ⚡-Synthese ohne Energie-Item – der Katalysator senkt die Aktivierungsenergie und wird dabei nicht verbraucht.",
+      "wirkung": { "art": "zweiteSynthese", "dauerhaft": true, "ziel": "keines" },
+      "besonderheit": "Bleibt liegen: In jedem Zug darfst du eine zweite Synthese durchführen – der Katalysator senkt die Aktivierungsenergie und wird dabei selbst nicht verbraucht.",
       "flavor": "Ein Splitter des legendären Platins. Jetzt weißt du, wofür der Feind es wollte.",
       "quest": "Organica – Flammensumpf", "bild": "⚙️"
     },
@@ -1526,21 +1592,26 @@ window.KARTEN_DATEN = {
 
     // ---------- ALKANOLE (Organica II) ----------
     {
-      "name": "Traubenzucker", "formel": "C₆H₁₂O₆", "region": "Organica", "teil": 2, "klasse": "Molekül", "lp": 40, "masse": 180,
+      "name": "Traubenzucker", "formel": "C₆H₁₂O₆", "region": "Organica", "teil": 2, "klasse": "Molekül", "lp": 50, "masse": 180,
       "eigenschaften": ["fest", "süß", "wasserlöslich", "Energieträger"],
       "attacken": [
-        { "name": "Zuckerschub", "typ": "Wucht", "schaden": 5, "effekt": "Ein eigenes Elemental erhält 5 LP zurück – Traubenzucker ist reine Energie." }
+        { "name": "Zuckerschub", "typ": "Wucht", "schaden": 17, "effekt": "Ein eigenes Elemental erhält 5 LP zurück – Traubenzucker ist reine Energie." }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Kohlenstoffdioxid + Wasser → Traubenzucker + Sauerstoff (Fotosynthese)",
+        "bilanz": "264 u + 108 u = 180 u + 192 u (6 CO₂ + 6 H₂O → C₆H₁₂O₆ + 6 O₂)",
+        "edukte": ["Kohlenstoffdioxid", "Wasser"],
+        "aktivierung": true, "exotherm": 0
+      },
       "besonderheit": "Edukt der Gärung: Lege Traubenzucker zusammen mit der Ethanol-Karte ab, um die alkoholische Gärung zu spielen (Hefe arbeitet ohne Energie-Item – Enzyme sind Katalysatoren).",
       "flavor": "Aus ihm machen die Hefen von Gärhusen alles, was in den Bottichen blubbert.",
       "quest": "Organica – Gärhusen", "bild": "🍬"
     },
     {
-      "name": "Ethanol", "formel": "C₂H₅OH", "region": "Organica", "teil": 2, "klasse": "Alkanol", "lp": 40, "masse": 46,
+      "name": "Ethanol", "formel": "C₂H₅OH", "region": "Organica", "teil": 2, "klasse": "Alkanol", "lp": 50, "masse": 46,
       "eigenschaften": ["flüssig", "brennbar", "löst Fett und Wasser", "C2-Stamm"],
       "attacken": [
-        { "name": "Spiritusflamme", "typ": "Feuer", "schaden": 10, "effekt": "" },
+        { "name": "Spiritusflamme", "typ": "Feuer", "schaden": 13, "effekt": "" },
         { "name": "Lösungsmittel", "typ": "Ätz", "schaden": 5, "effekt": "Eine Ausrüstungskarte des Gegners wird abgelegt – Ethanol löst fast alles." }
       ],
       "synthese": {
@@ -1554,23 +1625,33 @@ window.KARTEN_DATEN = {
       "quest": "Organica – Gärhusen", "bild": "🍷"
     },
     {
-      "name": "Methanol", "formel": "CH₃OH", "region": "Organica", "teil": 2, "klasse": "Alkanol", "lp": 40, "masse": 32,
+      "name": "Methanol", "formel": "CH₃OH", "region": "Organica", "teil": 2, "klasse": "Alkanol", "lp": 50, "masse": 32,
       "eigenschaften": ["flüssig", "brennbar", "giftig", "C1-Stamm"],
       "attacken": [
-        { "name": "Holzgeist", "typ": "Gas", "schaden": 10, "effekt": "Blendung: Die nächste Attacke des Gegners macht nur halben Schaden." }
+        { "name": "Holzgeist", "typ": "Gas", "schaden": 13, "effekt": "Blendung: Die nächste Attacke des Gegners macht nur halben Schaden." }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Kohlenstoffmonoxid + Wasserstoff → Methanol",
+        "bilanz": "28 u + 4 u = 32 u (CO + 2 H₂; zwei Wasserstoff-Teilchen à 2 u)",
+        "edukte": ["Kohlenstoffmonoxid", "Wasserstoff"],
+        "aktivierung": true, "exotherm": 5
+      },
       "besonderheit": "Der falsche Bruder: Ein C-Atom weniger als Ethanol – und aus dem Trinkbaren wird der Blindmacher. Methanol darf nie als Ersatz für Ethanol gespielt werden.",
       "flavor": "Hinter Gittern im Spiritushafen. Ein Atom Unterschied, ein Leben Unterschied.",
       "quest": "Organica – Spiritushafen", "bild": "☠️"
     },
     {
-      "name": "Glycerin", "formel": "C₃H₅(OH)₃", "region": "Organica", "teil": 2, "klasse": "Alkanol", "lp": 40, "masse": 92,
+      "name": "Glycerin", "formel": "C₃H₅(OH)₃", "region": "Organica", "teil": 2, "klasse": "Alkanol", "lp": 50, "masse": 92,
       "eigenschaften": ["flüssig", "zäh", "hygroskopisch", "süß"],
       "attacken": [
-        { "name": "Sirupfessel", "typ": "Wucht", "schaden": 5, "effekt": "Der Gegner kann in seinem nächsten Zug nicht wechseln – zäh wie Sirup." }
+        { "name": "Sirupfessel", "typ": "Wucht", "schaden": 15, "effekt": "Der Gegner kann in seinem nächsten Zug nicht wechseln – zäh wie Sirup." }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Traubenzucker + Wasserstoff → Glycerin",
+        "bilanz": "180 u + 4 u = 184 u (C₆H₁₂O₆ + 2 H₂ → 2 C₃H₈O₃; zwei Glycerin-Teilchen à 92 u)",
+        "edukte": ["Traubenzucker", "Wasserstoff"],
+        "aktivierung": true, "exotherm": 0
+      },
       "besonderheit": "Dreiwertig: Drei OH-Gruppen ziehen Wasser an. Heile ein eigenes Elemental um 10 LP (Salvias Salbe) – einmal pro Duell.",
       "flavor": "Das Rückgrat jedes Fettes – und in jeder Salbe der Heilerin.",
       "quest": "Organica – Glyceria", "bild": "🧴"
@@ -1578,10 +1659,10 @@ window.KARTEN_DATEN = {
 
     // ---------- ALDEHYD (Organica II) ----------
     {
-      "name": "Ethanal", "formel": "CH₃CHO", "region": "Organica", "teil": 2, "klasse": "Aldehyd", "lp": 40, "masse": 44,
+      "name": "Ethanal", "formel": "CH₃CHO", "region": "Organica", "teil": 2, "klasse": "Aldehyd", "lp": 50, "masse": 44,
       "eigenschaften": ["flüssig", "brennbar", "stechend", "C2-Stamm"],
       "attacken": [
-        { "name": "Stechender Hauch", "typ": "Gas", "schaden": 10, "effekt": "" }
+        { "name": "Stechender Hauch", "typ": "Gas", "schaden": 13, "effekt": "" }
       ],
       "synthese": {
         "wortgleichung": "Ethanol + Kupferoxid → Ethanal + Kupfer + Wasser",
@@ -1596,21 +1677,26 @@ window.KARTEN_DATEN = {
 
     // ---------- CARBONSÄUREN (Organica II) ----------
     {
-      "name": "Methansäure", "formel": "HCOOH", "region": "Organica", "teil": 2, "klasse": "Carbonsäure", "lp": 40, "masse": 46,
+      "name": "Methansäure", "formel": "HCOOH", "region": "Organica", "teil": 2, "klasse": "Carbonsäure", "lp": 50, "masse": 46,
       "eigenschaften": ["flüssig", "ätzend", "sauer", "C1-Stamm"],
       "attacken": [
-        { "name": "Ameisensäure-Sprühregen", "typ": "Ätz", "schaden": 10, "effekt": "" }
+        { "name": "Ameisensäure-Sprühregen", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Kohlenstoffmonoxid + Wasser → Methansäure",
+        "bilanz": "28 u + 18 u = 46 u – nichts geht verloren!",
+        "edukte": ["Kohlenstoffmonoxid", "Wasser"],
+        "aktivierung": true, "exotherm": 0
+      },
       "besonderheit": "Echte Säure: Wie in Acidia gelernt – Ätz-Attacken machen doppelten Schaden gegen metallische Elementals.",
       "flavor": "Der ganze Wald gehört den Ameisen. Wer zu nah kommt, lernt das schnell.",
       "quest": "Organica – Ameisenwald", "bild": "🐜"
     },
     {
-      "name": "Essigsäure", "formel": "CH₃COOH", "region": "Organica", "teil": 2, "klasse": "Carbonsäure", "lp": 40, "masse": 60,
+      "name": "Essigsäure", "formel": "CH₃COOH", "region": "Organica", "teil": 2, "klasse": "Carbonsäure", "lp": 50, "masse": 60,
       "eigenschaften": ["flüssig", "ätzend", "sauer", "C2-Stamm"],
       "attacken": [
-        { "name": "Entkalker", "typ": "Ätz", "schaden": 10, "effekt": "Gegen Salz- und Kalk-Elementals: zusätzlich 5 Schaden – der Kalk sprudelt weg." }
+        { "name": "Entkalker", "typ": "Ätz", "schaden": 13, "effekt": "Gegen Salz- und Kalk-Elementals: zusätzlich 5 Schaden – der Kalk sprudelt weg." }
       ],
       "synthese": {
         "wortgleichung": "Ethanol + Sauerstoff → Essigsäure + Wasser (Essigsäuregärung)",
@@ -1623,13 +1709,18 @@ window.KARTEN_DATEN = {
       "quest": "Organica – Essigheim", "bild": "🍶"
     },
     {
-      "name": "Buttersäure", "formel": "C₃H₇COOH", "region": "Organica", "teil": 2, "klasse": "Carbonsäure", "lp": 40, "masse": 88,
+      "name": "Buttersäure", "formel": "C₃H₇COOH", "region": "Organica", "teil": 2, "klasse": "Carbonsäure", "lp": 50, "masse": 88,
       "eigenschaften": ["flüssig", "ätzend", "widerlich riechend"],
       "attacken": [
         { "name": "Stinkwolke", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner muss sein aktives Elemental auf die Bank wechseln – niemand kämpft freiwillig daneben." },
-        { "name": "Säurespritzer", "typ": "Ätz", "schaden": 10, "effekt": "" }
+        { "name": "Säurespritzer", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Traubenzucker → Buttersäure + Kohlenstoffdioxid + Wasserstoff (Buttersäuregärung)",
+        "bilanz": "180 u = 88 u + 88 u + 4 u (C₆H₁₂O₆ → C₃H₇COOH + 2 CO₂ + 2 H₂)",
+        "edukte": ["Traubenzucker"],
+        "aktivierung": false, "exotherm": 0
+      },
       "besonderheit": "Noch in millionenfacher Verdünnung wahrnehmbar. Zusammen mit einem Alkanol wird aus ihr ein Ananas-Duft – Chemie ist erstaunlich.",
       "flavor": "Ranzige Butter, alter Käse, Schweiß. Der Lagermeister isst dabei sein Brot.",
       "quest": "Organica – Säuregasse", "bild": "🧀"
@@ -1637,10 +1728,10 @@ window.KARTEN_DATEN = {
 
     // ---------- ESTER (Organica II) ----------
     {
-      "name": "Essigsäure­ethylester", "formel": "CH₃COOC₂H₅", "region": "Organica", "teil": 2, "klasse": "Ester", "lp": 40, "masse": 88,
+      "name": "Essigsäure­ethylester", "formel": "CH₃COOC₂H₅", "region": "Organica", "teil": 2, "klasse": "Ester", "lp": 50, "masse": 88,
       "eigenschaften": ["flüssig", "brennbar", "duftend", "unpolar", "C2-Stamm"],
       "attacken": [
-        { "name": "Duftschleier", "typ": "Gas", "schaden": 5, "effekt": "Verstecken: Dein Elemental kann im nächsten Zug des Gegners nicht angegriffen werden." }
+        { "name": "Duftschleier", "typ": "Gas", "schaden": 8, "effekt": "Verstecken: Dein Elemental kann im nächsten Zug des Gegners nicht angegriffen werden." }
       ],
       "synthese": {
         "wortgleichung": "Essigsäure + Ethanol → Essigsäureethylester + Wasser (Kondensation)",
@@ -1681,22 +1772,27 @@ window.KARTEN_DATEN = {
     // keine Karte. Dieselbe Ringstruktur, ein anderes Metall im Zentrum:
     // mit Eisen wird sie zu Blut, mit Magnesium zu Blattgrün.
     {
-      "name": "Porphyrin-Ring", "formel": "C₂₀H₁₄N₄", "region": "Organica", "teil": 2, "klasse": "Molekül", "lp": 40, "masse": 310,
+      "name": "Porphyrin-Ring", "formel": "C₂₀H₁₄N₄", "region": "Organica", "teil": 2, "klasse": "Molekül", "lp": 50, "masse": 310,
       "eigenschaften": ["fest", "ringförmig", "Metallfänger", "lebendig"],
       "attacken": [
-        { "name": "Ringschluss", "typ": "Wucht", "schaden": 10, "effekt": "" },
+        { "name": "Ringschluss", "typ": "Wucht", "schaden": 17, "effekt": "" },
         { "name": "Klammergriff", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
-      "synthese": null,
+      "synthese": {
+        "wortgleichung": "Kohlenstoff + Stickstoff + Wasserstoff → Porphyrin-Ring",
+        "bilanz": "240 u + 56 u + 14 u = 310 u (20 C + 2 N₂ + 7 H₂ – der Ring wird aus seinen Elementen aufgebaut)",
+        "edukte": ["Kohlenstoff", "Stickstoff", "Wasserstoff"],
+        "aktivierung": true, "exotherm": 0
+      },
       "besonderheit": "Vier Stickstoff-Arme greifen nach jedem Metall-Ion, das ihnen zu nahe kommt. Allein ist der Ring farblos – erst das Metall in seiner Mitte gibt ihm seine Farbe.",
       "flavor": "Ein Ring aus vier Armen, leer in der Mitte. Was hineinfindet, entscheidet, ob daraus Blut wird oder Blattgrün.",
       "quest": "Organica – Die Herzkammer", "bild": "⭕"
     },
     {
-      "name": "Hämoglobin", "formel": "Fe-Porphyrin", "region": "Organica", "teil": 2, "klasse": "Legendär", "legendaer": true, "lp": 50, "masse": 64500,
+      "name": "Hämoglobin", "formel": "Fe-Porphyrin", "region": "Organica", "teil": 2, "klasse": "Legendär", "legendaer": true, "lp": 60, "masse": 64500,
       "eigenschaften": ["legendär", "rot", "Sauerstoff-Träger", "lebendig"],
       "attacken": [
-        { "name": "Sauerstoffstrom", "typ": "Wucht", "schaden": 15, "effekt": "" },
+        { "name": "Sauerstoffstrom", "typ": "Wucht", "schaden": 17, "effekt": "" },
         { "name": "Atemzug", "typ": "Gas", "schaden": 0, "effekt": "Heile alle deine Elementals um 10 LP – Hämoglobin bringt jedem, was er zum Leben braucht." }
       ],
       "synthese": {
@@ -1710,10 +1806,10 @@ window.KARTEN_DATEN = {
       "quest": "Organica – Die Herzkammer (legendär)", "bild": "❤️"
     },
     {
-      "name": "Chlorophyll", "formel": "Mg-Porphyrin", "region": "Organica", "teil": 2, "klasse": "Legendär", "legendaer": true, "lp": 50, "masse": 893,
+      "name": "Chlorophyll", "formel": "Mg-Porphyrin", "region": "Organica", "teil": 2, "klasse": "Legendär", "legendaer": true, "lp": 60, "masse": 893,
       "eigenschaften": ["legendär", "grün", "Lichtfänger", "lebendig"],
       "attacken": [
-        { "name": "Lichternte", "typ": "Feuer", "schaden": 15, "effekt": "" },
+        { "name": "Lichternte", "typ": "Feuer", "schaden": 18, "effekt": "" },
         { "name": "Fotosynthese", "typ": "Gas", "schaden": 0, "effekt": "Nimm eine abgelegte Karte zurück auf die Hand – aus Licht und Luft entsteht Neues." }
       ],
       "synthese": {

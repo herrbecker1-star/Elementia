@@ -10,28 +10,64 @@
 
 window.REGELN = {
 
-  fassung: "VI",
+  fassung: "VIII",
 
   // --- Abschnitt 2: Lebenspunkte ------------------------------
-  // Es gibt nur drei Werte. Ausruestung hat gar keine (lp: null).
+  // Die Stufen der LP-Leiter. Ausruestung hat gar keine (lp: null).
+  //
+  // Verbindungen standen bis Fassung VII auf 40. Gemessen am 15.08.2026
+  // war der Grundsatz des Spiels damit VERLETZT: Wer synthetisiert, sobald
+  // es geht – so spielt ein Kind –, verlor Duelle. syntheseLohnt lag bei
+  // -15,5 % (Feuerlande) und -22,7 % (Periodika).
+  //
+  // Die Rechnung dahinter ist einfach: Zwei Elemente à 30 LP (zusammen 60)
+  // werden zu EINER Verbindung. Bei 40 LP verliert das Team 20 LP und
+  // einen Koerper auf der Bank – die Synthese war ein Verlustgeschaeft.
+  //
+  // Gemessen wurde die ganze Leiter (varianten.js, "verbindungen-lp-*"):
+  //   40 LP  syntheseLohnt -15,5 %   der Ist-Zustand, eine Falle
+  //   45 LP                 +0,2 %   gerade nicht mehr schaedlich
+  //   50 LP                 +3,6 %   \ zusammen mit den neuen Bauformen
+  //   55 LP                +15,3 %   / die Wahl (siehe unten)
+  //   60 LP                +16,2 %   Pflicht: Bei zwei vollen 30ern ist
+  //                                  lpEdukte <= verbindung.lp IMMER wahr,
+  //                                  die Synthese ist keine Entscheidung
+  //                                  mehr. Deshalb NICHT genommen.
+  // Beschlossen wurde 50 zusammen mit der Schadensspreizung: Diese
+  // Kombination bringt syntheseLohnt auf +19,7 % und laesst als einzige
+  // die Spanne der belastbaren Karten SCHRUMPFEN (26,3 auf 24,8 %).
   lp: {
     element: 30,
-    verbindung: 40,
-    legendaer: 50
+    verbindung: 50,
+    legendaer: 60
   },
-  erlaubteLp: [30, 40, 50],
+
+  // --- Die Fuenferleiter ist seit Fassung VIII Geschichte -----
+  // Bis Fassung VII gab es genau drei LP-Werte und vier Schadenswerte.
+  // Der Grund lag nicht im Spiel, sondern im Punktezaehler: Die
+  // Drehscheibe am Tisch zeigte elf Felder in Fuenferschritten, und was
+  // nicht auf dieser Leiter lag, liess sich dort nicht anzeigen.
+  //
+  // Das war zu teuer. Gemessen am 15.08.2026: 72 % aller 127 Attacken
+  // trugen schlicht die 10, und im ganzen Feuerlande-Pool gab es nur
+  // VIER verschiedene Bauformen (LP × hoechster Schaden). Bei so wenigen
+  // Bauformen ist die Meta in wenigen Duellen durchschaut – es gibt
+  // schlicht nichts zu entdecken.
+  //
+  // Der Punktezaehler ist deshalb umgebaut: zwei Scheiben, Zehner und
+  // Einer, Bereich 0-79 in Einerschritten (Karten\Drehscheibe\
+  // lp-drehscheibe.html). Damit ist jede ganze Zahl anzeigbar. Der Preis
+  // ist, dass am Tisch gerechnet wird – vorher wurde nur weitergedreht.
+  // Das ist Kopfrechnen mit Zehneruebergang bei Kindern ab Klasse 7 und
+  // vertretbar; ohne freie Zahlen war das Spiel nicht auszubalancieren.
+  //
+  // Grenzen statt Listen: Die Obergrenze der LP ist, was der Zaehler
+  // zeigt. Beides sind ganze Zahlen – Halbe gaebe es auf keiner Scheibe.
+  lpSpanne: [10, 79],
+  schadenSpanne: [0, 40],
 
   // --- Abschnitt 2: Attacken ----------------------------------
   attackentypen: ["Feuer", "Wucht", "Gas", "Ätz"],
-
-  // Die Schadensleiter, seit Fassung VII wieder 0/5/10/15. Die
-  // Zwischenstufen 8 und 12 kamen aus dem Balancing (eine Stufe ist rund
-  // 15 Prozentpunkte Siegquote wert, das war zum Nachjustieren zu grob).
-  // Sie fallen wieder weg, weil der Punktezähler am Tisch eine Drehscheibe
-  // in Fünferschritten ist: Was nicht auf der Fünferleiter liegt, lässt
-  // sich dort nicht anzeigen, und genau das Rechnen sollte verschwinden.
-  // Betroffen waren drei Karten (Schwefelsäure, Octan, Ethin: 12 → 10).
-  erlaubterSchaden: [0, 5, 10, 15],
 
   // --- Abschnitt 5: Staerken und Schwaechen -------------------
   // Der Angriffstyp trifft auf eine Eigenschaft des Ziels.
@@ -47,13 +83,14 @@ window.REGELN = {
       begruendung: "Ein Hieb geht durch ein Gas beinahe hindurch." }
   ],
 
-  // "halber Schaden (1/2, auf volle 5 aufrunden)" – aufgerundet wird erst
-  // am Ende, nachdem alle Faktoren angewandt wurden. Der Schritt ist seit
-  // Fassung VII die 5 statt der 1: Damit bleibt jeder Punktestand auf der
-  // Fünferleiter der Drehscheibe. Es gibt nur drei Fälle: 15 → 10,
-  // 10 → 5, 5 → 5.
+  // "halber Schaden (1/2)" – gerundet wird erst am Ende, nachdem alle
+  // Faktoren angewandt wurden. Der Schritt ist seit Fassung VIII wieder
+  // die 1: Der neue Punktezaehler zeigt jede ganze Zahl, also muss nicht
+  // mehr auf die Fuenferleiter gerundet werden. Aufgerundet wird
+  // weiterhin – zugunsten des Angreifers, damit 5 halbiert nicht auf 2,5
+  // faellt und eine Attacke nie ins Leere laeuft.
   rundung: "auf",
-  rundungsSchritt: 5,
+  rundungsSchritt: 1,
 
   // Zusatzeffekte werden nie verdoppelt oder halbiert, nur der Schaden.
   effekteSkalieren: false,
@@ -80,11 +117,12 @@ window.REGELN = {
   //                    geknuepft (Glimmspan trifft nur Sauerstoff)
   //   zwangswechsel    Ziel muss auf die Bank (Siedeglas)
   //   angriffsperre    Gegner darf einen Zug nicht angreifen
-  //   freieAktivierung eine ⚡-Synthese ohne Energiekarte
+  //   zweiteSynthese   eine zweite Synthese im selben Zug (Gasbrenner
+  //                    einmalig, Platin-Katalysator dauerhaft)
   //   blick            in die gegnerische Hand sehen
   ausruestungsWirkungen: [
     "heilung", "schadensbonus", "dauerbonus", "schutz", "direktschaden",
-    "zwangswechsel", "angriffsperre", "freieAktivierung", "blick"
+    "zwangswechsel", "angriffsperre", "zweiteSynthese", "blick"
   ],
 
   // --- Grundsatz des Spiels ------------------------------------
@@ -122,10 +160,23 @@ window.REGELN = {
   //     leer und das Produkt tritt dort an – ohne Zugverbrauch.
   //
   // Weiterhin gilt: ⚡ ist die ZUENDUNG (Aktivierungsenergie), nicht
-  // die Energiebilanz. Aus "exotherm" folgt nicht, dass keine
-  // Energie-Ausruestung noetig waere: Magnesium verbrennt heftig
-  // exotherm und muss trotzdem angezuendet werden. Es zaehlt allein
-  // das Feld synthese.aktivierung.
+  // die Energiebilanz. Aus "exotherm" folgt nicht, dass keine Zuendung
+  // noetig waere: Magnesium verbrennt heftig exotherm und muss trotzdem
+  // angezuendet werden.
+  //
+  // Seit Fassung IX ist ⚡ aber nur noch FACHINFORMATION und kostet im
+  // Spiel nichts mehr: Eine Synthese braucht allein ihre Edukte.
+  // Grund ist kein Balancing, sondern eine Zwickmuehle im Deckbau. In
+  // Feuerlande traegt JEDE Synthese ein ⚡, auf Stufe I gibt es aber nur
+  // zwei Ausruestungsplaetze (handAusruestung: 2). Wer zwei Verbindungen
+  // bauen wollte, fuellte damit beide Plaetze mit Zuendkarten –
+  // Loeschdecke, Schutzbrille, Erlenmeyerkolben und Wunderkerze kamen
+  // nie ins Deck. Die Synthese ist der fachliche Kern des Spiels und
+  // darf nicht die Karte sein, die alle anderen verdraengt.
+  //
+  // Der Schalter bleibt stehen, damit sich die alte Regel als Variante
+  // "zuendung-pflicht" gegenmessen laesst (varianten.js).
+  zuendungNoetig: false,
 
   // Eine Synthese kostete drei Dinge auf einmal: zwei Elementals, den
   // ganzen Zug – und damit den Angriff. Gemessen hat sich das nicht
@@ -150,7 +201,9 @@ window.REGELN = {
   eduktVerbrauch: "alle",
 
   // Eigenschafts-Schlagwort, das eine Ausruestung als Energiequelle
-  // ausweist (Gasbrenner, Streichholz) – noetig bei aktivierung: true.
+  // ausweist (Gasbrenner, Streichholz). Seit Fassung IX nur noch
+  // Beschriftung: Gelesen wird es fuer die Anzeige und fuer die
+  // Variante "zuendung-pflicht", nicht mehr als Spielkosten.
   energieMerkmal: "Energie",
   // Exothermer Schaden trifft das aktive Elemental des Gegners direkt
   // und wird nicht von der Typen-Matrix veraendert.
@@ -219,6 +272,42 @@ window.REGELN = {
   // gibt es keine Zugbegrenzung.
   maxZuege: 300,
 
+  // --- NUR IN DER APP -----------------------------------------
+  // Alles unter appZusatz gilt AUSDRUECKLICH NICHT am Tisch. Das
+  // gedruckte Regelwerk kennt es nicht, die Regeltests pruefen es nicht,
+  // und die Karten tragen es nicht.
+  //
+  // Der Grund fuer die Trennung: Am Tisch braeuchte jeder Angriff einen
+  // Wuerfelwurf. Das kostet Zeit, und das Kartenspiel soll frei von
+  // Zufallsereignissen bleiben – so entschieden am 15.08.2026. In der App
+  // rechnet der Rechner, dort kostet es nichts.
+  //
+  // Wozu ueberhaupt Zufall: Er ist der einzige Hebel, der die Meta nicht
+  // verschiebt, sondern unscharf macht. Freiere Zahlen und mehr Bauformen
+  // aendern, WELCHE Karte die beste ist; der Volltreffer sorgt dafuer,
+  // dass die beste Karte nicht jedes Duell gewinnt.
+  //
+  // Die Engine fuehrt das nur aus, wenn das Duell ausdruecklich mit
+  // { volltreffer: true } gebaut wurde – Vorgabe ist aus.
+  //
+  // Gemessen am 15.08.2026 (Feuerlande, freudiger Bot, je 880 Duelle),
+  // Spanne der belastbaren Karten und Synthese-Anreiz:
+  //   aus         24,8 %   syntheseLohnt +19,7 %
+  //   10 % x1,5   24,3 %                 +19,8 %   kaum von "aus" zu
+  //                                                unterscheiden
+  //   15 % x1,5   22,5 %                 +17,9 %   genommen
+  //   20 % x2     18,5 %                 +11,1 %   zu stark: vorsprung
+  //                                                faellt auf 7,7 % und
+  //                                                reisst damit die
+  //                                                Schwelle von 8 %
+  // Die Kontrollzahl blieb in allen Laeufen bei rund 48 % – der Zufall
+  // bevorzugt also keine Seite, er macht nur die Rangfolge unschaerfer.
+  // Genau das ist der Zweck: Die staerkste Karte soll nicht mehr jedes
+  // Duell gewinnen.
+  appZusatz: {
+    volltreffer: { chance: 0.15, faktor: 1.5 }
+  },
+
   // --- Klassenfarben: nicht mehr hier -------------------------
   // Sie standen bis zum 12.08.2026 als Kopie an dieser Stelle, die
   // massgebliche Fassung in Karten\generator.html. Beide sind jetzt
@@ -227,7 +316,7 @@ window.REGELN = {
   // passiert, kartenstil.js, wie es aussieht.
 
   // Welche Klasse welche LP-Stufe haben soll (Regelwerk, Abschnitt 2):
-  // "Elemente 30 LP · Verbindungen 40 LP · legendäre Elementals 50 LP".
+  // "Elemente 30 LP · Verbindungen 50 LP · legendäre Elementals 60 LP".
   // Alles, was in keiner der beiden Listen steht, gilt als Verbindung.
   elementKlassen: ["Metall", "Nichtmetall", "Alkalimetall", "Erdalkalimetall", "Halogen", "Edelgas"],
   legendaereKlassen: ["Legendär"],

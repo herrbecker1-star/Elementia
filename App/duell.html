@@ -1463,7 +1463,15 @@ function starten(einstellung) {
   deckA.name = kanal.namen[0];
   deckB.name = kanal.namen[1];
 
-  duell = new E.Duell(deckA, deckB, { stufe: stufe, saat: saat });
+  // volltreffer: true ist der eine Punkt, an dem die App ueber das
+  // gedruckte Regelwerk hinausgeht (REGELN.appZusatz). Am Tisch bleibt das
+  // Spiel frei von Zufallsereignissen – dort braeuchte jeder Angriff einen
+  // Wuerfelwurf. Mit ?volltreffer=0 laesst sich der Zusatz abschalten und
+  // genau das Spiel ueben, das am Tisch gilt.
+  duell = new E.Duell(deckA, deckB, {
+    stufe: stufe, saat: saat,
+    volltreffer: PARAM.get("volltreffer") !== "0"
+  });
   lauschen(duell);
 
   ansichtSeite = (kanal.meineSeite === null) ? duell.amZug : kanal.meineSeite;
@@ -1485,6 +1493,7 @@ function lauschen(d) {
   d.bei("angriff", function (x) {
     ereignisse.push({ was: "angriff", seite: x.spieler.index, ziel: x.ziel.index,
       attacke: x.attacke, faktor: x.berechnung.faktor, gruende: x.berechnung.gruende.slice(),
+      volltreffer: x.berechnung.volltreffer === true,
       angreifer: x.spieler.arena ? x.spieler.arena.karte.name : "" });
   });
   d.bei("nach-schaden", function (x) {
@@ -1811,7 +1820,9 @@ function zeichneHand() {
   spieler.hand.ausruestung.forEach(function (k, i) {
     var eintrag = null;
     for (var m = 0; m < items.length; m++) if (items[m].index === i) eintrag = items[m];
-    ziel.appendChild(baueHandkarte(k, E.istEnergie(k) ? "Energie" : "Ausrüstung", eintrag, i, true));
+    // Alle Handgeräte heißen jetzt gleich: „Energie" war die Rolle, die
+    // Gasbrenner & Co. hatten, solange ⚡ einen Platz gekostet hat.
+    ziel.appendChild(baueHandkarte(k, "Ausrüstung", eintrag, i, true));
   });
 
   if (!spieler.hand.verbindungen.length && !spieler.hand.ausruestung.length) {
@@ -1835,15 +1846,6 @@ function ausruestungHindernis(spieler, karte) {
   if (!w) {
     return karte.name + " wirkt noch nicht im Programm — ihr Text auf der Karte gilt am Tisch. " +
            "Antippen zeigt ihn.";
-  }
-  if (w.kostetEnergie) {
-    var energie = spieler.hand.ausruestung.filter(function (a) {
-      return a !== karte && E.istEnergie(a);
-    }).length;
-    if (!energie) {
-      return karte.name + " muss zusammen mit einer ⚡-Energiekarte abgelegt werden — " +
-             "auf der Hand ist keine.";
-    }
   }
   if (w.bedingung) {
     var b = w.bedingung;
@@ -1943,8 +1945,8 @@ function deckZeichnen() {
 
   liste.appendChild(el("h3", null, "Ausrüstung · " + deck.ausruestung.length + " von " + satz.handAusruestung));
   liste.appendChild(el("p", "erklaerung",
-    "Ausrüstung mit dem Schlagwort „" + R.energieMerkmal + "“ liefert die Aktivierungsenergie ⚡ — " +
-    "ohne sie springt eine ⚡-Reaktion nicht an."));
+    "Alle Plätze gehören deinen Geräten: Eine Reaktion braucht nur ihre Edukte, " +
+    "keine Energiekarte mehr."));
   liste.appendChild(deckRaster(vorrat.ausruestung, "ausruestung", satz.handAusruestung, satz));
 
   liste.appendChild(el("p", "erklaerung",
@@ -2040,9 +2042,6 @@ function deckStandZeichnen(satz) {
   }
 
   var urteil = eduktZuordnung(deck.elementals, deck.verbindungen);
-  var energie = deck.ausruestung.filter(function (n) {
-    return E.istEnergie(kartenNachNamen(n));
-  }).length;
   var mitZuendung = deck.verbindungen.filter(brauchtZuendung).length;
 
   var streitFall = false;
@@ -2052,9 +2051,11 @@ function deckStandZeichnen(satz) {
     var edukte = (kartenNachNamen(name).synthese.edukte || []).join(" + ");
     if (u.baubar) {
       // Geschütztes Leerzeichen: sonst rutscht das ⚡ allein in die
-      // nächste Zeile und sieht aus wie ein Fehler.
+      // nächste Zeile und sieht aus wie ein Fehler. Das Zeichen sagt
+      // seit Fassung IX nur noch, dass die Reaktion gezündet werden
+      // muss – gekostet hat es einmal einen Ausrüstungsplatz.
       zeile.textContent = "✓ " + name + " — " + edukte + " im Team" +
-        (brauchtZuendung(name) ? ", braucht ⚡" : "");
+        (brauchtZuendung(name) ? " ⚡" : "");
     } else if (u.fehlend) {
       zeile.textContent = "✗ " + name + " braucht " + edukte + " — im Team " +
         (u.fehlend.length > 1 ? "fehlen " : "fehlt ") + u.fehlend.join(" und ") + ".";
@@ -2075,18 +2076,15 @@ function deckStandZeichnen(satz) {
       "In Feuerlande heißt das: ein Oxid und ein Sulfid, nicht zwei Oxide."));
   }
 
-  if (mitZuendung > energie) {
-    var m = el("div", "zeile merke");
-    m.textContent = mitZuendung === 1
-      ? "⚡ Diese Reaktion braucht Aktivierungsenergie — eine Ausrüstung mit dem Schlagwort „" +
-        R.energieMerkmal + "“ fehlt noch."
-      : "⚡ " + mitZuendung + " Reaktionen brauchen Aktivierungsenergie, im Deck sind " +
-        energie + " Energie-Karten. Jede ⚡-Reaktion verbraucht eine.";
-    stand.appendChild(m);
-  } else if (mitZuendung > 0 && mitZuendung === satz.handAusruestung) {
+  // ⚡ ist Fachinformation, keine Rechnung mehr: Bis Fassung VIII
+  // verbrauchte jede ⚡-Reaktion einen der zwei Ausrüstungsplätze, und
+  // in Feuerlande trägt jede Reaktion ein ⚡ — Löschdecke und
+  // Schutzbrille kamen deshalb nie ins Deck. Das ist der Hinweis, der
+  // an die Stelle dieser Rechnung tritt.
+  if (mitZuendung > 0) {
     stand.appendChild(el("div", "zeile merke",
-      "⚡ Beide Reaktionen brauchen Energie — die zwei Energie-Karten belegen damit beide " +
-      "Ausrüstungsplätze. Für Löschdecke oder Schutzbrille bleibt kein Platz."));
+      "⚡ heißt: Diese Reaktion springt nicht von allein an — im Duell kostet dich das " +
+      "nichts. Deine " + satz.handAusruestung + " Ausrüstungsplätze bleiben für Geräte frei."));
   }
 }
 
@@ -2156,7 +2154,7 @@ function kartenschauZeigen(k, instanz) {
   if (k.synthese) {
     var s = k.synthese;
     var sb = el("div", "ksabschnitt");
-    sb.appendChild(el("div", "kstitel", "Synthese" + (s.aktivierung ? " ⚡" : "") +
+    sb.appendChild(el("div", "kstitel", "Synthese" + (s.aktivierung ? " ⚡" : "") +
       (s.exotherm ? " · exotherm " + s.exotherm : "")));
     sb.appendChild(el("div", null, s.wortgleichung || ""));
     if (s.bilanz) sb.appendChild(el("div", "kseffekt", s.bilanz));
@@ -2213,11 +2211,14 @@ function syntheseHindernis(spieler, verbindung) {
     if (kette) return "Auf Meisterstufe " + duell.stufe +
       " darf eine Verbindung noch nicht Edukt der nächsten Reaktion sein.";
   }
-  if (s.aktivierung && !spieler.hand.ausruestung.some(E.istEnergie)) {
+  if (R.zuendungNoetig && s.aktivierung && !spieler.hand.ausruestung.some(E.istEnergie)) {
     return "⚡ " + verbindung.name + " braucht Aktivierungsenergie — eine Ausrüstung mit dem " +
            "Schlagwort „" + R.energieMerkmal + "“ auf der Hand.";
   }
-  if (duell.zusatzaktionVerbraucht) return "In diesem Zug wurde schon eine Reaktion durchgeführt.";
+  if (duell.zusatzaktionVerbraucht && !duell.darfZweiteSynthese(spieler)) {
+    return "In diesem Zug wurde schon eine Reaktion durchgeführt — " +
+           "ein Gasbrenner erlaubt eine zweite.";
+  }
   return verbindung.name + " lässt sich gerade nicht bilden.";
 }
 
@@ -2478,6 +2479,12 @@ function spieleEreignis(e, weiter) {
       rufen(e.faktor > 1 ? "×2 " + (grund ? grund.zielEigenschaft : "") : "½ " + (grund ? grund.zielEigenschaft : ""),
             e.faktor > 1 ? "#ff9b86" : "#86b0ff", nach);
     }
+    // Der Volltreffer ist der einzige Zufall im Duell und muss deshalb
+    // sichtbar sein – sonst wirkt die Zahl darunter wie ein Rechenfehler.
+    // Er steht ueber dem Angreifer, nicht ueber dem Ziel: Die Typen-Marke
+    // oben gehoert dem Ziel ("du bist brennbar"), der Volltreffer dem
+    // Schlag ("der hat gesessen").
+    if (e.volltreffer) rufen("Volltreffer!", "#f0c040", von);
     geschoss(e.attacke.typ, von, nach, weiter);
     return;
   }

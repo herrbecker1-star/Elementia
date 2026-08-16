@@ -84,18 +84,85 @@
     }
 
     const teamNamen = team.map(function (k) { return k.name; });
-    const passend = vorrat.verbindungen.filter(function (v) {
-      return (v.synthese.edukte || []).every(function (e) { return teamNamen.indexOf(e) !== -1; });
-    });
 
-    const verbindungen = mischen(passend, zufall).slice(0, regelsatz.handVerbindungen);
-
-    const ausruestung = [];
-    const brauchtEnergie = verbindungen.some(function (v) { return v.synthese.aktivierung; });
-    if (brauchtEnergie) {
-      const energie = vorrat.ausruestung.filter(E.istEnergie);
-      if (energie.length) ausruestung.push(mischen(energie, zufall)[0]);
+    // Welche Verbindungen sind mit diesem Team ueberhaupt erreichbar?
+    //
+    // Bis zum 15.08.2026 galt: alle Edukte muessen im START-Team stehen.
+    // Das schliesst jede KETTE aus – bei ihr ist ein Edukt selbst eine
+    // Verbindung, und die steht zu Beginn nie im Team. Gemessen wurde
+    // dadurch ein Spiel ohne Ketten: 26 der 38 Verbindungen tauchten in
+    // "nieGebaut" auf, darunter Salzsaeure, Natronlauge, Ethanol und die
+    // beiden Finale-Karten. Ab Meisterstufe II erlaubt das Regelwerk
+    // Ketten aber ausdruecklich, und ein Schueler baut sein Deck genau so:
+    // Er packt das Zwischenprodukt mit ein.
+    //
+    // Deshalb waechst die Menge der erreichbaren Stoffe hier so lange,
+    // wie noch etwas dazukommt – erst die Verbindungen aus reinen
+    // Teamkarten, dann die aus jenen und so fort.
+    const erreichbar = teamNamen.slice();
+    const stufen = [];          // in der Reihenfolge, in der sie baubar werden
+    if (regelsatz.syntheseKetten) {
+      let gewachsen = true;
+      while (gewachsen) {
+        gewachsen = false;
+        for (let i = 0; i < vorrat.verbindungen.length; i++) {
+          const v = vorrat.verbindungen[i];
+          if (erreichbar.indexOf(v.name) !== -1) continue;
+          const baubar = (v.synthese.edukte || []).every(function (e) {
+            return erreichbar.indexOf(e) !== -1;
+          });
+          if (!baubar) continue;
+          erreichbar.push(v.name);
+          stufen.push(v);
+          gewachsen = true;
+        }
+      }
+    } else {
+      // Meisterstufe I: keine Ketten, also nur was direkt aus dem Team geht.
+      for (let i = 0; i < vorrat.verbindungen.length; i++) {
+        const v = vorrat.verbindungen[i];
+        const baubar = (v.synthese.edukte || []).every(function (e) {
+          return teamNamen.indexOf(e) !== -1;
+        });
+        if (baubar) stufen.push(v);
+      }
     }
+
+    // Eine Verbindung ohne ihre Vorstufen auf der Hand ist ein toter
+    // Kartenplatz. Deshalb wird nicht einzeln gezogen, sondern immer
+    // samt allem, was vorher gebaut werden muss.
+    const verbindungen = [];
+    const inHand = {};
+    function mitVorstufen(v) {
+      if (inHand[v.name]) return true;
+      const noetig = [];
+      const edukte = v.synthese.edukte || [];
+      for (let e = 0; e < edukte.length; e++) {
+        if (teamNamen.indexOf(edukte[e]) !== -1) continue;
+        const vor = vorrat.verbindungen.find(function (x) { return x.name === edukte[e]; });
+        if (!vor) return false;
+        noetig.push(vor);
+      }
+      for (let n = 0; n < noetig.length; n++) if (!mitVorstufen(noetig[n])) return false;
+      if (verbindungen.length >= regelsatz.handVerbindungen) return false;
+      inHand[v.name] = true;
+      verbindungen.push(v);
+      return true;
+    }
+    const gemischt = mischen(stufen, zufall);
+    for (let i = 0; i < gemischt.length &&
+                    verbindungen.length < regelsatz.handVerbindungen; i++) {
+      const vorher = verbindungen.length;
+      if (!mitVorstufen(gemischt[i])) {
+        // Zurueckrollen: Eine halbe Kette nuetzt nichts.
+        while (verbindungen.length > vorher) delete inHand[verbindungen.pop().name];
+      }
+    }
+
+    // Bis Fassung VIII musste hier eine Energiekarte reserviert werden,
+    // sonst war die ⚡-Synthese nicht zu zuenden. Seit die Zuendung frei
+    // ist, gehoert der Platz den Geraeten – es wird einfach aufgefuellt.
+    const ausruestung = [];
     const rest = mischen(vorrat.ausruestung, zufall);
     for (let i = 0; i < rest.length && ausruestung.length < regelsatz.handAusruestung; i++) {
       if (ausruestung.indexOf(rest[i]) === -1) ausruestung.push(rest[i]);
@@ -155,9 +222,9 @@
     //       a) Direktschaden, der das gegnerische Elemental erschöpft
     //       b) Heilung, wenn das eigene unter der Hälfte steht
     //       c) Schutz, wenn das eigene unter der Hälfte steht
-    //     Eine Energiekarte wird NIE für den Schadensbonus verheizt,
-    //     solange eine Synthese möglich ist: Die Reaktion ist der
-    //     Kern des Spiels und ein Bonus von 5 wiegt sie nicht auf.
+    //       d) Gasbrenner, aber nur wenn die erste Synthese schon
+    //          gelaufen ist und noch eine zweite offen steht – sonst
+    //          wirft er die Karte für nichts weg.
     const items = duell.moeglicheAusruestung ? duell.moeglicheAusruestung(spieler) : [];
     const syntheseMoeglich = duell.moeglicheSynthesen(spieler).length > 0;
     const braucht = spieler.arena.lp <= spieler.arena.maxLp / 2;
@@ -166,11 +233,14 @@
       const zug = items[i];
       const karte = spieler.hand.ausruestung[zug.index];
       const w = karte.wirkung || {};
-      if (E.istEnergie(karte) && syntheseMoeglich) continue;
 
       let nehmen = false;
       if (w.art === "direktschaden" && (w.wert || 0) >= gegner.arena.lp) nehmen = true;
       else if ((w.art === "heilung" || w.art === "schutz") && braucht) nehmen = true;
+      else if (w.art === "zweiteSynthese") {
+        nehmen = duell.zusatzaktionVerbraucht && syntheseMoeglich &&
+                 !duell.darfZweiteSynthese(spieler);
+      }
       if (!nehmen) continue;
 
       // Ein Zug ohne Ziel wirft die Karte weg. Also wird hier eines
