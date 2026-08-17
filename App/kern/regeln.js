@@ -10,7 +10,7 @@
 
 window.REGELN = {
 
-  fassung: "X",
+  fassung: "XI",
 
   // --- Abschnitt 2: Lebenspunkte ------------------------------
   // Die Stufen der LP-Leiter. Ausruestung hat gar keine (lp: null).
@@ -39,7 +39,18 @@ window.REGELN = {
   lp: {
     element: 30,
     verbindung: 50,
-    legendaer: 60
+    legendaer: 60,
+    // Vierte Sprosse seit Fassung XI. Edelgase gehen KEINE Synthese ein –
+    // sie sind nie Edukt, nie Produkt, und damit war ihr einziger Zweck
+    // "Elemental mit 30 LP und einer 5er-Attacke". Gemessen waren sie die
+    // schwaechsten Karten des Spiels und wurden schlicht nicht benutzt.
+    //
+    // Die Zahl kommt aus der Chemie, nicht aus der Not: Wer nicht
+    // reagiert, haelt aus. Edelgase werden so zaeh wie eine Verbindung,
+    // ohne je eine zu werden. Zusammen mit der Aetz-Immunitaet (siehe
+    // typenMatrix) und der Wucht-Halbierung fuer "gasfoermig" trifft sie
+    // nur noch Feuer und Gas voll.
+    edelgas: 50
   },
 
   // --- Die Fuenferleiter ist seit Fassung VIII Geschichte -----
@@ -80,7 +91,19 @@ window.REGELN = {
     { typ: "Ätz",   zielEigenschaft: "metallisch", faktor: 2,
       begruendung: "Aetzende Stoffe nagen an Metall (Korrosion)." },
     { typ: "Wucht", zielEigenschaft: "gasförmig",  faktor: 0.5,
-      begruendung: "Ein Hieb geht durch ein Gas beinahe hindurch." }
+      begruendung: "Ein Hieb geht durch ein Gas beinahe hindurch." },
+    // Fuenfte Zeile seit Fassung XI. Das ist KEINE neue Erfindung,
+    // sondern die Einloesung eines Versprechens, das seit jeher auf VIER
+    // Karten gedruckt steht: Helium, Neon, Argon ("Edel: immun gegen
+    // Aetz-Attacken") und Stickstoff ("Reaktionstraege: erleidet durch
+    // Aetz-Attacken keinen Schaden"). Ausgefuehrt wurde es nie – der Text
+    // war Fliesstext, und die Engine liest nur diese Tabelle.
+    //
+    // Sie haengt an der EIGENSCHAFT, nicht an der Klasse: Stickstoff ist
+    // kein Edelgas, aber genauso reaktionstraege - und er war mit 26,6 %
+    // die schwaechste belastbare Karte in Feuerlande.
+    { typ: "Ätz",   zielEigenschaft: "reaktionsträge", faktor: 0,
+      begruendung: "Wer mit nichts reagiert, den greift auch nichts an." }
   ],
 
   // "halber Schaden (1/2)" – gerundet wird erst am Ende, nachdem alle
