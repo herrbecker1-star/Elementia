@@ -134,7 +134,7 @@ window.KARTEN_DATEN = {
         { "name": "Erstickender Griff", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner darf in seinem nächsten Zug keine Feuer-Attacke einsetzen." }
       ],
       "synthese": null,
-      "besonderheit": "Reaktionsträge: Stickstoff erleidet durch Ätz-Attacken keinen Schaden.",
+      "besonderheit": "Reaktionsträge (Gesetz 5): Ätz-Attacken machen 0 Schaden – vier Fünftel der Luft, und fast nichts greift sie an.",
       "flavor": "Es schläft in jedem Atemzug – vier Fünftel der Luft.",
       "quest": "Quest 3 – Teilchin", "bild": "bilder/stickstoff.jpg"
     },
@@ -597,36 +597,36 @@ window.KARTEN_DATEN = {
 
     // ---------- EDELGASE (Ort: Edelwald) ----------
     {
-      "name": "Helium", "formel": "He", "region": "Periodika", "klasse": "Edelgas", "oz": 2, "lp": 30, "masse": 4,
+      "name": "Helium", "formel": "He", "region": "Periodika", "klasse": "Edelgas", "oz": 2, "lp": 50, "masse": 4,
       "eigenschaften": ["gasförmig", "federleicht", "reaktionsträge"],
       "attacken": [
         { "name": "Piepsstimme", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner muss lachen: Seine nächste Attacke macht 5 Schaden weniger." }
       ],
       "synthese": null,
-      "besonderheit": "Edel: Helium nimmt an keiner Synthese teil und ist immun gegen Ätz-Attacken.",
+      "besonderheit": "Reaktionsträge (Gesetz 5): Ätz-Attacken machen 0 Schaden. Edelgase gehen keine Synthese ein – dafür halten sie aus: 50 LP statt 30.",
       "flavor": "Es schwebt über allem und lässt sich auf nichts ein.",
       "quest": "Periodika – Edelwald", "bild": "bilder/helium.jpg"
     },
     {
-      "name": "Neon", "formel": "Ne", "region": "Periodika", "klasse": "Edelgas", "oz": 10, "lp": 30, "masse": 20,
+      "name": "Neon", "formel": "Ne", "region": "Periodika", "klasse": "Edelgas", "oz": 10, "lp": 50, "masse": 20,
       "eigenschaften": ["gasförmig", "leuchtend", "reaktionsträge"],
       "attacken": [
         { "name": "Neonblitz", "typ": "Gas", "schaden": 5, "effekt": "Geblendet: Die nächste Attacke des Gegners macht nur halben Schaden." }
       ],
       "synthese": null,
-      "besonderheit": "Edel: Neon nimmt an keiner Synthese teil und ist immun gegen Ätz-Attacken.",
+      "besonderheit": "Reaktionsträge (Gesetz 5): Ätz-Attacken machen 0 Schaden. Edelgase gehen keine Synthese ein – dafür halten sie aus: 50 LP statt 30.",
       "flavor": "Nachts leuchten die Wipfel des Edelwalds in rotem Licht.",
       "quest": "Periodika – Edelwald", "bild": "bilder/neon.jpg"
     },
     {
-      "name": "Argon", "formel": "Ar", "region": "Periodika", "klasse": "Edelgas", "oz": 18, "lp": 30, "masse": 40,
+      "name": "Argon", "formel": "Ar", "region": "Periodika", "klasse": "Edelgas", "oz": 18, "lp": 50, "masse": 40,
       "eigenschaften": ["gasförmig", "unsichtbar", "reaktionsträge"],
       "attacken": [
         { "name": "Schutzgasmantel", "typ": "Gas", "schaden": 0, "effekt": "Argon erleidet bis zu deinem nächsten Zug nur halben Schaden." },
-        { "name": "Stiller Druck", "typ": "Gas", "schaden": 10, "effekt": "" }
+        { "name": "Stiller Druck", "typ": "Gas", "schaden": 5, "effekt": "" }
       ],
       "synthese": null,
-      "besonderheit": "Edel: Argon nimmt an keiner Synthese teil und ist immun gegen Ätz-Attacken.",
+      "besonderheit": "Reaktionsträge (Gesetz 5): Ätz-Attacken machen 0 Schaden. Edelgase gehen keine Synthese ein – dafür halten sie aus: 50 LP statt 30.",
       "flavor": "Ein Hundertstel jedes Atemzugs – und niemand bemerkt es.",
       "quest": "Periodika – Edelwald", "bild": "bilder/argon.jpg"
     },
