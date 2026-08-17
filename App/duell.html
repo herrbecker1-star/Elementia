@@ -84,6 +84,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .knopf:active { transform: translateY(1px); }
 .knopf.haupt  { background: linear-gradient(#6d5320, #493716); border-color: var(--gold); color: #fff6de; }
 .knopf[disabled] { opacity: .4; cursor: default; }
+/* Für die Leiste: muss neben „am Zug" und der Ablage Platz finden,
+   ohne die Zeilenhöhe des Rasters zu sprengen. */
+.knopf.klein { padding: 2px 9px; font-size: 11px; border-radius: 20px; font-weight: 600; }
 
 /* ============================================================
    1 · Vorspiel – wer, wo, womit
@@ -470,6 +473,10 @@ body.ruhig .spielkarte.ziel { animation: none; outline-style: solid; }
   background: var(--gold); border-radius: 50%; width: 15px; height: 15px;
   display: grid; place-items: center;
 }
+/* Zweites Exemplar: Der Haken allein sagt nur „drin", nicht „wie oft".
+   Genau darum geht es aber, seit dieselbe Karte zweimal ins Deck darf —
+   die Zahl muss man SEHEN, nicht nur vorgelesen bekommen. */
+.kartenraster .spielkarte.drin.zweimal::before { content: "2×"; font-size: 9px; width: 17px; }
 .eduktknopf {
   font-size: 9px; padding: 3px 2px; border-radius: 6px;
   background: rgba(77,139,82,.2); border: 1px solid rgba(77,139,82,.6);
@@ -1584,6 +1591,22 @@ function zeichneLeiste(ziel, spieler, istGegner) {
 
   var schub = el("span", "schub");
   ziel.appendChild(schub);
+
+  // „Zug beenden" gibt es erst, seit Ausrüstung und Synthese keinen
+  // Zug mehr kosten. Vorher beendete jede Aktion den Zug, ein Knopf
+  // wäre sinnlos gewesen. Jetzt ist er notwendig: Wer sein Gerät
+  // gespielt hat und nicht angreifen kann (Duftphiole, leere Bank),
+  // säße sonst fest.
+  if (!istGegner && !duell.vorbei && darfBedienen()) {
+    var passen = el("button", "knopf klein", "Zug beenden");
+    passen.title = "Ausrüstung und Synthese kosten keinen Zug — hiermit gibst du ab.";
+    passen.addEventListener("click", function () {
+      auswahl = null;
+      ausfuehren({ art: "aussetzen" });
+    });
+    ziel.appendChild(passen);
+  }
+
   var ablage = el("button", "ablage");
   ablage.innerHTML = "<span><b>" + spieler.ablage.length + "</b></span>";
   ablage.title = "Ablagestapel: " + spieler.ablage.length + " Karten";
@@ -1945,8 +1968,8 @@ function deckZeichnen() {
 
   liste.appendChild(el("h3", null, "Ausrüstung · " + deck.ausruestung.length + " von " + satz.handAusruestung));
   liste.appendChild(el("p", "erklaerung",
-    "Alle Plätze gehören deinen Geräten: Eine Reaktion braucht nur ihre Edukte, " +
-    "keine Energiekarte mehr."));
+    "Alle Plätze gehören deinen Geräten: Eine Reaktion braucht nur ihre Edukte. " +
+    "Ausrüstung kostet keinen Zug — du darfst sie ausspielen und danach noch angreifen."));
   liste.appendChild(deckRaster(vorrat.ausruestung, "ausruestung", satz.handAusruestung, satz));
 
   liste.appendChild(el("p", "erklaerung",
@@ -1954,21 +1977,67 @@ function deckZeichnen() {
     "derselben Region — bis er über das Netz kommt und sein eigenes mitbringt."));
 }
 
+// Wie oft steht dieser Name schon in diesem Deckteil?
+function wieOft(feld, name) {
+  var n = 0;
+  for (var i = 0; i < deck[feld].length; i++) if (deck[feld][i] === name) n++;
+  return n;
+}
+
+// Welche Edukte fehlen dem Team WIRKLICH? Als Multiset gerechnet,
+// nicht mit indexOf: Ein Sauerstoff im Team deckt EIN Oxid ab, nicht
+// beide. Genau daran scheiterte bis Fassung IX „zwei Oxide bauen" —
+// der Knopf meldete „Edukte sind im Team" und meinte den Sauerstoff,
+// der längst für das andere Oxid verplant war.
+function eduktListe(name) {
+  var k = kartenNachNamen(name);
+  return (k && k.synthese && k.synthese.edukte) ? k.synthese.edukte : [];
+}
+
+function fehlendeEdukte(verbindungsName) {
+  var vorrat = deck.elementals.slice();
+  // Was die übrigen Verbindungen im Deck schon binden, ist weg.
+  deck.verbindungen.forEach(function (n) {
+    if (n === verbindungsName) return;
+    eduktListe(n).forEach(function (e) {
+      var pos = vorrat.indexOf(e);
+      if (pos !== -1) vorrat.splice(pos, 1);
+    });
+  });
+  var fehlt = [];
+  eduktListe(verbindungsName).forEach(function (e) {
+    var pos = vorrat.indexOf(e);
+    if (pos === -1) fehlt.push(e); else vorrat.splice(pos, 1);
+  });
+  return fehlt;
+}
+
 function deckRaster(karten, feld, hoechstens, satz) {
   var raster = el("div", "kartenraster");
+  var hoechstensGleiche = R.maxGleicheKarten || 1;
+
   karten.forEach(function (k) {
     var eintrag = el("div", "wahlkarte");
-    var drin = deck[feld].indexOf(k.name) !== -1;
-    var karte = baueSpielkarte(k, "hand", { beschreibung: drin ? "im Deck" : "nicht im Deck" });
-    if (drin) karte.classList.add("drin");
+    var anzahl = wieOft(feld, k.name);
+    var karte = baueSpielkarte(k, "hand", {
+      beschreibung: anzahl === 0 ? "nicht im Deck"
+                  : anzahl === 1 ? "im Deck"
+                                 : anzahl + "× im Deck"
+    });
+    if (anzahl) karte.classList.add("drin");
+    if (anzahl > 1) karte.classList.add("zweimal");
 
+    // Antippen zählt hoch und beim Höchststand wieder auf null.
+    // Bewusst eine einzige Geste: Auf einem Handy ist Antippen das
+    // Einzige, was zuverlässig funktioniert — kein Wischen, kein
+    // langes Drücken, keine zwei Knöpfe auf einer 118 px breiten Karte.
     karte.addEventListener("click", function () {
-      var pos = deck[feld].indexOf(k.name);
-      if (pos !== -1) { deck[feld].splice(pos, 1); deckZeichnen(); return; }
-      // Doppelte Karten sind erst ab Meisterstufe III erlaubt
-      // (Koeffizienten: 2 Mg + O₂ → 2 MgO). Hier greift die Regel
-      // gar nicht, weil jede Karte nur einmal im Raster steht —
-      // die Voll-Meldung ist trotzdem nötig.
+      if (anzahl >= hoechstensGleiche) {
+        // Alle Exemplare heraus.
+        deck[feld] = deck[feld].filter(function (n) { return n !== k.name; });
+        deckZeichnen();
+        return;
+      }
       if (deck[feld].length >= hoechstens) {
         deckMeldung("Es passen nur " + hoechstens + " Karten in diesen Teil des Decks. " +
           "Erst eine herausnehmen.");
@@ -1982,9 +2051,7 @@ function deckRaster(karten, feld, hoechstens, satz) {
     // Der schnelle Weg: von der Verbindung zu ihren Edukten.
     if (feld === "verbindungen" && k.synthese && k.synthese.edukte) {
       var knopf = el("button", "eduktknopf", "Edukte ins Team");
-      var fehlt = k.synthese.edukte.filter(function (n) {
-        return deck.elementals.indexOf(n) === -1;
-      });
+      var fehlt = fehlendeEdukte(k.name);
       if (!fehlt.length) { knopf.textContent = "Edukte sind im Team"; knopf.disabled = true; }
       knopf.addEventListener("click", function (ev) {
         ev.stopPropagation();
@@ -1992,6 +2059,14 @@ function deckRaster(karten, feld, hoechstens, satz) {
         if (fehlt.length > platz) {
           deckMeldung("Für " + fehlt.join(" und ") + " ist im Team kein Platz mehr — " +
             "erst ein anderes Elemental herausnehmen.");
+          return;
+        }
+        var zuviel = fehlt.filter(function (n) {
+          return wieOft("elementals", n) >= hoechstensGleiche;
+        });
+        if (zuviel.length) {
+          deckMeldung(zuviel.join(" und ") + " liegt schon " + hoechstensGleiche +
+            "× im Team — mehr Exemplare derselben Karte erlaubt das Deck nicht.");
           return;
         }
         fehlt.forEach(function (n) { deck.elementals.push(n); });
@@ -2069,11 +2144,14 @@ function deckStandZeichnen(satz) {
   });
 
   // Die Begründung steht EINMAL darunter, nicht hinter jeder Zeile.
+  // Bis Fassung IX endete sie mit „ein Oxid und ein Sulfid, nicht
+  // zwei Oxide" — das war eine Sackgasse. Jetzt ist es eine Anleitung.
   if (streitFall) {
     stand.appendChild(el("div", "zeile merke",
-      "Jedes Edukt braucht ein eigenes Exemplar. Dieselbe Karte zweimal ins Deck zu legen " +
-      "ist erst ab Meisterstufe III erlaubt (Koeffizienten: 2 Mg + O₂ → 2 MgO). " +
-      "In Feuerlande heißt das: ein Oxid und ein Sulfid, nicht zwei Oxide."));
+      "Jedes Edukt braucht ein eigenes Exemplar — und wird dabei verbraucht. " +
+      "Zwei Oxide brauchen also zwei Sauerstoff: Tippe die Karte im Team ein zweites Mal an, " +
+      "dann steht sie „2×“ im Deck. Mehr als " + (R.maxGleicheKarten || 1) +
+      "× dieselbe Karte geht nicht."));
   }
 
   // ⚡ ist Fachinformation, keine Rechnung mehr: Bis Fassung VIII
@@ -2215,7 +2293,7 @@ function syntheseHindernis(spieler, verbindung) {
     return "⚡ " + verbindung.name + " braucht Aktivierungsenergie — eine Ausrüstung mit dem " +
            "Schlagwort „" + R.energieMerkmal + "“ auf der Hand.";
   }
-  if (duell.zusatzaktionVerbraucht && !duell.darfZweiteSynthese(spieler)) {
+  if (duell.syntheseGenutzt && !duell.darfZweiteSynthese(spieler)) {
     return "In diesem Zug wurde schon eine Reaktion durchgeführt — " +
            "ein Gasbrenner erlaubt eine zweite.";
   }
@@ -2317,6 +2395,13 @@ function zielSchluessel(z) {
 }
 
 function zugPruefen(spieler, zug) {
+  // Aussetzen steht mit Absicht NICHT in moeglicheZuege: Der
+  // Notausgang der KI (ki.js, „return alle[0]") würde sonst
+  // gelegentlich einfach passen. Hier muss es trotzdem durch — seit
+  // Ausrüstung frei ist, ist Abgeben ein echter Spielzug. Gefährlich
+  // ist es nicht: Aussetzen verändert nichts, es reicht den Zug weiter.
+  if (zug.art === "aussetzen") return { art: "aussetzen" };
+
   var moeglich = duell.moeglicheZuege(spieler);
   for (var i = 0; i < moeglich.length; i++) {
     var m = moeglich[i];

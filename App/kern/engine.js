@@ -131,7 +131,16 @@
     this.volltreffer = (optionen.volltreffer === true && R.appZusatz)
       ? R.appZusatz.volltreffer : null;
     this.zuhoerer = {};
+    // Zwei Zaehler, weil sie zwei verschiedene Fragen beantworten:
+    //   zugZaehler    Aktionen – daran haengen Netz-Zugnummer und
+    //                 Pruefsumme, und das Zuglimit gegen Endlosduelle.
+    //   rundenZaehler echte Spielzuege – das, was am Tisch ein "Zug"
+    //                 ist und was die Werkstatt als Dauer misst.
+    // Seit Synthese UND Ausruestung frei sind, laufen beide deutlich
+    // auseinander; eine Zahl fuer beides waere ab jetzt eine Luege.
     this.zugZaehler = 0;
+    this.rundenZaehler = 0;
+    this.syntheseGenutzt = false;
     this.vorbei = false;
     this.sieger = null;
     this.grund = null;
@@ -238,13 +247,11 @@
       zuege.push({ art: "wechsel", index: i });
     }
 
-    // Synthese – aber nie zweimal im selben Zug. Ist die Synthese eine
-    // freie Aktion, darf die geschenkte Aktion keine weitere sein
-    // (Abschnitt 6: eine Synthese pro Zug). Ausnahme sind Gasbrenner
-    // und Platin-Katalysator: Sie erlauben genau eine zweite. Eine
-    // dritte kann daraus nicht werden – nach der zweiten ist die
-    // Zusatzaktion aufgebraucht und der Zug wechselt (fuehreAus).
-    if (!this.zusatzaktionVerbraucht || this.darfZweiteSynthese(spieler)) {
+    // Synthese – aber nie zweimal im selben Zug (Abschnitt 6: eine
+    // Synthese pro Zug). Ausnahme sind Gasbrenner und
+    // Platin-Katalysator: Sie erlauben genau eine zweite. Eine dritte
+    // kann daraus nicht werden – die zweite verbraucht den Zaehler.
+    if (!this.syntheseGenutzt || this.darfZweiteSynthese(spieler)) {
       const synthesen = this.moeglicheSynthesen(spieler);
       for (let i = 0; i < synthesen.length; i++) zuege.push(synthesen[i]);
     }
@@ -388,28 +395,58 @@
     else if (zug.art === "ausruestung") this.ausruestungSpielen(spieler, zug);
 
     this.melde("zug-ende", { spieler: spieler, zug: zug });
-    this.dauerwirkungen(spieler);
 
+    // zugZaehler zaehlt AKTIONEN, nicht Runden. Daran haengen die
+    // Netz-Zugnummern und die Pruefsumme – er muss das bleiben.
     this.zugZaehler++;
+
     if (!this.vorbei) {
       if (this.zugZaehler >= window.REGELN.maxZuege) {
         this.beenden(null, "zuglimit");
-      } else if (zug.art === "synthese" && window.REGELN.syntheseIstFreieAktion &&
-                 !this.zusatzaktionVerbraucht && spieler.arena) {
-        // Freie Aktion: derselbe Spieler bleibt am Zug, aber nur einmal.
-        this.zusatzaktionVerbraucht = true;
-        this.melde("zusatzaktion", { spieler: spieler });
+      } else if (this.istFreieAktion(zug, spieler)) {
+        // Derselbe Spieler bleibt am Zug. Das kann nicht ewig gehen:
+        // Jede Ausruestung verlaesst dabei die Hand, und die Synthese
+        // ist auf eine je Zug begrenzt.
+        if (zug.art === "synthese") this.syntheseGenutzt = true;
+        this.melde("zusatzaktion", { spieler: spieler, zug: zug });
       } else {
-        this.zusatzaktionVerbraucht = false;
-        // Die Angriffssperre gilt fuer GENAU einen Zug: Wer sie
-        // hatte, hat sie jetzt abgesessen.
-        spieler.angriffGesperrt = false;
-        this.amZug = 1 - this.amZug;
-        this.zustaendeAblaufen(this.spieler[this.amZug]);
-        this.melde("rundenbeginn", { spieler: this.spieler[this.amZug] });
+        this.zugBeenden(spieler);
       }
     }
     return true;
+  };
+
+  // Welche Aktionen kosten den Zug NICHT? Seit Fassung X sind das
+  // zwei: die Synthese (hoechstens eine je Zug, der Gasbrenner
+  // erlaubt eine zweite) und JEDE Ausruestung. Das ersetzt die alte
+  // Sonderregel "die Synthese schenkt dir eine weitere Aktion" –
+  // gedruckt steht jetzt nur noch: Dein Zug endet, wenn du angreifst,
+  // wechselst oder passt.
+  Duell.prototype.istFreieAktion = function (zug, spieler) {
+    const R = window.REGELN;
+    if (zug.art === "ausruestung") return R.ausruestungIstFreieAktion !== false;
+    if (zug.art !== "synthese") return false;
+    // Ohne Arena steht niemand mehr, der handeln koennte.
+    return R.syntheseIstFreieAktion === true && !!spieler.arena;
+  };
+
+  // Der Zugwechsel an EINER Stelle. Alles, was "einmal je Zug"
+  // bedeutet, haengt hier – vorher stand es im else-Zweig einer
+  // Verzweigung, und dauerwirkungen stand sogar davor: Wer mit
+  // Kalium synthetisierte und dann angriff, zahlte den Selbstschaden
+  // zweimal. Mit freier Ausruestung waeren es bis zu vier gewesen.
+  Duell.prototype.zugBeenden = function (spieler) {
+    this.dauerwirkungen(spieler);
+    if (this.vorbei) return;
+
+    this.syntheseGenutzt = false;
+    // Die Angriffssperre gilt fuer GENAU einen Zug: Wer sie hatte,
+    // hat sie jetzt abgesessen.
+    spieler.angriffGesperrt = false;
+    this.rundenZaehler++;
+    this.amZug = 1 - this.amZug;
+    this.zustaendeAblaufen(this.spieler[this.amZug]);
+    this.melde("rundenbeginn", { spieler: this.spieler[this.amZug] });
   };
 
   Duell.prototype.angreifen = function (spieler, index) {
@@ -699,11 +736,11 @@
       spieler.ablage.push(spieler.hand.ausruestung.splice(pos, 1)[0]);
     }
 
-    // Ist die Zusatzaktion schon verbraucht, ist DIES die zweite
-    // Synthese des Zuges – sie geht auf das Konto des Gasbrenners.
-    // Der Platin-Katalysator (dauerhaft) zaehlt nicht herunter.
-    // Erst hier, damit eine misslungene Synthese nichts kostet.
-    if (this.zusatzaktionVerbraucht && !spieler.zweiteSyntheseDauerhaft) {
+    // Lief in diesem Zug schon eine Synthese, ist DIES die zweite –
+    // sie geht auf das Konto des Gasbrenners. Der Platin-Katalysator
+    // (dauerhaft) zaehlt nicht herunter. Erst hier, damit eine
+    // misslungene Synthese nichts kostet.
+    if (this.syntheseGenutzt && !spieler.zweiteSyntheseDauerhaft) {
       spieler.zweiteSynthese = (spieler.zweiteSynthese || 0) - 1;
     }
 

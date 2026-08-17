@@ -159,6 +159,80 @@
       }
     }
 
+    // --- Zweite Exemplare nachlegen (Fassung X) ---------------
+    // Das Team oben wurde OHNE Zuruecklegen gezogen und die
+    // Verbindungen danach ueber eine Namensmenge geprueft. Beides
+    // zusammen uebersieht genau den Fall, um den es geht: Zwei Oxide
+    // brauchen ZWEI Sauerstoff, nicht einen. Ohne diesen Schritt
+    // baute die KI weiter nur Decks nach der alten Regel – und die
+    // Werkstatt haette die neue Moeglichkeit gar nicht gemessen.
+    const hoechstensGleiche = window.REGELN.maxGleicheKarten || 1;
+    const hoechstensZwillinge = window.REGELN.maxZwillinge === undefined
+      ? 99 : window.REGELN.maxZwillinge;
+    (function zweiteExemplare() {
+      // Was im Duell selbst entsteht, muss nicht im Team liegen.
+      const ausReaktion = verbindungen.map(function (v) { return v.name; });
+      const offen = team.map(function (k) { return k.name; });
+      const fehlen = [];
+      for (let i = 0; i < verbindungen.length; i++) {
+        const edukte = verbindungen[i].synthese.edukte || [];
+        for (let e = 0; e < edukte.length; e++) {
+          if (ausReaktion.indexOf(edukte[e]) !== -1) continue;
+          const pos = offen.indexOf(edukte[e]);
+          if (pos !== -1) offen.splice(pos, 1);
+          else fehlen.push(edukte[e]);
+        }
+      }
+      if (!fehlen.length) return;
+
+      // Welche Teamkarten braucht keine der Verbindungen? Die duerfen
+      // weichen, wenn kein Platz mehr frei ist.
+      function gebraucht(name) {
+        return verbindungen.some(function (v) {
+          return (v.synthese.edukte || []).indexOf(name) !== -1;
+        });
+      }
+
+      // Platz 0 ist unantastbar – und zwar auf BEIDEN Seiten.
+      //
+      // Die Simulation zwingt Seite A eine Pruefkarte ins Team
+      // (deckBauen mit pflichtkarte), Seite B baut frei. Wuerde hier
+      // nur die Pflichtkarte geschuetzt, haette B beim Tausch eine
+      // Freiheit mehr: Steht auf A ausgerechnet die Pruefkarte als
+      // einzige entbehrliche Karte da, bekaeme B seinen Zwilling und
+      // A nicht – B baut zwei Verbindungen, A eine. Gemessen wurde
+      // genau das: Die Kontrollzahl fiel auf 39,8 %, und damit sind
+      // laut Werkstatt alle Zahlen darunter wertlos.
+      //
+      // Weil die Pflichtkarte immer zuerst ins Team geht, ist Platz 0
+      // auf A die Pruefkarte und auf B eine beliebige – beide Seiten
+      // haben damit genau eine unantastbare Karte.
+      // Wie viele Zwillinge liegen schon im Team?
+      function zwillingeImTeam() {
+        const gezaehlt = {};
+        let n = 0;
+        for (let i = 0; i < team.length; i++) {
+          gezaehlt[team[i].name] = (gezaehlt[team[i].name] || 0) + 1;
+          if (gezaehlt[team[i].name] === 2) n++;
+        }
+        return n;
+      }
+
+      for (let f = 0; f < fehlen.length; f++) {
+        const name = fehlen[f];
+        const karte = vorrat.elementals.find(function (x) { return x.name === name; });
+        if (!karte) continue;
+        const schon = team.filter(function (k) { return k.name === name; }).length;
+        if (schon >= hoechstensGleiche) continue;
+        if (schon >= 1 && zwillingeImTeam() >= hoechstensZwillinge) continue;
+        if (team.length < regelsatz.team) { team.push(karte); continue; }
+        const weg = team.findIndex(function (k, i) {
+          return i !== 0 && !gebraucht(k.name);
+        });
+        if (weg !== -1) team.splice(weg, 1, karte);
+      }
+    })();
+
     // Bis Fassung VIII musste hier eine Energiekarte reserviert werden,
     // sonst war die ⚡-Synthese nicht zu zuenden. Seit die Zuendung frei
     // ist, gehoert der Platz den Geraeten – es wird einfach aufgefuellt.
@@ -238,7 +312,7 @@
       if (w.art === "direktschaden" && (w.wert || 0) >= gegner.arena.lp) nehmen = true;
       else if ((w.art === "heilung" || w.art === "schutz") && braucht) nehmen = true;
       else if (w.art === "zweiteSynthese") {
-        nehmen = duell.zusatzaktionVerbraucht && syntheseMoeglich &&
+        nehmen = duell.syntheseGenutzt && syntheseMoeglich &&
                  !duell.darfZweiteSynthese(spieler);
       }
       if (!nehmen) continue;

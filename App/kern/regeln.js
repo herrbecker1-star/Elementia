@@ -10,7 +10,7 @@
 
 window.REGELN = {
 
-  fassung: "VIII",
+  fassung: "X",
 
   // --- Abschnitt 2: Lebenspunkte ------------------------------
   // Die Stufen der LP-Leiter. Ausruestung hat gar keine (lp: null).
@@ -178,14 +178,28 @@ window.REGELN = {
   // "zuendung-pflicht" gegenmessen laesst (varianten.js).
   zuendungNoetig: false,
 
+  // --- Abschnitt 4: Was kostet einen Zug? ---------------------
   // Eine Synthese kostete drei Dinge auf einmal: zwei Elementals, den
   // ganzen Zug – und damit den Angriff. Gemessen hat sich das nicht
   // gerechnet: Wer synthetisierte, gewann nur 38 % statt 52 %. Seit
-  // 07.08.2026 ist die Synthese eine FREIE Aktion – wer synthetisiert,
-  // darf im selben Zug noch angreifen oder wechseln. Weiterhin gilt
-  // syntheseProZug: 1, die Zusatzaktion darf also keine zweite
-  // Synthese sein.
+  // 07.08.2026 ist die Synthese eine FREIE Aktion. Weiterhin gilt
+  // syntheseProZug: 1.
   syntheseIstFreieAktion: true,
+
+  // Seit Fassung X gilt dasselbe fuer die Ausruestung, und aus zwei
+  // Regeln wird eine: "Dein Zug endet, wenn du angreifst, wechselst
+  // oder passt. Synthese und Ausruestung kosten keinen Zug."
+  //
+  // Der Grund ist derselbe wie bei der Zuendung eine Fassung vorher:
+  // Wer die Loeschdecke spielte, griff in diesem Zug nicht an – fast
+  // jedes Geraet war damit ein Verlustgeschaeft, und die Karten
+  // blieben liegen. Gebremst wird es allein durch die Hand: zwei
+  // Geraete auf Stufe I, drei ab Stufe III.
+  //
+  // Die alte Sonderregel ("die Synthese schenkt dir EINE weitere
+  // Aktion") entfaellt dabei ersatzlos. Sie war der Sonderfall, den
+  // diese Regel jetzt allgemein ausspricht.
+  ausruestungIstFreieAktion: true,
 
   // Was mit den Edukten passiert. "alle" ist die Regel (Abschnitt 6:
   // „Kein Edukt bleibt uebrig") und die einzige Einstellung, zu der die
@@ -217,6 +231,41 @@ window.REGELN = {
   // Energie frei. Der Brennstoff ist es schliesslich, der sie liefert.
   brennstoffBonus: 0,
 
+  // --- Abschnitt 1: Wie oft darf dieselbe Karte ins Deck? -----
+  // Bis Fassung IX: einmal. Das klang nach einer Regel, war aber
+  // keine – im Deckbildschirm stand jede Karte schlicht nur einmal
+  // im Raster, und gedruckt ergab sich das Verbot nur nebenbei aus
+  // dem Deckbau-Kasten in Abschnitt 7.
+  //
+  // Der Preis war hoch: In Feuerlande brauchen 7 der 10 Synthesen
+  // Sauerstoff, und jedes Edukt wird verbraucht. Mit einem einzigen
+  // Sauerstoff im Team ist genau EIN Oxid baubar – zwei verschiedene
+  // Oxide zu bilden war unmoeglich, obwohl das chemisch das
+  // Naheliegendste ueberhaupt ist.
+  //
+  // Zwei, nicht beliebig viele: Vier Sauerstoff im Viererteam waeren
+  // erlaubt, und Sauerstoff ist mit 65 % die staerkste
+  // Feuerlande-Karte. Das waere kein Deck mehr, das etwas ueber
+  // Chemie lehrt.
+  //
+  // Gilt fuer alle drei Deckteile und fuer jede Meisterstufe. Nicht
+  // zu verwechseln mit koeffizienten (Abschnitt 10): Das sind
+  // Synthesen, die zwei Exemplare desselben Edukts VERLANGEN
+  // (2 Mg + O2 -> 2 MgO) – solche Rezepte gibt es in den Kartendaten
+  // noch gar nicht.
+  maxGleicheKarten: 2,
+
+  // Wie VIELE verschiedene Karten duerfen doppelt sein? Der zweite
+  // Hebel an derselben Regel – und der viel schaerfere, falls sich
+  // zeigt, dass Doppelte das Gleichgewicht kippen: Um zwei Oxide zu
+  // bauen, braucht man genau EINEN Zwilling (zweimal Sauerstoff).
+  // Alles darueber hinaus ist Kuer.
+  //   0   gar keine Doppelten (Stand bis Fassung IX)
+  //   1   ein Zwilling je Deck – "Eine einzige Karte darfst du
+  //       zweimal mitnehmen"
+  //   99  beliebig viele, begrenzt nur durch maxGleicheKarten
+  maxZwillinge: 99,
+
   // --- Abschnitt 10: Meisterstufen ----------------------------
   // Stufe I spielte bis Fassung V mit team: 3. Gemessen (je 1.100 Duelle,
   // bis=Feuerlande): Team 3 -> 16,2 Zuege / 0,54 Synthesen / Spanne 16,5 %,
@@ -228,7 +277,10 @@ window.REGELN = {
   meisterstufen: {
     "I": {
       region: "Feuerlande", team: 4, handAusruestung: 2, handVerbindungen: 2,
-      deckMin: 3, deckMax: 7,
+      // 4 (nur das Team) bis 8 (Team + beide Handgrenzen). Stand bis
+      // 16.08.2026 auf 3/7 – uebersehen, als das Team in Fassung VI
+      // von 3 auf 4 ging. Gelesen wird es nirgends, gedruckt schon.
+      deckMin: 4, deckMax: 8,
       syntheseKetten: false, koeffizienten: false, analyse: false,
       neu: "Grundregeln, einstufige Synthese"
     },
@@ -290,17 +342,36 @@ window.REGELN = {
   // Die Engine fuehrt das nur aus, wenn das Duell ausdruecklich mit
   // { volltreffer: true } gebaut wurde – Vorgabe ist aus.
   //
-  // Gemessen am 15.08.2026 (Feuerlande, freudiger Bot, je 880 Duelle),
-  // Spanne der belastbaren Karten und Synthese-Anreiz:
-  //   aus         24,8 %   syntheseLohnt +19,7 %
-  //   10 % x1,5   24,3 %                 +19,8 %   kaum von "aus" zu
-  //                                                unterscheiden
-  //   15 % x1,5   22,5 %                 +17,9 %   genommen
-  //   20 % x2     18,5 %                 +11,1 %   zu stark: vorsprung
-  //                                                faellt auf 7,7 % und
-  //                                                reisst damit die
-  //                                                Schwelle von 8 %
-  // Die Kontrollzahl blieb in allen Laeufen bei rund 48 % – der Zufall
+  // ACHTUNG, die Zahlen vom 15.08.2026 an dieser Stelle waren nicht
+  // nachvollziehbar: Die Werkstatt hat "volltreffer" bis zum 17.08.2026
+  // gar nicht an die Simulation gereicht (werkstatt.html), der Zufall
+  // lief also in KEINEM Simulationslauf mit. Woher jene Werte stammten,
+  // ist unklar; sie sind hier ersetzt.
+  //
+  // NEU GEMESSEN am 17.08.2026, mit dem Kaestchen "Volltreffer" in der
+  // Werkstatt, Fassung X, je 200 Duelle je Karte, Kontrollzahl 50-51 %.
+  // Spanne der belastbaren Karten:
+  //
+  //                 Feuerlande   Periodika   Aquaria
+  //   aus (Tisch)      27,8 %      43,3 %     35,8 %
+  //   15 % x1,5        25,7 %      39,0 %     35,2 %   <- Vorgabe
+  //
+  // Der Zufall hilft also, aber wenig: 0,6 bis 4,3 Punkte. Als Ersatz
+  // fuer einen Regelhebel taugt er nicht – die doppelten Karten haben
+  // die Spanne um 8 bis 11 Punkte gehoben.
+  //
+  // Die Staerke ist trotzdem richtig gewaehlt, und das ist jetzt
+  // gemessen statt geschaetzt (Feuerlande):
+  //   10 % x1,5   Spanne 28,9 %   syntheseLohnt 44,4 %
+  //   15 % x1,5   Spanne 27,2 %                 45,1 %   genommen
+  //   20 % x2     Spanne 29,0 %                 39,8 %   kostet Anreiz
+  //                                                      und bringt
+  //                                                      keine Spanne
+  // Anders als 2026 zuerst notiert reisst 20 % x2 die Schwelle von 8 %
+  // NICHT (Vorsprung 22,8 %) – seit Fassung IX/X haben die Verbindungen
+  // dafuer zu viel Luft. Es lohnt nur trotzdem nicht.
+  //
+  // Die Kontrollzahl bleibt in allen Laeufen bei rund 50 % – der Zufall
   // bevorzugt also keine Seite, er macht nur die Rangfolge unschaerfer.
   // Genau das ist der Zweck: Die staerkste Karte soll nicht mehr jedes
   // Duell gewinnen.
