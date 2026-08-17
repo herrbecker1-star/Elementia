@@ -542,7 +542,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Träge Masse: Barium kann nicht ausgewechselt werden – wer es in die Arena schickt, kämpft bis zum Ende.",
       "flavor": "Der grüne Riese aus der Tiefe. Sein Feuer färbt den Nachthimmel von Erdalkali.",
-      "quest": "Periodika – Erdalkali (legendär)", "bild": "🎆"
+      "quest": "Periodika – Erdalkali (legendär)", "bild": "bilder/barium.jpg"
     },
 
     // ---------- HALOGENE (Ort: Halogeni) ----------
@@ -568,7 +568,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "",
       "flavor": "Schwerer als Luft kriecht es durch die Gassen von Halogeni.",
-      "quest": "Periodika – Halogeni", "bild": "☣️"
+      "quest": "Periodika – Halogeni", "bild": "bilder/chlor.jpg"
     },
     {
       "name": "Brom", "formel": "Br₂", "region": "Periodika", "klasse": "Halogen", "oz": 35, "legendaer": true, "lp": 30, "masse": 160,
@@ -580,7 +580,19 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Einziges flüssiges Nichtmetall: Wucht-Attacken gegen Brom machen nur halben Schaden – es fließt einfach beiseite.",
       "flavor": "Ein See aus braunem Dampf und Tücke, tief im Süden von Halogeni.",
-      "quest": "Periodika – Halogeni (legendär)", "bild": "🫗"
+      "quest": "Periodika – Halogeni (legendär)", "bild": "bilder/brom.jpg"
+    },
+    {
+      "name": "Iod", "formel": "I₂", "region": "Periodika", "klasse": "Halogen", "oz": 53, "lp": 30, "masse": 254,
+      "eigenschaften": ["fest", "grauschwarz", "sublimierend", "giftig"],
+      "attacken": [
+        { "name": "Violetter Dampf", "typ": "Gas", "schaden": 10, "effekt": "" },
+        { "name": "Iodbiss", "typ": "Ätz", "schaden": 5, "effekt": "" }
+      ],
+      "synthese": null,
+      "besonderheit": "Das mildeste Halogen: Je weiter unten in der Familie, desto ruhiger. Iod ist als einziges fest – Wucht-Attacken treffen es voll, dafür fürchtet es keine Aufwirbelung.",
+      "flavor": "Es schmilzt nicht. Es verschwindet als violetter Hauch – und schlägt sich anderswo wieder nieder.",
+      "quest": "Periodika – Halogeni", "bild": "bilder/iod.jpg"
     },
 
     // ---------- EDELGASE (Ort: Edelwald) ----------
@@ -593,7 +605,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Edel: Helium nimmt an keiner Synthese teil und ist immun gegen Ätz-Attacken.",
       "flavor": "Es schwebt über allem und lässt sich auf nichts ein.",
-      "quest": "Periodika – Edelwald", "bild": "🎈"
+      "quest": "Periodika – Edelwald", "bild": "bilder/helium.jpg"
     },
     {
       "name": "Neon", "formel": "Ne", "region": "Periodika", "klasse": "Edelgas", "oz": 10, "lp": 30, "masse": 20,
@@ -604,7 +616,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Edel: Neon nimmt an keiner Synthese teil und ist immun gegen Ätz-Attacken.",
       "flavor": "Nachts leuchten die Wipfel des Edelwalds in rotem Licht.",
-      "quest": "Periodika – Edelwald", "bild": "🌃"
+      "quest": "Periodika – Edelwald", "bild": "bilder/neon.jpg"
     },
     {
       "name": "Argon", "formel": "Ar", "region": "Periodika", "klasse": "Edelgas", "oz": 18, "lp": 30, "masse": 40,
@@ -616,10 +628,66 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Edel: Argon nimmt an keiner Synthese teil und ist immun gegen Ätz-Attacken.",
       "flavor": "Ein Hundertstel jedes Atemzugs – und niemand bemerkt es.",
-      "quest": "Periodika – Edelwald", "bild": "💡"
+      "quest": "Periodika – Edelwald", "bild": "bilder/argon.jpg"
     },
 
     // ---------- SALZE & VERBINDUNGEN (Synthese-Ketten!) ----------
+    //
+    // Lithiumoxid und Bariumoxid sind die Familien-Paare zu Calciumoxid:
+    // dieselbe Reaktion, eine Zeile weiter im PSE. Bis zum 17.08.2026 war
+    // Periodika die Region mit elf Elementen und nur vier Verbindungen –
+    // Lithium, Barium und Brom kamen im GANZEN Kartensatz in keiner
+    // einzigen Synthese als Edukt vor.
+    {
+      "name": "Lithiumoxid", "formel": "Li₂O", "region": "Periodika", "klasse": "Oxid", "lp": 50, "masse": 30,
+      "eigenschaften": ["fest", "weiß", "ätzend", "federleicht"],
+      "attacken": [
+        { "name": "Staubwurf", "typ": "Wucht", "schaden": 10, "effekt": "" },
+        { "name": "Laugenhauch", "typ": "Ätz", "schaden": 13, "effekt": "" }
+      ],
+      "synthese": {
+        "wortgleichung": "Lithium + Sauerstoff → Lithiumoxid",
+        "bilanz": "28 u + 32 u = 60 u (vier Li auf ein O₂, zwei Teilchen à 30 u)",
+        "edukte": ["Lithium", "Sauerstoff"],
+        "aktivierung": true, "exotherm": 5
+      },
+      "besonderheit": "Familienbeweis: Lithium verbrennt zu einem Oxid wie Calcium – nur braucht es vier Lithium auf ein Sauerstoff-Teilchen statt zwei Calcium. Wie jedes Metalloxid brennt es selbst nicht mehr; es ätzt.",
+      "flavor": "Das leichteste Metall gibt das leichteste Oxid – und bleibt selbst im Feuer flink.",
+      "quest": "Periodika – Alkali", "bild": "⬜"
+    },
+    {
+      "name": "Bariumoxid", "formel": "BaO", "region": "Periodika", "klasse": "Oxid", "lp": 50, "masse": 153,
+      "eigenschaften": ["fest", "weiß", "ätzend", "schwer"],
+      "attacken": [
+        { "name": "Schwerstaub", "typ": "Wucht", "schaden": 13, "effekt": "" },
+        { "name": "Ätzschleier", "typ": "Ätz", "schaden": 10, "effekt": "" }
+      ],
+      "synthese": {
+        "wortgleichung": "Barium + Sauerstoff → Bariumoxid",
+        "bilanz": "274 u + 32 u = 306 u (zwei Teilchen à 153 u)",
+        "edukte": ["Barium", "Sauerstoff"],
+        "aktivierung": true, "exotherm": 5
+      },
+      "besonderheit": "Gleiche Familie, gleiche Reaktion: Barium verbrennt zu BaO genau wie Calcium zu CaO – zwei Metalle auf ein Sauerstoff-Teilchen. Daran erkennst du eine Elementfamilie.",
+      "flavor": "Der grüne Riese verglüht – und lässt ein schweres, weißes Pulver zurück.",
+      "quest": "Periodika – Erdalkali", "bild": "⬛"
+    },
+    {
+      "name": "Kaliumiodid", "formel": "KI", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 166,
+      "eigenschaften": ["fest", "kristallin", "weiß", "gut löslich"],
+      "attacken": [
+        { "name": "Iodidsplitter", "typ": "Wucht", "schaden": 15, "effekt": "" }
+      ],
+      "synthese": {
+        "wortgleichung": "Kalium + Iod → Kaliumiodid",
+        "bilanz": "78 u + 254 u = 332 u (zwei Teilchen à 166 u)",
+        "edukte": ["Kalium", "Iod"],
+        "aktivierung": true, "exotherm": 5
+      },
+      "besonderheit": "Doebereiners Beweis: Kalium reagiert mit Iod genau wie mit Chlor – dieselbe Reaktion, nur eine Zeile tiefer im Periodensystem. Als Iodid steckt es in jedem Speisesalz.",
+      "flavor": "Ein Salz, das in der Suppe niemandem auffällt – und ohne das der Kopf nicht arbeitet.",
+      "quest": "Periodika – Nebenquest Doebereiners Garten", "bild": "🧠"
+    },
     {
       "name": "Natriumchlorid", "formel": "NaCl", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 58,
       "eigenschaften": ["fest", "kristallin", "weiß", "würzig"],
@@ -634,7 +702,7 @@ window.KARTEN_DATEN = {
       },
       "besonderheit": "Gezähmt: Aus wildem Metall und giftigem Gas wurde ein harmloses Salz – das Wunder der Salzhochzeit.",
       "flavor": "Es liegt auf jedem Tisch Elementias – und niemand ahnt, aus welchen Eltern es stammt.",
-      "quest": "Periodika – Halogeni", "bild": "🧂"
+      "quest": "Periodika – Halogeni", "bild": "bilder/natriumchlorid.jpg"
     },
     {
       "name": "Kaliumchlorid", "formel": "KCl", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 75,
@@ -650,7 +718,7 @@ window.KARTEN_DATEN = {
       },
       "besonderheit": "Gleiche Familie, gleiche Reaktion: Kalium reagiert mit Chlor genauso wie Natrium – daran erkennst du eine Elementfamilie.",
       "flavor": "Die Bauern von Periodika streuen es auf ihre Felder.",
-      "quest": "Periodika – Halogeni", "bild": "🌱"
+      "quest": "Periodika – Halogeni", "bild": "bilder/kaliumchlorid.jpg"
     },
     {
       "name": "Calciumoxid", "formel": "CaO", "region": "Periodika", "klasse": "Oxid", "lp": 50, "masse": 56,
@@ -686,6 +754,23 @@ window.KARTEN_DATEN = {
       "flavor": "Wer Kalk löscht, dem dampft der Eimer – Wärme ohne Feuer.",
       "quest": "Periodika – Mendelmey Festung", "bild": "🥛"
     },
+    {
+      "name": "Calciumcarbonat", "formel": "CaCO₃", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 100,
+      "eigenschaften": ["fest", "weiß", "kristallin", "unlöslich"],
+      "attacken": [
+        { "name": "Kalksteinbrocken", "typ": "Wucht", "schaden": 15, "effekt": "" },
+        { "name": "Kreidestaub", "typ": "Gas", "schaden": 5, "effekt": "" }
+      ],
+      "synthese": {
+        "wortgleichung": "Calciumhydroxid + Kohlenstoffdioxid → Calciumcarbonat + Wasser (Kalkwasserprobe)",
+        "bilanz": "74 u + 44 u = 100 u + 18 u",
+        "edukte": ["Calciumhydroxid", "Kohlenstoffdioxid"],
+        "aktivierung": false, "exotherm": 0
+      },
+      "besonderheit": "Drittes Kettenglied: Calcium → Calciumoxid → Calciumhydroxid → Calciumcarbonat. Die längste Kette Elementias – und zugleich der Nachweis für Kohlenstoffdioxid: Trübt sich das Kalkwasser, war CO₂ im Spiel.",
+      "flavor": "Aus dem klaren Kalkwasser fällt ein weißer Schleier – und aus dem Schleier werden Berge.",
+      "quest": "Periodika – Mendelmey Festung", "bild": "🪨"
+    },
 
     // ---------- AUSRÜSTUNG (Periodika) ----------
     {
@@ -696,7 +781,7 @@ window.KARTEN_DATEN = {
       "wirkung": { "art": "schutz", "gegen": "alle", "faktor": 0, "ziel": "eigenesElemental", "bedingung": { "klasse": "Alkalimetall" } },
       "besonderheit": "Spiele das Petroleumglas auf eines deiner Alkalimetalle: Es erleidet bis zu deinem nächsten Zug keinen Schaden – sicher unter Petroleum, so lagert man Alkalimetalle.",
       "flavor": "Was mit Luft und Wasser streitet, schläft ruhig unter Öl.",
-      "quest": "Periodika – Alkali", "bild": "🫙"
+      "quest": "Periodika – Alkali", "bild": "bilder/petroleumglas.jpg"
     },
     {
       "name": "Spektralbrille", "formel": "", "region": "Periodika", "klasse": "Ausrüstung", "lp": null,
@@ -705,7 +790,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Lege ab und nenne die Flammenfärbung deines aktiven Metalls richtig (Li karminrot · Na gelb · K violett · Ca ziegelrot · Ba grün): Seine nächste Feuer-Attacke macht +5 Schaden.",
       "flavor": "Jede Familie hat ihre Farbe. Man muss nur hinsehen können.",
-      "quest": "Periodika – Erdalkali", "bild": "🕶️"
+      "quest": "Periodika – Erdalkali", "bild": "bilder/spektralbrille.jpg"
     },
     {
       "name": "Das Periodenbuch", "formel": "", "region": "Periodika", "klasse": "Ausrüstung", "lp": null,
@@ -714,7 +799,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Lege ab und nenne Ordnungszahl UND Familie deines aktiven Elementals richtig: Deine nächste ⚡-Synthese braucht keine Aktivierungsenergie – du kennst den Stoff genau.",
       "flavor": "Mendelejews Erben schrieben jedes Wesen Elementias in dieses Buch – geordnet nach der Zahl im Kern.",
-      "quest": "Periodika – Mendelmey Festung", "bild": "📖"
+      "quest": "Periodika – Mendelmey Festung", "bild": "bilder/das-periodenbuch.jpg"
     },
 
     // ============================================================
@@ -1170,7 +1255,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Edelmetall &amp; bester Leiter: Silber erleidet durch Ätz-Attacken nur halben Schaden. Es ist der beste Stromleiter überhaupt.",
       "flavor": "Der beste Leiter der Welt – und der klügste Kopf unter den Clans.",
-      "quest": "Erdhügel – Agentum", "bild": "🥈"
+      "quest": "Erdhügel – Agentum", "bild": "bilder/silber.jpg"
     },
     {
       "name": "Gold", "formel": "Au", "region": "Erdhügel", "klasse": "Metall", "oz": 79, "lp": 30, "masse": 197,
@@ -1181,7 +1266,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Edelmetall: Gold reagiert mit nichts – Ätz-Attacken (Säure, Rost) machen 0 Schaden. Es kommt gediegen (rein) in der Natur vor.",
       "flavor": "Es fürchtet weder Feuer noch Säure noch die Zeit.",
-      "quest": "Erdhügel – Aurum", "bild": "🥇"
+      "quest": "Erdhügel – Aurum", "bild": "bilder/gold.jpg"
     },
     {
       "name": "Platin", "formel": "Pt", "region": "Erdhügel", "klasse": "Metall", "oz": 78, "legendaer": true, "lp": 60, "masse": 195,
@@ -1193,7 +1278,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Legendäres Edelmetall: Platin erleidet durch Ätz- und Feuer-Attacken keinen Schaden. Genau dieses Elemental brauchen die Entroperianer für ihr Massenspektrometer.",
       "flavor": "Edler als Gold, unzerstörbar – das Herzstück, um das ein ganzer Krieg entbrannte.",
-      "quest": "Erdhügel – Finale (legendär)", "bild": "💍"
+      "quest": "Erdhügel – Finale (legendär)", "bild": "bilder/platin.jpg"
     },
 
     // ---------- LEGIERUNGEN (Erdhügel) ----------
