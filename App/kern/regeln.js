@@ -127,6 +127,21 @@ window.REGELN = {
   // gedruckt wird. Weitere Arten kommen spaeter dazu.
   wirkungsarten: ["selbstschaden"],
 
+  // Was eine APP-ATTACKE (Feld "appAttacke") wirken darf. Eine eigene
+  // Liste, nicht ausruestungsWirkungen: "blick" und "dauerbonus"
+  // gehoeren keiner Attacke, und die Trennung ist die Stelle, an der
+  // pruefer.js greift.
+  //
+  // Alle vier gelten NUR in der App (appRegeln.appAttacken):
+  //   schutz     einen Schadenstyp schwaechen – gibt es schon, hier
+  //              mit "gegen" auf Wucht, Feuer oder Gas und "minus"
+  //              statt "faktor"
+  //   heilung    Lebenspunkte zurueckgeben – gibt es schon
+  //   vernebeln  senkt die Trefferquote des Gegners (haengt an
+  //              appZusatz.treffer, also an "Daneben")
+  //   gift       Schaden am Ende des naechsten gegnerischen Zuges
+  appAttackenWirkungen: ["schutz", "heilung", "vernebeln", "gift"],
+
   // --- Abschnitt 4: Ausruestung spielen ------------------------
   // Die vierte Aktion stand von Anfang an im Regelwerk, die Engine
   // kannte sie bis zum 15.08.2026 nicht. Ausgefuehrt wird, was in
@@ -399,7 +414,204 @@ window.REGELN = {
   // Genau das ist der Zweck: Die staerkste Karte soll nicht mehr jedes
   // Duell gewinnen.
   appZusatz: {
-    volltreffer: { chance: 0.15, faktor: 1.5 }
+    volltreffer: { chance: 0.15, faktor: 1.5 },
+
+    // --- Daneben und Ausweichen (22.08.2026) ------------------
+    // Nicht jeder Treffer sitzt. Jede Schadensattacke trifft zu 95 %.
+    //
+    // FLACH, und das ist ein Meßergebnis, keine Bequemlichkeit.
+    // Geplant war eine Leiter, die am gedruckten Grundschaden haengt
+    // ("wer weit ausholt, trifft seltener": 100/90/80 ueber die
+    // Schwellen 10 und 20). Gemessen wurde sie am 22.08.2026 und
+    // faellt aus, weil sie den GRUNDSATZ des Spiels verletzt.
+    //
+    // Der Grund liegt im Kartensatz: "starke Attacke" und "Verbindung"
+    // sind hier dasselbe.
+    //
+    //   Mittlerer Schaden     Elemente  9,6   Verbindungen 11,4
+    //   Anteil Verbindungen an allen Wucht-Attacken   74 % (Periodika)
+    //   Anteil Verbindungen an allen Feuer-Attacken   18 % (Periodika)
+    //
+    // Eine Trefferstrafe, die an der Staerke einer Attacke haengt, ist
+    // deshalb eine Steuer auf das Synthetisieren – und die trifft den
+    // fachlichen Kern des Spiels. Gemessen, Periodika, 400 Duelle je
+    // Karte, zwei Saaten, App mit Volltreffer (Schwelle: vorsprung
+    // >= 8 % und syntheseLohnt > 0):
+    //
+    //   Form                        vorsprung      Grundsatz
+    //   aus (Tisch)                 10,0 / 10,4 %  ja
+    //   Leiter 100/90/80             5,4 /  4,7 %  NEIN
+    //   Typquoten F92 W85 G97 Ae92   5,0 /  3,9 %  NEIN
+    //   Typquoten, mildeste Fassung  5,9 /  5,4 %  NEIN
+    //   flach 95 %                   8,7 /  8,0 %  ja    <- genommen
+    //   flach 97 %                   9,5 /  8,8 %  ja
+    //
+    // Eine Leiter KANN in diesem Kartensatz gar nichts anderes tun:
+    // Der Schaden reicht nur von 5 bis 18 (schadenSpanne erlaubt 0-40),
+    // und die Masse liegt bei 10 (Elemente) und 13 (Verbindungen). Eine
+    // Bandgrenze zwischen 10 und 13 IST die Trennung Element/Verbindung;
+    // eine Grenze darueber wirkt gar nicht. Drei geprueft Leitern mit
+    // Grenze bei 15 lieferten Zahlen, die auf die Stelle genau dem
+    // Tischspiel entsprachen – sie feuerten nie.
+    //
+    // Die flache Quote wirkt dabei nicht schwaecher: Spanne der
+    // belastbaren Karten in Periodika 32,3 -> 28,7 %, in Feuerlande
+    // 24,8 -> 22,5 %. Der Preis sind rund eine Runde mehr je Duell.
+    //
+    // Wollte man die Leiter doch, muesste zuerst der Schaden ueber die
+    // erlaubte Spanne gespreizt werden, so dass Staerke nicht mehr mit
+    // "Verbindung" zusammenfaellt. Das aendert die gedruckten Karten
+    // und ist ein eigenes Vorhaben.
+    //
+    // Attacken mit Schaden 0 wuerfeln NIE. Der Zinkpanzer ist keine
+    // Attacke, die danebengehen kann – er ist eine Wirkung, die als
+    // Attacke gedruckt ist. Ein Wurf wuerde solche Karten grundlos
+    // entwerten.
+    //
+    // ACHTUNG beim Messen: Zusammen mit dem Volltreffer hat ein Angriff
+    // jetzt DREI Ausgaenge (daneben – Treffer – Volltreffer). Die
+    // 15 % x1,5 des Volltreffers wurden gegen ein Spiel ohne
+    // Fehlschlaege gemessen; beide Zufallsquellen gehoeren zusammen
+    // gemessen, nie nacheinander bewertet.
+    //
+    // Beide widerlegten Formen bleiben als Bauform stehen, damit sie
+    // sich gegenmessen lassen (varianten.js, "daneben-*"):
+    //   leiter: [{ bisSchaden, quote }, …]  erste passende Sprosse gilt
+    //   jeTyp:  { Feuer: 0.9, Wucht: 0.8, … }  hat Vorrang vor leiter
+    treffer: {
+      leiter: [
+        { bisSchaden: 99, quote: 0.95 }
+      ]
+    },
+
+    // --- Kostet eine App-Attacke den Zug? ---------------------
+    // Zur Messung offen, Vorgabe aus. Der Hintergrund ist derselbe wie
+    // bei der Ausruestung in Fassung X: Ein Zug ohne Schaden, der rund
+    // 5 Schaden verhindert, ist ein Verlustgeschaeft, wenn ein Zug rund
+    // 11 Schaden macht. Gemessen am 22.08.2026 hat der Bot deshalb 9
+    // von 11 App-Attacken NIE gespielt – nur Zinksalbe (Heilung) und
+    // ganz vereinzelt den Aetzenden Hauch.
+    //
+    // Steht der Wert auf true, ist HOECHSTENS EINE App-Attacke je Zug
+    // frei (wie syntheseProZug: 1), sonst stuende das Duell still.
+    appAttackeIstFreieAktion: false,
+
+    // --- Bank-Synergien (22.08.2026) --------------------------
+    // Wer inaktiv auf der Bank steht, tat bisher genau nichts, bis er
+    // nachrueckte. Hier bekommt die Bank eine Rolle: Elementals, die
+    // fachlich zusammengehoeren, staerken das aktive.
+    //
+    // Kuratierte Tabelle wie die typenMatrix – jede Zeile mit
+    // Begruendung. NICHT automatisch aus "eigenschaften": Dort stehen
+    // ueber hundert Schlagwoerter, darunter "weiß", "klangvoll" und
+    // "Glücksbringer". Eine Synergie auf "goldglänzend" waere Unsinn.
+    //
+    // geltung:
+    //   "bank-zu-aktiv"  Ein Elemental auf der Bank teilt ein Merkmal
+    //                    mit dem aktiven. Braucht "mindestens".
+    //   "team"           Das GANZE Team traegt das Merkmal.
+    //
+    // bedingung:
+    //   { gleich: "hauptgruppe" | "klasse" }   Uebereinstimmung
+    //   { alle: "<merkmal>" }                  jede Karte traegt es
+    //   { eines: "<merkmal>" }                 mindestens eine
+    //
+    // ACHTUNG BEIM BALANCIEREN: Synergien belohnen ein volles,
+    // sortenreines Team – die Synthese verkleinert es. Wer zwei
+    // Elemente verschmilzt, verliert einen Bankplatz und womoeglich
+    // seine Synergie. Das ist derselbe Mechanismus, der die Synthese
+    // bis Fassung VII zum Verlustgeschaeft gemacht hat. syntheseLohnt
+    // ist hier keine Kennzahl unter mehreren, sondern die
+    // ABBRUCHBEDINGUNG (Schwelle grundsatz.mindestVorsprung).
+    //
+    // Deshalb steht "Verwandte Stoffklasse" mit in der Tabelle: Sie
+    // gilt auch zwischen VERBINDUNGEN (Oxid neben Oxid), damit die
+    // Synthese eine Synergie verschiebt statt sie zu zerstoeren.
+    // Hoechstens EINE Synergie gilt gleichzeitig. Ohne Grenze stapeln
+    // sie sich: In Feuerlande griffen "Verwandte Stoffklasse" (35 % der
+    // Runden) und "Brennstoff im Ruecken" (31 %) oft zusammen. Bei
+    // einem Grundschaden von rund 11 sind +10 kein Bonus mehr.
+    synergienMax: 1,
+
+    // "inKraft: false" heisst: gebaut, chemisch richtig, gemessen – und
+    // NICHT im Spiel. Die Zeile bleibt stehen, damit sie sich
+    // gegenmessen laesst, so wie zuendungNoetig stehen geblieben ist.
+    //
+    // ============================================================
+    //  DAS ERGEBNIS VOM 22.08.2026 IN EINEM SATZ:
+    //  Eine Synergie, die nur ELEMENTE tragen koennen, bestraft das
+    //  Synthetisieren – denn die Synthese verbraucht genau diese
+    //  Elemente. Eine Synergie, die auch eine VERBINDUNG tragen kann,
+    //  tut das nicht; sie belohnt es sogar.
+    // ============================================================
+    //
+    // Gemessen (400 Duelle je Karte, zwei Saaten, alle uebrigen
+    // App-Regeln an; Schwelle vorsprung >= 8 % UND syntheseLohnt > 0):
+    //
+    //   Fassung                       Periodika vorsprung   Grundsatz
+    //   ohne Synergien                    9,7 / 9,1 %       ja
+    //   alle fuenf, Staerke 5, gestapelt  0,8 / 0,1 %       NEIN  (!)
+    //   alle fuenf, Staerke 5, max 1      3,9 / 3,4 %       NEIN
+    //   alle fuenf, Staerke 2, max 1      7,2 / 6,6 %       NEIN
+    //   alle fuenf, Staerke 1, max 1      6,9 / 6,9 %       NEIN
+    //   nur Stoffklasse, Staerke 3       10,7 / 10,5 %      ja    <- genommen
+    //   nur Stoffklasse, Staerke 2       11,0 / 10,5 %      ja
+    //   nur Stoffklasse, Staerke 5       11,3 / 10,3 %      ja
+    //
+    // Bei "alle fuenf, Staerke 5" fiel syntheseLohnt sogar unter NULL
+    // (-3,6 %): Wer synthetisierte, verlor. Das ist der Grundsatz des
+    // Spiels, und deshalb ist die Sache entschieden.
+    //
+    // Staerke 3 gewaehlt, nicht 2: Sie bringt in Feuerlande die groesste
+    // Verbesserung der Spanne (22,7 -> 19,4 % und 22,0 -> 17,7 %) und
+    // hebt Periodikas vorsprung trotzdem ueber den Ausgangswert. Der
+    // Preis ist eine um 2 bis 3 Punkte breitere Spanne in Periodika.
+    synergien: [
+      { name: "Verwandte Stoffklasse", inKraft: true,
+        geltung: "bank-zu-aktiv", mindestens: 1,
+        bedingung: { gleich: "klasse" },
+        wirkung: { art: "schadensbonus", wert: 3 },
+        begruendung: "Stoffe derselben Klasse reagieren nach demselben Muster – " +
+          "zwei Oxide, zwei Salze, zwei Alkane. Die einzige Zeile, die eine " +
+          "Verbindung genauso tragen kann wie ein Element: Wer zwei Oxide " +
+          "nebeneinander stellt, hat sie – und die Synthese schafft Oxide." },
+
+      // --- Gebaut, gemessen, nicht in Kraft ---------------------
+      // Alle vier belohnen ELEMENTE auf der Bank. Genau die verbraucht
+      // die Synthese, und damit bestrafen sie den fachlichen Kern des
+      // Spiels. Sie wieder einzuschalten lohnt erst, wenn Verbindungen
+      // eigene Merkmale tragen, an denen Synergien haengen koennen.
+      { name: "Gleiche Hauptgruppe", inKraft: false,
+        geltung: "bank-zu-aktiv", mindestens: 1,
+        bedingung: { gleich: "hauptgruppe" },
+        wirkung: { art: "schadensbonus", wert: 3 },
+        begruendung: "Elemente einer Hauptgruppe haben gleich viele Außenelektronen " +
+          "und reagieren ähnlich. In Feuerlande griff sie in 0 % der Runden – " +
+          "dort gibt es keine Karte mit Hauptgruppen-Klasse." },
+
+      { name: "Metallischer Verbund", inKraft: false,
+        geltung: "team",
+        bedingung: { alle: "metallisch" },
+        wirkung: { art: "schutz", gegen: "alle", minus: 1 },
+        begruendung: "Metalle leiten Wärme und Energie ab, statt sie aufzunehmen. " +
+          "Ein Oxid ist nicht metallisch – jede Synthese bricht den Verbund." },
+
+      { name: "Schutzgas", inKraft: false,
+        geltung: "bank", mindestens: 1,
+        bedingung: { eines: "reaktionsträge" },
+        wirkung: { art: "schutz", gegen: "Feuer", minus: 3 },
+        begruendung: "Ein reaktionsträges Gas verdrängt den Sauerstoff – genau dafür " +
+          "wird beim Schweißen Argon eingesetzt. Griff in Periodika in 24 % der " +
+          "Runden und war dort einer der beiden Hauptgründe für den Einbruch." },
+
+      { name: "Brennstoff im Rücken", inKraft: false,
+        geltung: "bank", mindestens: 1,
+        bedingung: { eines: "brennbar" },
+        wirkung: { art: "schadensbonus", wert: 3, typ: "Feuer" },
+        begruendung: "Wer Brennstoff im Team hat, hält die Flamme in Gang. Dasselbe " +
+          "Bild wie brennstoffBonus, nur aufs Team bezogen. Griff in 25 bis 31 % " +
+          "der Runden – und der Brennstoff ist immer ein Element." }
+    ]
   },
 
   // --- Klassenfarben: nicht mehr hier -------------------------

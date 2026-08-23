@@ -108,6 +108,54 @@
   }
 
   // ------------------------------------------------------------
+  //  App-Regeln – was NUR in der App gilt
+  //
+  //  Am Tisch bleibt das Spiel deterministisch und knapp, weil jeder
+  //  Wuerfelwurf Unterrichtszeit kostet. In der App rechnet der
+  //  Rechner, dort kostet es nichts. Alles, was hier steht, gehoert
+  //  zu REGELN.appZusatz und darf im gedruckten Regelwerk nicht
+  //  vorkommen.
+  //
+  //  Warum eine LISTE statt einzelner Wahrheitswerte: Der groesste
+  //  Messfehler dieses Projekts war ein Schalter, der nicht
+  //  durchgereicht wurde – "volltreffer" fehlte in den Optionen der
+  //  Werkstatt, und saemtliche Balancing-Zahlen beschrieben deshalb
+  //  das Tischspiel, waehrend sie die App beschreiben sollten. Mit
+  //  vier App-Regeln waere dieselbe Falle viermal so tief. Sie sind
+  //  deshalb EINZELN schaltbar: Nur so laesst sich messen, welche
+  //  Regel welche Zahl bewegt.
+  // ------------------------------------------------------------
+  const APP_REGELN = ["volltreffer", "daneben", "appAttacken", "synergien"];
+
+  // Wirkungen, die dem eigenen Elemental gelten. Alles andere trifft
+  // den Gegner. Nur noetig, weil eine ATTACKE ihr Ziel nicht im Zug
+  // mitfuehrt – bei der Ausruestung waehlt es der Spieler.
+  const HILFT = { heilung: true, schutz: true, schadensbonus: true,
+                  dauerbonus: true, zweiteSynthese: true };
+
+  function appRegelnLesen(optionen) {
+    const aus = {};
+    for (let i = 0; i < APP_REGELN.length; i++) aus[APP_REGELN[i]] = false;
+
+    const q = optionen.appRegeln;
+    if (q === true) {
+      // "App wie gespielt" – der Sammelschalter.
+      for (let i = 0; i < APP_REGELN.length; i++) aus[APP_REGELN[i]] = true;
+    } else if (q && typeof q === "object") {
+      for (let i = 0; i < APP_REGELN.length; i++) {
+        aus[APP_REGELN[i]] = q[APP_REGELN[i]] === true;
+      }
+    }
+
+    // Der alte Schalter bleibt gueltig. duell.html, die Werkstatt und
+    // die Regeltests setzen ihn seit dem 17.08.2026; er darf durch die
+    // neue Liste nicht stillschweigend wirkungslos werden.
+    if (optionen.volltreffer === true) aus.volltreffer = true;
+
+    return aus;
+  }
+
+  // ------------------------------------------------------------
   //  Duell
   //
   //  deck = {
@@ -125,10 +173,15 @@
     this.regelsatz = R.meisterstufen[this.stufe];
     this.zufall = optionen.zufall || zufallsQuelle(optionen.saat || 1);
 
+    // Welche App-Regeln gelten in diesem Duell? Vorgabe ist ALLES AUS –
+    // sonst waeren die Regeltests nicht mehr wiederholbar und die
+    // Simulation wuerde ungefragt ein anderes Spiel messen als das
+    // gedruckte.
+    this.appRegeln = appRegelnLesen(optionen);
+
     // Volltreffer: NUR in der App, und nur wenn ausdruecklich verlangt.
-    // Vorgabe ist aus – sonst waeren die Regeltests nicht mehr
-    // wiederholbar und das gedruckte Spiel braeuchte einen Wuerfel.
-    this.volltreffer = (optionen.volltreffer === true && R.appZusatz)
+    // Bleibt als eigenes Feld stehen, weil angreifen() damit rechnet.
+    this.volltreffer = (this.appRegeln.volltreffer && R.appZusatz)
       ? R.appZusatz.volltreffer : null;
     this.zuhoerer = {};
     // Zwei Zaehler, weil sie zwei verschiedene Fragen beantworten:
@@ -160,6 +213,10 @@
     // Wer begonnen hat, bleibt abrufbar – die Simulation misst damit,
     // wie schwer die Initiative wiegt.
     this.beginner = this.amZug;
+
+    // Die Synergien gelten von der ersten Runde an – sie haengen an der
+    // Aufstellung, nicht an einem gespielten Zug.
+    this.synergienAktualisieren();
 
     this.melde("duell-start", {
       stufe: this.stufe,
@@ -236,7 +293,7 @@
     // gesperrt ("Der Gegner kann in seinem naechsten Zug nicht
     // angreifen").
     if (!spieler.angriffGesperrt) {
-      const attacken = spieler.arena.karte.attacken || [];
+      const attacken = this.attackenVon(spieler.arena.karte);
       for (let i = 0; i < attacken.length; i++) {
         zuege.push({ art: "angriff", index: i });
       }
@@ -405,9 +462,11 @@
         this.beenden(null, "zuglimit");
       } else if (this.istFreieAktion(zug, spieler)) {
         // Derselbe Spieler bleibt am Zug. Das kann nicht ewig gehen:
-        // Jede Ausruestung verlaesst dabei die Hand, und die Synthese
-        // ist auf eine je Zug begrenzt.
+        // Jede Ausruestung verlaesst dabei die Hand, die Synthese ist
+        // auf eine je Zug begrenzt – und die App-Attacke ebenso, sonst
+        // stuende das Duell still.
         if (zug.art === "synthese") this.syntheseGenutzt = true;
+        if (zug.art === "angriff") this.appAttackeGenutzt = true;
         this.melde("zusatzaktion", { spieler: spieler, zug: zug });
       } else {
         this.zugBeenden(spieler);
@@ -425,6 +484,22 @@
   Duell.prototype.istFreieAktion = function (zug, spieler) {
     const R = window.REGELN;
     if (zug.art === "ausruestung") return R.ausruestungIstFreieAktion !== false;
+
+    // Eine App-Attacke kann eine freie Aktion sein – hoechstens EINE je
+    // Zug, wie bei der Synthese. Der Grund ist derselbe, aus dem die
+    // Ausruestung in Fassung X frei wurde: Ein Zug ohne Schaden, der
+    // rund 5 Schaden verhindert, ist ein Verlustgeschaeft, wenn ein Zug
+    // rund 11 Schaden macht. Gemessen am 22.08.2026 hat der Bot 9 von
+    // 11 App-Attacken deshalb NIE gespielt.
+    if (zug.art === "angriff" && R.appZusatz && R.appZusatz.appAttackeIstFreieAktion &&
+        this.appRegeln.appAttacken && !this.appAttackeGenutzt) {
+      const karte = spieler.arena && spieler.arena.karte;
+      if (karte && karte.appAttacke &&
+          this.attackenVon(karte)[zug.index] === karte.appAttacke) {
+        return true;
+      }
+    }
+
     if (zug.art !== "synthese") return false;
     // Ohne Arena steht niemand mehr, der handeln koennte.
     return R.syntheseIstFreieAktion === true && !!spieler.arena;
@@ -440,18 +515,264 @@
     if (this.vorbei) return;
 
     this.syntheseGenutzt = false;
+    this.appAttackeGenutzt = false;
     // Die Angriffssperre gilt fuer GENAU einen Zug: Wer sie hatte,
     // hat sie jetzt abgesessen.
     spieler.angriffGesperrt = false;
     this.rundenZaehler++;
     this.amZug = 1 - this.amZug;
     this.zustaendeAblaufen(this.spieler[this.amZug]);
+    // Nach dem Abraeumen, nicht davor: zustaendeAblaufen wirft auch die
+    // Synergie-Zustaende dieser Seite weg, und die sollen sofort wieder
+    // gelten – sie haengen an der Lage, nicht an einem Zug.
+    this.synergienAktualisieren();
     this.melde("rundenbeginn", { spieler: this.spieler[this.amZug] });
+  };
+
+  // Die Lage kann sich mitten im Zug aendern: Wechsel, Synthese und
+  // jedes erschoepfte Elemental veraendern die Bank. Deshalb an EINER
+  // Stelle und fuer BEIDE Seiten – eine Synergie des Gegners haengt
+  // genauso an seiner Bank wie die eigene.
+  Duell.prototype.synergienAktualisieren = function () {
+    if (!this.appRegeln.synergien) return;
+    this.synergienSetzen(this.spieler[0]);
+    this.synergienSetzen(this.spieler[1]);
+  };
+
+  // ------------------------------------------------------------
+  //  Bank-Synergien – NUR in der App (REGELN.appZusatz.synergien)
+  //
+  //  Die Bank tat bisher nichts, bis sie nachrueckte. Hier staerken
+  //  Elementals, die fachlich zusammengehoeren, das aktive.
+  //
+  //  Die Hauptgruppe steht auf keiner Karte – sie folgt aber aus der
+  //  Kartenklasse, wo die Chemie sie hergibt. Eine eigene Angabe in
+  //  "appMerkmale" geht vor; so laesst sich jede Karte nachtragen,
+  //  ohne dass am Druckbogen etwas passiert (der Generator liest
+  //  "appMerkmale" nicht).
+  // ------------------------------------------------------------
+  const HAUPTGRUPPE_JE_KLASSE = {
+    "Alkalimetall": 1, "Erdalkalimetall": 2, "Halogen": 7, "Edelgas": 8
+  };
+
+  function hauptgruppeVon(karte) {
+    const m = karte.appMerkmale;
+    if (m && m.hauptgruppe !== undefined) return m.hauptgruppe;
+    const h = HAUPTGRUPPE_JE_KLASSE[karte.klasse];
+    return h === undefined ? null : h;
+  }
+
+  // Traegt die Karte dieses Merkmal? Gesucht wird zuerst in
+  // appMerkmale (app-seitig nachgetragen), dann in den gedruckten
+  // Eigenschaften – "metallisch" und "brennbar" stehen ohnehin dort.
+  function traegtMerkmal(karte, merkmal) {
+    const m = karte.appMerkmale;
+    if (m && m[merkmal] === true) return true;
+    return (karte.eigenschaften || []).indexOf(merkmal) !== -1;
+  }
+
+  Duell.prototype.synergienVon = function (spieler) {
+    const R = window.REGELN;
+    const treffer = [];
+    if (!this.appRegeln.synergien || !R.appZusatz || !R.appZusatz.synergien) return treffer;
+    if (!spieler.arena) return treffer;
+
+    const aktiv = spieler.arena.karte;
+    const bank = spieler.bank.map(function (i) { return i.karte; });
+    const team = [aktiv].concat(bank);
+
+    // Tritt die Stoffklasse hinter der Hauptgruppe zurueck? Nur, wenn
+    // es die Hauptgruppen-Zeile ueberhaupt noch gibt. Sonst fielen zwei
+    // Alkalimetalle durch BEIDE Raster: die Hauptgruppe ist aus, und
+    // die Stoffklasse haette ihnen den Vortritt gelassen.
+    const hauptgruppeGilt = R.appZusatz.synergien.some(function (s) {
+      return s.inKraft !== false && s.bedingung && s.bedingung.gleich === "hauptgruppe";
+    });
+
+    for (let i = 0; i < R.appZusatz.synergien.length; i++) {
+      const s = R.appZusatz.synergien[i];
+      // "inKraft: false" heisst gebaut, aber nicht im Spiel. Die Zeile
+      // bleibt zum Gegenmessen stehen (varianten.js, "synergien-*").
+      if (s.inKraft === false) continue;
+      const b = s.bedingung || {};
+      let passt = false;
+
+      if (s.geltung === "team") {
+        if (b.alle) passt = team.length > 0 && team.every(function (k) {
+          return traegtMerkmal(k, b.alle);
+        });
+      } else if (s.geltung === "bank") {
+        // Ein Elemental auf der Bank genuegt – das aktive zaehlt NICHT
+        // mit. Argon nuetzt als Schutzgas nur, solange es daneben steht.
+        const wieviele = bank.filter(function (k) { return traegtMerkmal(k, b.eines); }).length;
+        passt = wieviele >= (s.mindestens || 1);
+      } else if (s.geltung === "bank-zu-aktiv") {
+        let wieviele = 0;
+        for (let n = 0; n < bank.length; n++) {
+          if (b.gleich === "hauptgruppe") {
+            const ha = hauptgruppeVon(aktiv), hb = hauptgruppeVon(bank[n]);
+            if (ha !== null && ha === hb) wieviele++;
+          } else if (b.gleich === "klasse") {
+            if (!aktiv.klasse || aktiv.klasse !== bank[n].klasse) continue;
+            // Zwei Alkalimetalle teilen die Klasse UND die Hauptgruppe –
+            // das ist chemisch dieselbe Aussage, und beide Zeilen zu
+            // zaehlen waere doppelt gezaehlt. Wo die Hauptgruppe schon
+            // greift, schweigt die Stoffklasse.
+            if (hauptgruppeGilt) {
+              const hA = hauptgruppeVon(aktiv), hB = hauptgruppeVon(bank[n]);
+              if (hA !== null && hA === hB) continue;
+            }
+            wieviele++;
+          }
+        }
+        passt = wieviele >= (s.mindestens || 1);
+      }
+
+      if (passt) treffer.push(s);
+    }
+    return treffer;
+  };
+
+  // Synergien gelten, solange die Lage besteht – sie werden deshalb
+  // nicht "gespielt", sondern bei jedem Rundenbeginn neu gesetzt.
+  // Alles Alte wird vorher weggeraeumt, sonst summierten sie sich auf.
+  Duell.prototype.synergienSetzen = function (spieler) {
+    // Erst abraeumen: Boni und Zustaende, die aus Synergien stammen.
+    for (let i = spieler.boni.length - 1; i >= 0; i--) {
+      if (spieler.boni[i].synergie) spieler.boni.splice(i, 1);
+    }
+    const alle = this.team(spieler);
+    for (let t = 0; t < alle.length; t++) {
+      const z = alle[t].zustaende;
+      for (let i = z.length - 1; i >= 0; i--) if (z[i].synergie) z.splice(i, 1);
+    }
+    if (!spieler.arena) return [];
+
+    let treffer = this.synergienVon(spieler);
+
+    // Wie viele Synergien duerfen GLEICHZEITIG gelten? Ohne Grenze
+    // stapeln sie sich: In Feuerlande griffen "Verwandte Stoffklasse"
+    // (35 % der Runden) und "Brennstoff im Ruecken" (31 %) oft zusammen,
+    // dazu noch der metallische Verbund – bei einem Grundschaden von
+    // rund 11 sind +10 oder +15 kein Bonus mehr, sondern ein anderes
+    // Spiel. Gemessen am 22.08.2026 fiel syntheseLohnt dabei unter NULL.
+    const grenze = window.REGELN.appZusatz.synergienMax;
+    if (grenze && treffer.length > grenze) treffer = treffer.slice(0, grenze);
+
+    for (let i = 0; i < treffer.length; i++) {
+      const w = treffer[i].wirkung || {};
+      if (w.art === "schadensbonus") {
+        spieler.boni.push({
+          art: "schadensbonus", wert: w.wert || 0, typ: w.typ || null,
+          rest: Infinity, quelle: treffer[i].name, synergie: true
+        });
+      } else if (w.art === "schutz") {
+        spieler.arena.zustaende.push({
+          art: "schutz", gegen: w.gegen || "alle",
+          faktor: (w.faktor === undefined ? 1 : w.faktor), minus: w.minus || 0,
+          quelle: treffer[i].name, seite: spieler.index, synergie: true
+        });
+      }
+    }
+    if (treffer.length) {
+      this.melde("synergien", { spieler: spieler, treffer: treffer });
+    }
+    return treffer;
+  };
+
+  // ------------------------------------------------------------
+  //  Welche Attacken hat diese Karte?
+  //
+  //  EINE Stelle, weil zug.index die Attacke ueber ihre POSITION
+  //  adressiert und kanal.js genau diesen Index uebertraegt. Gaebe es
+  //  zwei Listen, wuerde ein Zug auf dem anderen Geraet eine andere
+  //  Attacke ausloesen.
+  //
+  //  Die App-Attacke steht IMMER hinten – so verschiebt sie die
+  //  gedruckten Attacken nicht. Sie gilt nur, wenn appAttacken an ist,
+  //  und beide Geraete fahren dieselben appRegeln (Raumhandschlag).
+  //
+  //  Der Generator liest ausschliesslich "attacken" – "appAttacke"
+  //  wird deshalb nicht gedruckt. Genau dafuer ist es ein eigenes Feld.
+  // ------------------------------------------------------------
+  Duell.prototype.attackenVon = function (karte) {
+    const liste = karte.attacken || [];
+    if (!this.appRegeln.appAttacken || !karte.appAttacke) return liste;
+    return liste.concat([karte.appAttacke]);
+  };
+
+  // Trefferquote einer Attacke – NUR in der App (REGELN.appZusatz.treffer).
+  // Gibt null zurueck, wenn nicht gewuerfelt wird; dann sitzt der Treffer
+  // wie am Tisch. Das ist der Normalfall und ausdruecklich kein Fehler.
+  Duell.prototype.trefferQuote = function (attacke, angreifer) {
+    const R = window.REGELN;
+    if (!this.appRegeln.daneben || !R.appZusatz || !R.appZusatz.treffer) return null;
+    // Wirkungsattacken (Zinkpanzer) gehen nicht daneben.
+    if (!attacke.schaden || attacke.schaden <= 0) return null;
+
+    // Nebel senkt die Quote dessen, der durch ihn hindurch zielt.
+    // Der Zustand haengt am Angreifer – vernebelt ist, wer nichts sieht.
+    let nebel = 0;
+    if (angreifer && angreifer.arena) {
+      const z = angreifer.arena.zustaende;
+      for (let i = 0; i < z.length; i++) {
+        if (z[i].art === "vernebelt") nebel += z[i].minus || 0;
+      }
+    }
+
+    // Zwei Formen stehen zur Wahl, und sie schliessen einander aus:
+    //
+    //   jeTyp   Die Quote haengt am ANGRIFFSTYP. Ein Hieb geht eher
+    //           daneben als ein Gas, das sich ausbreitet.
+    //   leiter  Die Quote haengt am gedruckten Grundschaden.
+    //
+    // Gemessen am 22.08.2026 ist das keine Geschmacksfrage: Im
+    // Kartensatz reicht der Schaden nur von 5 bis 18 (erlaubt waeren
+    // 0 bis 40), und er trennt fast genau Elemente (Mittel 9,6) von
+    // Verbindungen (11,4). Eine Schadensleiter ist deshalb in DIESEM
+    // Kartensatz kaum etwas anderes als eine Steuer auf das
+    // Synthetisieren – und die trifft den Grundsatz des Spiels.
+    const t = R.appZusatz.treffer;
+    let quote = 1;
+    if (t.jeTyp && t.jeTyp[attacke.typ] !== undefined) {
+      quote = t.jeTyp[attacke.typ];
+    } else {
+      const leiter = t.leiter || [];
+      for (let i = 0; i < leiter.length; i++) {
+        if (attacke.schaden <= leiter[i].bisSchaden) { quote = leiter[i].quote; break; }
+      }
+    }
+    // Nach unten offen bis 0,05: Auch im dichtesten Nebel soll ein
+    // Treffer moeglich bleiben, sonst waere die Karte kein Nebel,
+    // sondern eine Angriffsperre.
+    return Math.max(0.05, quote - nebel);
   };
 
   Duell.prototype.angreifen = function (spieler, index) {
     const gegner = this.gegner(spieler);
-    const attacke = spieler.arena.karte.attacken[index];
+    const attacke = this.attackenVon(spieler.arena.karte)[index];
+    if (!attacke) return;
+
+    // Daneben zuerst: Ein Fehlschlag beendet die Rechnung sofort – es
+    // gibt keinen Schaden, keine Typen-Matrix, keinen Bonus, keinen
+    // Volltreffer und auch KEINE Wirkung. Wer nicht trifft, loest die
+    // Reaktion nicht aus; das gilt selbst fuer den Selbstschaden, denn
+    // auch Fluor reagiert nur, wenn es sein Ziel erreicht.
+    //
+    // Der Wurf wird NUR gezogen, wenn die Regel an ist. Ein unbedingt
+    // gezogener und dann verworfener Wurf wuerde die ganze Zufallsfolge
+    // verschieben – die Tischzahlen waeren ohne jede Regelaenderung
+    // andere. Gezogen wird aus this.zufall, nie aus Math.random: Im
+    // Netzspiel uebertraegt kanal.js nur die Zuege, beide Geraete
+    // rechnen den Verlauf nach.
+    const quote = this.trefferQuote(attacke, spieler);
+    if (quote !== null && quote < 1 && this.zufall() >= quote) {
+      this.melde("daneben", {
+        spieler: spieler, ziel: gegner, attacke: attacke, quote: quote
+      });
+      return;
+    }
+
     const berechnung = schadenBerechnen(attacke, gegner.arena.karte);
 
     // Ausruestungsboni kommen NACH der Typen-Matrix dazu, nicht davor:
@@ -514,6 +835,25 @@
   // Gilt nur fuer das Elemental in der Arena – auf der Bank ruht es.
   Duell.prototype.dauerwirkungen = function (spieler) {
     if (this.vorbei || !spieler.arena) return;
+
+    // Zuerst die Zustaende am Elemental selbst – Gift wirkt am Ende des
+    // Zuges dessen, der vergiftet ist. VOR dem Ablaufen der Zustaende
+    // (zustaendeAblaufen laeuft erst beim naechsten Rundenbeginn):
+    // Ein Gift, das ablaeuft, bevor es wirkt, waere keines.
+    //
+    // Rueckwaerts, weil ein toedlicher Zustandsschaden das Elemental
+    // erschoepfen und die Arena austauschen kann.
+    const zustaende = spieler.arena.zustaende;
+    for (let i = zustaende.length - 1; i >= 0; i--) {
+      const z = zustaende[i];
+      if (z.art !== "zustandsschaden") continue;
+      this.melde("zustandsschaden", {
+        spieler: spieler, wert: z.wert, quelle: z.quelle
+      });
+      this.schadenZufuegen(spieler, z.wert, { quelle: spieler, zustand: z });
+      if (this.vorbei || !spieler.arena) return;
+    }
+
     const wirkung = spieler.arena.karte.wirkung;
     if (!wirkung || wirkung.ausloeser !== "zugende") return;
 
@@ -532,11 +872,28 @@
     if (wirkung.art === "selbstschaden") {
       // Der Angreifer zahlt selbst. Fluor etwa reagiert mit fast allem,
       // auch mit sich. Das kann ihn erschoepfen – dann rueckt nach.
+      // Bleibt hier stehen und geht nicht ueber wirkungAnwenden: Es ist
+      // die einzige Wirkung, die es schon am Tisch gibt, und sie traegt
+      // ihr eigenes Ereignis, an dem der Bildschirm haengt.
       this.melde("wirkung", { spieler: spieler, attacke: attacke, wirkung: wirkung });
       this.schadenZufuegen(spieler, wirkung.wert, {
         quelle: spieler, attacke: attacke, selbstschaden: true
       });
+      return;
     }
+
+    // Alles Uebrige laeuft ueber denselben Weg wie die Ausruestung.
+    // Das Ziel steht bei einer Attacke nicht im Zug – es ergibt sich
+    // aus der Wirkung: Was hilft, hilft dem Angreifer; was schadet,
+    // trifft den Getroffenen.
+    const gegner = this.gegner(spieler);
+    let zielInstanz;
+    if (wirkung.ziel === "gegnerArena") zielInstanz = gegner.arena;
+    else if (wirkung.ziel === "eigeneArena") zielInstanz = spieler.arena;
+    else if (HILFT[wirkung.art]) zielInstanz = spieler.arena;
+    else zielInstanz = gegner.arena;
+
+    this.wirkungAnwenden(spieler, wirkung, attacke.name, zielInstanz);
   };
 
   // Sammelt die Schadensboni ein, die auf diese Attacke passen, und
@@ -572,7 +929,16 @@
       if (z.art !== "schutz") continue;
       if (z.gegen !== "alle" && z.gegen !== typ) continue;
       const vorher = schaden;
-      schaden = Math.ceil(schaden * z.faktor);
+      // Erst der Faktor (halbieren, loeschen), dann der feste Abzug.
+      // "5 Schaden weniger" ist etwas anderes als "halber Schaden", und
+      // manche Karten sagen beides – deshalb beide Wege, in dieser
+      // Reihenfolge. Vorgabe fuer faktor ist seit dem 22.08.2026 die 1
+      // (keine Minderung) statt der 0: Ein Schutz, der nur "minus"
+      // meint, soll nicht versehentlich ALLES abfangen. Alle sieben
+      // gedruckten Schutzkarten setzen faktor ausdruecklich, an ihnen
+      // aendert das nichts.
+      schaden = Math.ceil(schaden * (z.faktor === undefined ? 1 : z.faktor));
+      if (z.minus) schaden = Math.max(0, schaden - z.minus);
       this.melde("schutz-gewirkt", {
         ziel: leidtragender, instanz: instanz, quelle: z.quelle,
         vorher: vorher, nachher: schaden
@@ -620,6 +986,7 @@
       return;
     }
     spieler.arena = spieler.bank.shift();
+    this.synergienAktualisieren();
     this.melde("wechsel", { spieler: spieler, instanz: spieler.arena, erzwungen: true });
   };
 
@@ -645,6 +1012,29 @@
       ziel: zug.ziel || null, instanz: zielInstanz
     });
 
+    this.wirkungAnwenden(spieler, w, karte.name, zielInstanz);
+  };
+
+  // ------------------------------------------------------------
+  //  Eine Wirkung ausfuehren – EIN Weg fuer alle Quellen
+  //
+  //  Bis zum 22.08.2026 stand dieser Rumpf in ausruestungSpielen, und
+  //  wirkungAusfuehren (der Weg fuer ATTACKEN) kannte einen einzigen
+  //  Zweig. Neun Wirkungsarten waren gebaut und nur ueber die
+  //  Ausruestung erreichbar.
+  //
+  //  Nicht kopiert, sondern herausgeloest: Zwei Fassungen derselben
+  //  Regel laufen frueher oder spaeter auseinander – bei den
+  //  Klassenfarben ist genau das schon einmal passiert (regeln.js und
+  //  generator.html hielten je eine eigene Liste).
+  //
+  //  quelleName ist der Name der Karte oder Attacke, die wirkt; er
+  //  landet in den Zustaenden und Boni, damit der Bildschirm sagen
+  //  kann, WORAN es liegt.
+  // ------------------------------------------------------------
+  Duell.prototype.wirkungAnwenden = function (spieler, w, quelleName, zielInstanz) {
+    if (!w || !w.art) return;
+
     if (w.art === "heilung" && zielInstanz) {
       const vorher = zielInstanz.lp;
       zielInstanz.lp = Math.min(zielInstanz.maxLp, zielInstanz.lp + (w.wert || 0));
@@ -656,24 +1046,29 @@
     } else if (w.art === "direktschaden" && zielInstanz) {
       const gegner = this.gegner(spieler);
       if (gegner.arena === zielInstanz) {
-        this.schadenZufuegen(gegner, w.wert || 0, { quelle: spieler, ausruestung: karte });
+        this.schadenZufuegen(gegner, w.wert || 0, { quelle: spieler, quelleName: quelleName });
       }
 
     } else if (w.art === "schutz" && zielInstanz) {
       // Gilt bis zum naechsten eigenen Zug – dort wird er geloescht.
+      // "faktor" halbiert oder loescht den Schaden, "minus" zieht einen
+      // festen Betrag ab. Beides zusammen ist erlaubt; gerechnet wird
+      // erst der Faktor, dann der Abzug (schutzAnwenden).
       zielInstanz.zustaende.push({
-        art: "schutz", gegen: w.gegen || "alle", faktor: (w.faktor === undefined ? 0 : w.faktor),
-        nurEinmal: !!w.nurEinmal, quelle: karte.name, seite: spieler.index
+        art: "schutz", gegen: w.gegen || "alle",
+        faktor: (w.faktor === undefined ? 1 : w.faktor),
+        minus: w.minus || 0,
+        nurEinmal: !!w.nurEinmal, quelle: quelleName, seite: spieler.index
       });
 
     } else if (w.art === "schadensbonus") {
       spieler.boni.push({
         art: "schadensbonus", wert: w.wert || 0, typ: w.typ || null,
-        rest: w.anzahl || 1, quelle: karte.name
+        rest: w.anzahl || 1, quelle: quelleName
       });
       if (w.gegnerMalus) {
         this.gegner(spieler).boni.push({
-          art: "schadensbonus", wert: -w.gegnerMalus, typ: null, rest: 1, quelle: karte.name
+          art: "schadensbonus", wert: -w.gegnerMalus, typ: null, rest: 1, quelle: quelleName
         });
       }
 
@@ -681,8 +1076,49 @@
       // "Bleibt liegen" – gilt bis zum Ende des Duells.
       spieler.boni.push({
         art: "schadensbonus", wert: w.wert || 0, typ: w.typ || null,
-        rest: Infinity, quelle: karte.name
+        rest: Infinity, quelle: quelleName
       });
+
+    // --- Nur in der App: die Wirkungen der App-Attacken ---------
+    } else if (w.art === "vernebeln") {
+      // Senkt die Trefferquote des GEGNERS bis zu seinem naechsten Zug.
+      // Haengt an Mechanik 1: Ohne Trefferquote gibt es nichts zu senken,
+      // und dann laeuft die Wirkung folgenlos ins Leere. Das ist kein
+      // Fehler – am Tisch gibt es beides nicht.
+      const gegnerV = this.gegner(spieler);
+      if (gegnerV.arena) {
+        // seite ist die des ERZEUGERS, nicht die des Ziels.
+        // zustaendeAblaufen raeumt zu Beginn eines Zuges die Zustaende
+        // mit DIESER Seite weg – der Nebel haelt damit genau einen
+        // gegnerischen Zug lang. Mit der Zielseite waere er schon
+        // verfallen, bevor der Gegner ueberhaupt gezogen hat.
+        gegnerV.arena.zustaende.push({
+          art: "vernebelt", minus: w.minus || 0,
+          quelle: quelleName, seite: spieler.index
+        });
+        this.melde("vernebelt", {
+          spieler: spieler, ziel: gegnerV, minus: w.minus || 0, quelle: quelleName
+        });
+      }
+
+    } else if (w.art === "gift") {
+      // Schaden am Ende des naechsten gegnerischen Zuges. Der Zustand
+      // haengt an der INSTANZ: Wer auf die Bank wechselt, nimmt ihn mit –
+      // ein vergifteter Stoff wird nicht dadurch rein, dass er wartet.
+      const gegnerG = this.gegner(spieler);
+      if (gegnerG.arena) {
+        // seite = Erzeuger, wie beim Nebel. Das Gift wirkt damit am
+        // Ende des naechsten gegnerischen Zuges und verfaellt erst,
+        // wenn der Vergifter wieder an der Reihe ist – also NACHDEM
+        // es gewirkt hat.
+        gegnerG.arena.zustaende.push({
+          art: "zustandsschaden", wert: w.wert || 0,
+          quelle: quelleName, seite: spieler.index
+        });
+        this.melde("vergiftet", {
+          spieler: spieler, ziel: gegnerG, wert: w.wert || 0, quelle: quelleName
+        });
+      }
 
     } else if (w.art === "zwangswechsel" && zielInstanz) {
       const gegner = this.gegner(spieler);
@@ -714,6 +1150,7 @@
     const neu = spieler.bank[bankIndex];
     spieler.bank[bankIndex] = spieler.arena;
     spieler.arena = neu;
+    this.synergienAktualisieren();
     this.melde("wechsel", { spieler: spieler, instanz: neu, erzwungen: false });
   };
 
@@ -769,6 +1206,11 @@
     if (arenaFreiGeworden || !spieler.arena) spieler.arena = neueKarte;
     else spieler.bank.push(neueKarte);
 
+    // Die Synthese aendert die Bank staerker als alles andere: Zwei
+    // Edukte verschwinden, ein Produkt kommt. Genau hier entscheidet
+    // sich, ob Synergien das Synthetisieren bestrafen.
+    this.synergienAktualisieren();
+
     this.melde("synthese-gelungen", {
       spieler: spieler,
       verbindung: verbindung,
@@ -815,6 +1257,10 @@
     neueInstanz: neueInstanz,
     istAusruestung: istAusruestung,
     istEnergie: istEnergie,
-    zufallsQuelle: zufallsQuelle
+    zufallsQuelle: zufallsQuelle,
+    // Die Namen der App-Regeln, damit Werkstatt und Duellbildschirm
+    // ihre Kaestchen daraus bauen und keine zweite Liste pflegen.
+    APP_REGELN: APP_REGELN,
+    appRegelnLesen: appRegelnLesen
   };
 })();

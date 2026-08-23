@@ -274,19 +274,125 @@
     return bestes;
   }
 
+  // Was ist eine Wirkung ungefähr wert, in Schaden gerechnet?
+  // Bewusst grob — wie der Rest dieser Spiellogik. Ohne eine solche
+  // Schätzung würde eine App-Attacke mit `schaden: 0` NIE gewählt, und
+  // die Werkstatt würde ein Spiel messen, in dem es sie gar nicht gibt.
+  // Das ist derselbe blinde Fleck wie beim Volltreffer, eine Ebene höher.
+  // Liegt an dieser Instanz schon ein Zustand dieser Art?
+  function hatZustand(instanz, art, gegen) {
+    if (!instanz) return false;
+    return (instanz.zustaende || []).some(function (z) {
+      return z.art === art && (gegen === undefined || z.gegen === gegen);
+    });
+  }
+
+  function wirkungWert(w, spieler, gegner) {
+    if (!w) return 0;
+    // Grobes Maß für „ein Schlag" in diesem Spiel: zehn Schaden.
+    const SCHLAG = 10;
+    if (w.art === "heilung") {
+      // Heilung über die volle LP-Zahl hinaus ist verschenkt.
+      const fehlt = spieler.arena ? spieler.arena.maxLp - spieler.arena.lp : 0;
+      return Math.min(w.wert || 0, fehlt);
+    }
+    if (w.art === "schutz") {
+      // Einen Schutz erneuern, der noch liegt, bringt nichts.
+      if (hatZustand(spieler.arena, "schutz", w.gegen || "alle")) return 0;
+
+      // Verhinderter Schaden ist gewonnener Schaden – aber nur, WENN
+      // der Gegner im nächsten Zug wirklich mit diesem Typ angreift.
+      // Führt er zwei Attacken und nur eine davon ist Feuer, ist ein
+      // Feuerschutz ungefähr die Hälfte wert.
+      //
+      // Ohne diese Gewichtung überschätzt der Bot jeden Schutz und
+      // spielt ihn statt anzugreifen. Gemessen am 22.08.2026 endeten so
+      // 18 von 400 Feuerlande-Duellen im Zuglimit: Beide Seiten deckten
+      // ab, keine machte Schaden.
+      let anteil = 1;
+      if (w.gegen && w.gegen !== "alle" && gegner.arena) {
+        const alle = gegner.arena.karte.attacken || [];
+        const passend = alle.filter(function (a) { return a.typ === w.gegen; });
+        if (!alle.length || !passend.length) return 0;
+        anteil = passend.length / alle.length;
+      }
+      const wert = (w.minus || 0) +
+        (w.faktor !== undefined && w.faktor < 1 ? SCHLAG * (1 - w.faktor) : 0);
+      return wert * anteil;
+    }
+    if (w.art === "vernebeln") {
+      if (hatZustand(gegner.arena, "vernebelt")) return 0;
+      return (w.minus || 0) * SCHLAG;
+    }
+    if (w.art === "gift") {
+      if (hatZustand(gegner.arena, "zustandsschaden")) return 0;
+      return w.wert || 0;
+    }
+    // selbstschaden bleibt bei 0 – ausdrücklich, nicht aus Versehen.
+    // Es ist die EINZIGE Wirkung, die es schon am Tisch gibt (Phosphor,
+    // Fluor, Salzsäure). Würde der Bot sie hier mit −5 bewerten, spielte
+    // er das gedruckte Spiel anders als bisher, und sämtliche
+    // Vergleichszahlen dieses Projekts verschöben sich still — gemessen
+    // am 22.08.2026 in Periodika (Angriffe 112 938 → 112 952,
+    // vorsprung 9,76 → 9,79 %).
+    //
+    // Dass der Bot Selbstschaden ignoriert, ist eine alte Vereinfachung.
+    // Sie zu beheben wäre eine eigene Änderung mit eigener Messung — und
+    // nicht eine, die sich nebenbei in eine App-Regel einschleicht.
+    if (w.art === "selbstschaden") return 0;
+    return 0;
+  }
+
   function entscheide(duell, spieler, strategie) {
     const gegner = duell.gegner(spieler);
-    const attacken = spieler.arena.karte.attacken || [];
+    // Über attackenVon, nicht über karte.attacken: In der App hängt an
+    // manchen Verbindungen eine zusätzliche Attacke, und zug.index
+    // adressiert die Attacke über ihre Position.
+    const attacken = duell.attackenVon
+      ? duell.attackenVon(spieler.arena.karte)
+      : (spieler.arena.karte.attacken || []);
 
-    let besteAttacke = -1, besterSchaden = -1;
-    for (let i = 0; i < attacken.length; i++) {
-      const s = E.schadenBerechnen(attacken[i], gegner.arena.karte).schaden;
-      if (s > besterSchaden) { besterSchaden = s; besteAttacke = i; }
+    // Gewählt wird nach dem ERWARTUNGSWERT, nicht nach dem Rohschaden:
+    // Schaden × Trefferquote. Ohne das würde der Bot in der App stets
+    // die große ungenaue Attacke nehmen, und die Werkstatt würde ein
+    // Spiel messen, das so niemand spielt — derselbe blinde Fleck wie
+    // beim Volltreffer, nur eine Ebene höher.
+    //
+    // Am Tisch liefert trefferQuote null, dann ist der Erwartungswert
+    // der Schaden selbst und diese Zeile ändert nichts.
+    function erwartung(attacke) {
+      const s = E.schadenBerechnen(attacke, gegner.arena.karte).schaden;
+      const q = duell.trefferQuote ? duell.trefferQuote(attacke, spieler) : null;
+      const roh = q === null ? s : s * q;
+      // Die Wirkung zählt mit. Sie geht NICHT mit der Trefferquote
+      // herunter: Eine Attacke ohne Schaden würfelt gar nicht erst,
+      // und wo doch gewürfelt wird, fällt bei einem Fehlschlag ohnehin
+      // beides aus.
+      return { schaden: s, wert: roh + wirkungWert(attacke.wirkung, spieler, gegner) };
     }
 
+    // Zwei verschiedene Fragen, also zwei Sieger:
+    //   besteAttacke   höchster Erwartungswert – der Zug für den Alltag
+    //   toedlichste    höchster ROHSCHADEN – die Frage "kann ich den
+    //                  Gegner jetzt erschöpfen?"
+    // Beides zu vermengen kostet Abschlüsse: Eine 11er-Attacke mit 90 %
+    // hat den kleineren Erwartungswert als eine 10er mit 100 %, ist aber
+    // die einzige, die einen Gegner mit 11 LP noch umwirft.
+    let besteAttacke = -1, besterWert = -1;
+    let toedlichste = -1, hoechsterSchaden = -1;
+    for (let i = 0; i < attacken.length; i++) {
+      const e = erwartung(attacken[i]);
+      if (e.wert > besterWert) { besterWert = e.wert; besteAttacke = i; }
+      if (e.schaden > hoechsterSchaden) { hoechsterSchaden = e.schaden; toedlichste = i; }
+    }
+    const besterSchaden = hoechsterSchaden;
+
     // 1. Lässt sich das Duell jetzt entscheiden?
+    //    Hier zählt der volle Schaden, nicht der Erwartungswert: Eine
+    //    Attacke, die den Gegner erschöpfen KANN, ist den Versuch wert,
+    //    auch wenn sie nur zu 80 % trifft — sie kann höchstens danebengehen.
     if (besterSchaden > 0 && besterSchaden >= gegner.arena.lp) {
-      return { art: "angriff", index: besteAttacke };
+      return { art: "angriff", index: toedlichste };
     }
 
     // 1b. Ausrüstung, die JETZT den Ausschlag gibt.
@@ -325,15 +431,26 @@
 
     // 2. Synthese – aber nur, wenn sie sich lohnt. Sie kostet zwei
     //    Elementals und bringt eines zurück: das Team schrumpft.
+    //
+    //    Mit Bank-Synergien kostet sie unter Umständen MEHR als das:
+    //    Wer zwei Elemente derselben Hauptgruppe verschmilzt, verliert
+    //    womöglich die Synergie, die genau daraus entstand. Der
+    //    vorsichtige Bot rechnet das mit — der freudige nicht, denn er
+    //    soll spielen wie ein Kind, das synthetisiert, sobald es geht.
     const synthesen = duell.moeglicheSynthesen(spieler);
     if (strategie === "freudig" && synthesen.length) return synthesen[0];
+    const synergienJetzt = duell.synergienVon ? duell.synergienVon(spieler).length : 0;
     for (let i = 0; i < synthesen.length; i++) {
       const s = synthesen[i];
       const verbindung = spieler.hand.verbindungen[s.index];
       const exotherm = verbindung.synthese.exotherm || 0;
       if (exotherm > 0 && exotherm >= gegner.arena.lp) return s;      // beendet den Gegner
       const lpEdukte = s.edukteImTeam.reduce(function (a, x) { return a + x.lp; }, 0);
-      if (lpEdukte <= verbindung.lp) return s;                        // unterm Strich mehr LP
+      // Eine verlorene Synergie wiegt ungefähr wie 5 LP je Runde. Grob
+      // gerechnet mit zehn verbleibenden Runden: fünfzig LP wären zu
+      // viel, ein einzelner Wert von 10 LP trifft es besser.
+      const synergieVerlust = synergienJetzt * 10;
+      if (lpEdukte + synergieVerlust <= verbindung.lp) return s;      // unterm Strich mehr LP
     }
 
     // 3. Angreifen, solange es überhaupt wirkt
@@ -341,13 +458,17 @@
       return { art: "angriff", index: besteAttacke };
     }
 
-    // 4. Sonst wechseln – vielleicht trifft ein anderes Elemental besser
-    let bestesBank = -1, bankSchaden = 0;
+    // 4. Sonst wechseln – vielleicht trifft ein anderes Elemental besser.
+    //    Auch hier der Erwartungswert: Ein Wechsel auf eine Karte, die
+    //    hart, aber selten trifft, ist keine Verbesserung.
+    let bestesBank = -1, bankWert = 0;
     for (let b = 0; b < spieler.bank.length; b++) {
-      const bAttacken = spieler.bank[b].karte.attacken || [];
+      const bAttacken = duell.attackenVon
+        ? duell.attackenVon(spieler.bank[b].karte)
+        : (spieler.bank[b].karte.attacken || []);
       for (let i = 0; i < bAttacken.length; i++) {
-        const s = E.schadenBerechnen(bAttacken[i], gegner.arena.karte).schaden;
-        if (s > bankSchaden) { bankSchaden = s; bestesBank = b; }
+        const w = erwartung(bAttacken[i]).wert;
+        if (w > bankWert) { bankWert = w; bestesBank = b; }
       }
     }
     if (bestesBank !== -1) return { art: "wechsel", index: bestesBank };

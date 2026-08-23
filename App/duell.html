@@ -69,6 +69,34 @@ body {
   background-attachment: fixed;
 }
 
+/* --- Der Schauplatz (23.08.2026) ------------------------------
+   Der Satz darüber galt bis heute ohne Ausnahme. Jetzt gibt es
+   drei gezeichnete Schauplätze, und je Duell wird EINER gezeigt.
+   Der Einwand von damals bleibt richtig, ist aber bezifferbar
+   klein geworden: Die drei liegen verkleinert bei zusammen 0,6 MB
+   gegen 6,6 MB für die App, geladen wird je Partie genau einer,
+   und der Service Worker behält ihn danach (istBild greift auf
+   jedes .jpg).
+
+   Zwei Ebenen über dem Bild, nicht eine: der Schleier nimmt ihm
+   das Licht, die drei Verläufe darüber sind dieselben wie sonst.
+   Sonst läge über einem hellen Uferpfad eine schwarze Schrift auf
+   hellem Grund – und das Brett muss lesbar bleiben, bevor es
+   schön ist.
+
+   Nur mit Klasse "kulisse": Ohne Bild bleibt es Zeile für Zeile
+   beim heutigen Aussehen, statt bloß dunkler zu werden. */
+body.spielt.kulisse {
+  background:
+    radial-gradient(120% 80% at 50% 50%, rgba(200,162,74,.10), transparent 70%),
+    radial-gradient(90% 60% at 50% 0%,   rgba(120,80,40,.22),  transparent 75%),
+    radial-gradient(90% 60% at 50% 100%, rgba(120,80,40,.22),  transparent 75%),
+    linear-gradient(rgba(13,11,8,.74), rgba(13,11,8,.86)),
+    var(--kulisse) center / cover no-repeat,
+    linear-gradient(#1b1610, #100d09 55%, #1b1610);
+  background-attachment: fixed;
+}
+
 button { font: inherit; color: inherit; cursor: pointer; }
 
 .knopf {
@@ -183,8 +211,12 @@ body.spielt { overflow: hidden; position: fixed; inset: 0; }
    Die Hand des Gegners kostet als Kartenfächer eine ganze Zeile
    und sagt nichts: Sie liegt verdeckt. Als Anzahl sagt sie genau
    dasselbe und lässt Platz für die Karten, auf die es ankommt. */
+/* flex-wrap als Fangnetz: Auf 360 px passt die Leiste in eine Zeile,
+   auf noch schmaleren Geräten ragte „Zug beenden" sonst aus dem Bild
+   – und das ist der einzige Knopf, mit dem man abgeben kann. Lieber
+   zwei Zeilen als ein unerreichbarer Knopf. */
 .leiste {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   font-size: 12px; color: var(--leise); padding: 0 2px; min-height: 22px;
 }
 .leiste .wer { color: var(--text); font-weight: 600; font-size: 13px; }
@@ -239,6 +271,62 @@ body.spielt { overflow: hidden; position: fixed; inset: 0; }
 .kbild img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .kbild .emoji { position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; }
 .k-arena .kbild .emoji { font-size: 46px; }
+
+/* --- Die Arenakarte: Bildfenster oben (23.08.2026) ------------
+   Auf Bank und Hand füllt das Bild weiter die ganze Karte – dort
+   erkennt man eine Karte am Farbklang, nicht am Motiv, und der
+   Fächer soll aussehen wie ein Fächer.
+
+   In der Arena ist es umgekehrt: Dort steht EINE Karte groß, und
+   an ihr hängt die Entscheidung. Die Bilder sind Querformat (4:3),
+   die Karte ist Hochformat (635:889) – formatfüllend gingen davon
+   47 % der Bildbreite verloren. Deshalb hier ein Bildfenster im
+   Format des Bildes, genau wie auf der gedruckten Karte, und
+   darunter der Fuß mit Name, Formel, LP und Eigenschaften.
+
+   Der Fuß ist kein Rest, sondern der Grund, warum das geht: Die
+   Eigenschaften standen bisher in der Spalte daneben. Auf der
+   Karte füllen sie den Platz, den das kleinere Bild freigibt –
+   und stehen dort, wohin sie gehören, nämlich an ihrem Stoff. */
+/* Die Arenakarte behält NICHT mehr das Verhältnis der gedruckten
+   Karte. Sie kann es nicht: Ein 4:3-Fenster braucht 0,75 der Breite,
+   die Beschriftung darunter rund 0,3 – zusammen gut ein Quadrat.
+   Bliebe es bei 635:889, stünde unter dem Namen ein handbreiter
+   leerer Streifen, und genau das war die Fassung vom Vormittag.
+   Statt einer Höhe, die die Zeile vorgibt, bestimmt jetzt die
+   BREITE die Karte, und die Höhe folgt dem Inhalt. */
+.k-arena {
+  height: auto; max-height: 100%;
+  width: clamp(140px, 44vw, 250px); max-width: 100%;
+  aspect-ratio: auto;
+}
+/* 0 1 auto, nicht 0 0 auto: Auf einem niedrigen Schirm darf das
+   Fenster zusammengehen, statt die Karte aus der Zeile zu schieben.
+   Beschnitten wird dann oben und unten – das verträgt ein Motiv
+   besser als der seitliche Schnitt, den es vorher überall gab.
+   Der Boden von 48 px ist nötig: Auf 320×568 schrumpfte das Fenster
+   sonst auf NULL, und die Arenakarte zeigte gar kein Bild mehr. Ein
+   beschnittenes Motiv ist immer noch ein Motiv, ein verschwundenes
+   nicht. (Gemessen wird das Brett auf 360×640; 320 ist darunter.) */
+.k-arena .kbild { flex: 0 1 auto; aspect-ratio: 4 / 3; min-height: 48px; }
+.k-arena .kfuss { flex: 0 0 auto; }
+.kfuss {
+  min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 4px 6px 2px;
+  background: linear-gradient(#241d16, #191410);
+}
+.k-arena .kfuss .knamensband {
+  position: static; padding: 0; background: none;
+  display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px;
+}
+.k-arena .kfuss .kname { flex: 1 1 100%; }
+.k-arena .kfuss .klp {
+  position: static; margin-left: auto; padding: 0 5px;
+  font-size: 12px; background: rgba(0,0,0,.5);
+}
+.k-arena .kfuss .eigen { gap: 2px; overflow: hidden; }
+.k-arena .kfuss .eigen span { font-size: 9px; padding: 0 3px; }
 
 .klp {
   position: absolute; top: 3px; right: 3px;
@@ -322,10 +410,10 @@ body:not(.ruhig) .k-hand:not([disabled]):hover { transform: translateY(-8px); z-
 body.ruhig .spielkarte.ziel { animation: none; outline-style: solid; }
 
 /* --- Der Kampfplatz: Karte links, was sie kann rechts ---------- */
-.arena { display: flex; justify-content: center; min-height: 0; min-width: 0; }
+.arena { display: flex; justify-content: center; align-items: center; min-height: 0; min-width: 0; }
 
 .kampfplatz {
-  display: flex; gap: 8px; align-items: stretch;
+  display: flex; gap: 8px; align-items: center;
   width: 100%; max-width: 560px; min-height: 0; min-width: 0; height: 100%;
 }
 .kampfinfo {
@@ -344,19 +432,31 @@ body.ruhig .spielkarte.ziel { animation: none; outline-style: solid; }
 }
 .eigen span.gefahr { color: #f0b0a6; border-color: rgba(192,57,43,.55); background: rgba(192,57,43,.14); }
 
-.attacken { display: flex; flex-direction: column; gap: 3px; }
+/* Kompakter seit dem 23.08.2026: Die Eigenschaften stehen jetzt auf
+   der Arenakarte, hier bleiben nur noch Attacken und der Link. Was
+   NICHT kleiner wird, ist die Schadenszahl – sie ist das, wonach
+   man sucht –, und was gar nicht verschwindet, ist das „(10×½)"
+   samt ▲▼: Das ist der Rechenweg der Engine, sichtbar gemacht, und
+   damit die Regel, um die es im Unterricht geht. */
+.attacken { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .attacke {
-  display: flex; align-items: center; gap: 6px; width: 100%;
-  padding: 4px 7px; border-radius: 7px; text-align: left;
+  display: flex; align-items: center; gap: 5px; width: 100%; min-width: 0;
+  padding: 2px 6px; border-radius: 6px; text-align: left;
   background: rgba(0,0,0,.34); border: 1px solid rgba(200,162,74,.14);
 }
 .attacke .typ {
-  font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700;
-  color: #fff; background: var(--tf, #555); border-radius: 3px; padding: 1px 5px; flex: 0 0 auto;
+  font-size: 8.5px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
+  color: #fff; background: var(--tf, #555); border-radius: 3px; padding: 0 4px; flex: 0 0 auto;
 }
-.attacke .an { flex: 1 1 auto; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* min-width: 0 ist die Bedingung dafür, dass die drei Angaben
+   daneben überhaupt wirken: Ein Flex-Kind hat von sich aus
+   min-width:auto und weigert sich, unter seinen Inhalt zu
+   schrumpfen – die Ellipse käme also nie zum Zug, stattdessen
+   schöbe ein langer Attackenname die Schadenszahl aus der Zeile.
+   Ergänzt am 23.08.2026; die Absicht stand hier schon vorher. */
+.attacke .an { flex: 1 1 auto; min-width: 0; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attacke .sch { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
-.attacke .sch small { font-size: 9.5px; font-weight: 400; color: var(--leise); }
+.attacke .sch small { font-size: 9px; font-weight: 400; color: var(--leise); }
 .attacke .wirkt { font-size: 10px; font-weight: 700; flex: 0 0 auto; }
 .attacke .wirkt.hoch { color: #ff9b86; }
 .attacke .wirkt.tief { color: #86b0ff; }
@@ -707,8 +807,11 @@ body.ruhig #deckhinweis { animation: none; }
   .kampfplatz { gap: 6px; }
   .k-arena .kname { font-size: clamp(10px, 3vw, 13px); }
   .eigen span { font-size: 9px; }
-  .attacke { padding: 2px 6px; }
-  .attacke .an { font-size: 11.5px; }
+  /* Seit die Attacke auch sonst kompakt gesetzt ist (23.08.2026),
+     bleibt hier nur noch die Zeilenhöhe zu holen. Padding und
+     Schriftgrad stehen schon in der Grundfassung. */
+  .attacke { padding: 1px 5px; }
+  .kfuss { padding: 3px 5px 1px; gap: 2px; }
   /* Nicht schmaler machen, um Höhe zu sparen: Auf 360×640 waren die
      Bankkarten 41 px breit, und „Wasserstoff" brach zu „Wassersto/ff".
      Breite ist dort reichlich da (drei Karten in 344 px), knapp ist
@@ -973,6 +1076,15 @@ function el(tag, klasse, text) {
   if (text !== undefined && text !== null) e.textContent = text;
   return e;
 }
+// Welche Attacken zeigt der Bildschirm? Immer dieselbe Antwort wie die
+// Engine – sonst zeigte die Karte etwas anderes, als der Knopf auslöst.
+// Vor dem Duellbeginn (Deckbau, Sammlung) gibt es noch kein Duell;
+// dann gelten die gedruckten Attacken.
+function attackenVon(k) {
+  if (duell && duell.attackenVon) return duell.attackenVon(k);
+  return k.attacken || [];
+}
+
 function regionVon(k) { return k.region || "Feuerlande"; }
 function urbildPfad(k) { return "../Karten/" + k.bild; }
 function bildPfad(k, gross) {
@@ -987,12 +1099,59 @@ function bildIn(ziel, k, gross) {
     img.src = bildPfad(k, gross);
     img.alt = "";
     img.decoding = "async";
-    img.onerror = function () { this.onerror = null; this.src = urbildPfad(k); };
+    // Die Bilder sind Querformat (4:3), die Duellkarte ist Hochformat
+    // (635:889). Mit object-fit:cover bleiben davon nur rund 53 % der
+    // Bildbreite sichtbar — 47 % werden abgeschnitten, je zur Hälfte
+    // links und rechts. Bei mittigem Motiv fällt das nicht auf, bei
+    // außermittigem verschwindet genau das, worum es geht.
+    //
+    // "bildFokus" verschiebt den Ausschnitt (object-position), z. B.
+    // "30% 50%". App-seitiges Feld: Der Generator liest es nicht, am
+    // Druck ändert sich dadurch nichts.
+    if (k.bildFokus) img.style.objectPosition = k.bildFokus;
+    img.onerror = function () {
+      this.onerror = null;
+      // Der Rückfall lädt die DRUCKvorlage (1200 px statt 400). Das
+      // ist ein Notnagel, kein Normalfall: Wer eine Karte bebildert
+      // und bilder-verkleinern.ps1 vergisst, soll es erfahren.
+      if (window.console) {
+        console.warn("Kein App-Bild für " + k.name + " – lade die Druckvorlage. " +
+                     "bilder-verkleinern.ps1 laufen lassen.");
+      }
+      this.src = urbildPfad(k);
+    };
     ziel.appendChild(img);
   } else {
     ziel.appendChild(el("div", "emoji", k.bild || "❔"));
   }
   return ziel;
+}
+
+// ------------------------------------------------------------
+//  Der Schauplatz
+//
+//  Drei gezeichnete Hintergründe, je Duell einer. Sie liegen in
+//  Karten\hintergruende-app – NICHT bei den Kartenbildern: Ein
+//  Schauplatz steht auf keiner Karte und gehört auf keinen
+//  Druckbogen. bilder-verkleinern.ps1 rechnet sie in Teil 3.
+//
+//  Gezogen wird aus der SAAT, nicht aus Math.random. Das kostet
+//  nichts und bringt zweierlei: Im Netzduell sehen beide Geräte
+//  denselben Schauplatz, und ein Probelauf mit gleicher Saat sieht
+//  zweimal gleich aus – sonst wäre jedes Bildschirmfoto anders und
+//  keine Layoutprüfung wiederholbar.
+// ------------------------------------------------------------
+var SCHAUPLAETZE = ["arena-steppe", "arena-uferpfad", "arena-wald"];
+
+function schauplatzSetzen(saat) {
+  var zahl = Math.abs(Number(saat) || 0);
+  var name = SCHAUPLAETZE[zahl % SCHAUPLAETZE.length];
+  document.body.style.setProperty("--kulisse",
+    'url("../Karten/hintergruende-app/' + name + '.jpg")');
+  // Erst die Klasse schaltet die Bildfassung des Bretthintergrunds
+  // ein. Ohne sie bleibt alles beim reinen Verlauf – so sieht ein
+  // Gerät ohne die Bilder nicht bloß dunkler aus, sondern wie immer.
+  document.body.classList.add("kulisse");
 }
 
 // --- Ruhemodus: derselbe Schlüssel wie in der Sammlung --------
@@ -1184,6 +1343,14 @@ function netzAufbauSchicken() {
   };
   if (netzkanal.meineSeite === 0) {
     meinAufbau.saat = Math.floor(Math.random() * 1e9);
+    // Die App-Regeln gehoeren zum Handschlag wie Stufe und Saat.
+    // Beide Geraete rechnen denselben Verlauf nach und tauschen nur
+    // Zuege; rechnete eines mit "Daneben" und das andere ohne, waeren
+    // es zwei verschiedene Duelle mit denselben Zugnummern.
+    meinAufbau.appRegeln = {};
+    window.ENGINE.APP_REGELN.forEach(function (name) {
+      meinAufbau.appRegeln[name] = PARAM.get("tisch") === "1" ? false : PARAM.get(name) !== "0";
+    });
   }
   netzkanal.sendeAufbau(meinAufbau);
   netzVersuchenZuStarten();
@@ -1204,6 +1371,10 @@ function netzVersuchenZuStarten() {
     region: eroeffner.region,
     stufe: eroeffner.stufe,
     saat: eroeffner.saat,
+    // Kommt der Aufbau von einem aelteren Stand ohne dieses Feld,
+    // gilt der Volltreffer wie bisher und sonst nichts – das ist das
+    // Spiel, das dieses Geraet auch vorher gerechnet haette.
+    appRegeln: eroeffner.appRegeln || { volltreffer: true },
     gegner: "netz",
     deckA: aufbauA.deck,
     deckB: aufbauB.deck
@@ -1490,14 +1661,29 @@ function starten(einstellung) {
   deckA.name = kanal.namen[0];
   deckB.name = kanal.namen[1];
 
-  // volltreffer: true ist der eine Punkt, an dem die App ueber das
-  // gedruckte Regelwerk hinausgeht (REGELN.appZusatz). Am Tisch bleibt das
-  // Spiel frei von Zufallsereignissen – dort braeuchte jeder Angriff einen
-  // Wuerfelwurf. Mit ?volltreffer=0 laesst sich der Zusatz abschalten und
-  // genau das Spiel ueben, das am Tisch gilt.
+  // Hier geht die App ueber das gedruckte Regelwerk hinaus
+  // (REGELN.appZusatz). Am Tisch bleibt das Spiel frei von
+  // Zufallsereignissen – dort braeuchte jeder Angriff einen
+  // Wuerfelwurf, und das kostet Unterrichtszeit.
+  //
+  // In der App sind deshalb ALLE App-Regeln an. Einzeln abschalten
+  // laesst sich jede mit ihrem Namen (?volltreffer=0, ?daneben=0 …),
+  // und ?tisch=1 schaltet sie alle aus – damit laesst sich genau das
+  // Spiel ueben, das am Tisch gilt.
+  //
+  // Im Netzduell gibt der Eroeffner sie vor: Rechneten zwei Geraete
+  // mit verschiedenen App-Regeln, liefen ihre Duelle auseinander.
+  var appRegeln = einstellung.appRegeln;
+  if (!appRegeln) {
+    appRegeln = {};
+    E.APP_REGELN.forEach(function (name) {
+      appRegeln[name] = PARAM.get("tisch") === "1" ? false : PARAM.get(name) !== "0";
+    });
+  }
+  einstellung.appRegeln = appRegeln;
+
   duell = new E.Duell(deckA, deckB, {
-    stufe: stufe, saat: saat,
-    volltreffer: PARAM.get("volltreffer") !== "0"
+    stufe: stufe, saat: saat, appRegeln: appRegeln
   });
   lauschen(duell);
 
@@ -1505,6 +1691,7 @@ function starten(einstellung) {
   auswahl = null;
   spielLaeuft = true;
   ruheSetzen();
+  schauplatzSetzen(saat);
   document.body.classList.add("spielt");
   document.getElementById("vorspiel").style.display = "none";
   document.getElementById("ende").classList.remove("an");
@@ -1522,6 +1709,32 @@ function lauschen(d) {
       attacke: x.attacke, faktor: x.berechnung.faktor, gruende: x.berechnung.gruende.slice(),
       volltreffer: x.berechnung.volltreffer === true,
       angreifer: x.spieler.arena ? x.spieler.arena.karte.name : "" });
+  });
+  // Daneben – nur in der App (REGELN.appZusatz.treffer). Auf dieses
+  // Ereignis folgt KEIN "schaden": Der Zug ist verbraucht, und
+  // gewirkt hat nichts.
+  d.bei("daneben", function (x) {
+    ereignisse.push({ was: "daneben", seite: x.spieler.index, ziel: x.ziel.index,
+      attacke: x.attacke, quote: x.quote,
+      angreifer: x.spieler.arena ? x.spieler.arena.karte.name : "" });
+  });
+  // Bank-Synergien – nur in der App. Sie werden nicht gespielt,
+  // sondern gelten; gemeldet wird deshalb nur, WELCHE gerade greift.
+  // Der Grund gehört dazu: Das ist die Stelle, an der die Mechanik
+  // nebenbei Chemie unterrichtet.
+  d.bei("synergien", function (x) {
+    ereignisse.push({ was: "synergie", seite: x.spieler.index,
+      namen: x.treffer.map(function (s) { return s.name; }),
+      gruende: x.treffer.map(function (s) { return s.begruendung; }) });
+  });
+  d.bei("vergiftet", function (x) {
+    ereignisse.push({ was: "vergiftet", seite: x.ziel.index, wert: x.wert, quelle: x.quelle });
+  });
+  d.bei("vernebelt", function (x) {
+    ereignisse.push({ was: "vernebelt", seite: x.ziel.index, minus: x.minus, quelle: x.quelle });
+  });
+  d.bei("zustandsschaden", function (x) {
+    ereignisse.push({ was: "zustandsschaden", seite: x.spieler.index, wert: x.wert, quelle: x.quelle });
   });
   d.bei("nach-schaden", function (x) {
     ereignisse.push({ was: "schaden", seite: x.ziel.index, schaden: x.schaden,
@@ -1699,16 +1912,16 @@ function baueSpielkarte(instanz, groesse, zusatz) {
   var lp = instanz.karte ? instanz.lp : k.lp;
   var maxLp = instanz.karte ? instanz.maxLp : k.lp;
 
+  var istArena = groesse === "arena";
   var b = el("button", "spielkarte k-" + groesse);
   b.style.setProperty("--kf", STIL.farbe(k.klasse));
 
-  var bild = bildIn(el("div", "kbild"), k, groesse === "arena");
-  bild.appendChild(el("div", "kkante"));
+  var bild = bildIn(el("div", "kbild"), k, istArena);
 
+  var lpz = null;
   if (lp !== null && lp !== undefined) {
-    var lpz = el("div", "klp");
+    lpz = el("div", "klp");
     lpz.innerHTML = lp + "<small>/" + maxLp + "</small>";
-    bild.appendChild(lpz);
   }
 
   var band = el("div", "knamensband");
@@ -1717,10 +1930,25 @@ function baueSpielkarte(instanz, groesse, zusatz) {
   var laenge = k.name.length > 14 ? " lang" : k.name.length > 10 ? " mittel" : "";
   band.appendChild(el("span", "kname" + laenge, k.name));
   if (k.formel) band.appendChild(el("span", "kformel", k.formel));
-  bild.appendChild(band);
 
-  if (zusatz.art) bild.appendChild(el("div", "kart", zusatz.art));
   b.appendChild(bild);
+
+  // Dieselben Bausteine, zweimal einsortiert – nicht zweimal gebaut.
+  // In der Arena steht die Beschriftung UNTER dem Bildfenster wie auf
+  // der gedruckten Karte; auf Bank und Hand liegt sie darauf.
+  if (istArena) {
+    b.appendChild(el("div", "kkante"));      // über die ganze Kartenhöhe
+    var fuss = el("div", "kfuss");
+    if (lpz) band.appendChild(lpz);          // rechts neben die Formel
+    fuss.appendChild(band);
+    if (zusatz.fuss) fuss.appendChild(zusatz.fuss);
+    b.appendChild(fuss);
+  } else {
+    bild.appendChild(el("div", "kkante"));
+    if (lpz) bild.appendChild(lpz);
+    bild.appendChild(band);
+    if (zusatz.art) bild.appendChild(el("div", "kart", zusatz.art));
+  }
 
   if (lp !== null && lp !== undefined) {
     var anteil = maxLp ? lp / maxLp : 0;
@@ -1751,7 +1979,24 @@ function zeichneArena(ziel, spieler, istGegner) {
   }
 
   var instanz = spieler.arena, k = instanz.karte;
-  var karte = baueSpielkarte(instanz, "arena");
+
+  // Eigenschaften: die, auf die eine Regel greift, farbig markiert.
+  // Genau daran hängt der halbe Unterricht – „brennbar" ist keine
+  // Verzierung, sondern der Grund für doppelten Schaden.
+  //
+  // Sie stehen seit dem 23.08.2026 auf der Karte statt daneben: Das
+  // Bildfenster im Querformat gibt unten Platz frei, und ein Merkmal
+  // gehört an seinen Stoff. Die Spalte daneben trägt dadurch nur
+  // noch die Attacken.
+  var eigen = el("div", "eigen");
+  if (k.masse) eigen.appendChild(el("span", null, k.masse + " u"));
+  (k.eigenschaften || []).forEach(function (name) {
+    var s = el("span", null, name);
+    if (regelBetrifft(name)) s.className = "gefahr";
+    eigen.appendChild(s);
+  });
+
+  var karte = baueSpielkarte(instanz, "arena", { fuss: eigen });
   karte.id = istGegner ? "arena-karte-gegen" : "arena-karte-ich";
 
   // Ist dieses Elemental Edukt der gerade gewählten Reaktion, wird es
@@ -1779,20 +2024,11 @@ function zeichneArena(ziel, spieler, istGegner) {
 
   var info = el("div", "kampfinfo" + (istGegner ? " gegen" : ""));
 
-  // Eigenschaften: die, auf die eine Regel greift, farbig markiert.
-  // Genau daran hängt der halbe Unterricht – „brennbar“ ist keine
-  // Verzierung, sondern der Grund für doppelten Schaden.
-  var eigen = el("div", "eigen");
-  if (k.masse) eigen.appendChild(el("span", null, k.masse + " u"));
-  (k.eigenschaften || []).forEach(function (name) {
-    var s = el("span", null, name);
-    if (regelBetrifft(name)) s.className = "gefahr";
-    eigen.appendChild(s);
-  });
-  info.appendChild(eigen);
-
   var att = el("div", "attacken");
-  (k.attacken || []).forEach(function (a, i) {
+  // attackenVon, nicht k.attacken: In der App hängt an manchen
+  // Verbindungen eine zusätzliche Attacke, die nicht gedruckt wird.
+  // Der Index muss derselbe sein, den die Engine später bekommt.
+  attackenVon(k).forEach(function (a, i) {
     att.appendChild(baueAttacke(a, i, istGegner));
   });
   info.appendChild(att);
@@ -1873,6 +2109,29 @@ function zeichneHand() {
   }
 }
 
+// Ausrüstung: Kartenschau als Bestätigung. Sie zeigt bereits Bild,
+// Name, Klasse und die „Besonderheit" – also genau den Satz, der
+// erklärt, was das Gerät tut. Deshalb keine zweite Anzeige dafür.
+//
+// „Spielen" führt aus, sobald das Ziel feststeht. Bei mehreren
+// möglichen Zielen bleibt es bei der gewohnten Geste: Die Ziele
+// bekommen den roten Ring, angetippt wird über zielWaehlen. Der
+// Zug geht in jedem Fall durch ausfuehren – den einen Weg, den auch
+// das Netz und der Computer nehmen.
+function ausruestungAnbieten(karte, eintrag) {
+  kartenschauZeigen(karte, null, { text: "Spielen", tun: function () {
+    if (!darfBedienen()) return;
+    if (eintrag.ziele && eintrag.ziele.length > 1) {
+      auswahl = eintrag;
+      zeichne();
+      sagen("Ziel für " + karte.name + " antippen — die möglichen sind rot umrandet.", 6000);
+      return;
+    }
+    auswahl = null;
+    ausfuehren(eintrag);
+  } });
+}
+
 // Ist diese Instanz ein Ziel des gerade gewählten Ausrüstungszuges?
 function istZielVonAuswahl(instanz) {
   if (!auswahl || auswahl.art !== "ausruestung" || !auswahl.ziele) return false;
@@ -1908,7 +2167,25 @@ function baueHandkarte(k, art, eintrag, index, istItem) {
 
   if (eintrag) {
     b.classList.add("bereit");
-    if (auswahl && auswahl.art === zugArt && auswahl.index === index) b.classList.add("gewaehlt");
+    var gewaehlt = !!(auswahl && auswahl.art === zugArt && auswahl.index === index);
+    if (gewaehlt) b.classList.add("gewaehlt");
+
+    // Ausrüstung: erst zeigen, was sie tut, dann bestätigen.
+    // Vorher entschied man nach dem Kartennamen – „Erlenmeyerkolben"
+    // sagt einem Siebtkläßler nicht, dass er einen Schutz spielt.
+    // Die Synthese bleibt bei der alten Geste: Sie hat mit der Bühne
+    // ihre eigene Erklärstelle, und die kommt nach dem Ausführen.
+    if (istItem) {
+      b.addEventListener("click", function () {
+        // Wartet die Karte gerade auf ein Ziel, nimmt ein erneutes
+        // Antippen die Wahl zurück – sonst ginge das Popup wieder auf
+        // und man käme aus der Zielwahl nicht mehr heraus.
+        if (gewaehlt) { auswahl = null; zeichne(); sagen(null); return; }
+        ausruestungAnbieten(k, eintrag);
+      });
+      return b;
+    }
+
     b.addEventListener("click", function () { antippen(eintrag); });
     return b;
   }
@@ -2255,7 +2532,12 @@ document.getElementById("deckleeren").addEventListener("click", function () {
 //  das die einzige Stelle, an der man nachliest, was er kann –
 //  und deshalb ist sie beim Gegner besonders wichtig.
 // ============================================================
-function kartenschauZeigen(k, instanz) {
+// aktion = { text, tun } macht aus der Kartenschau einen
+// Bestätigungsdialog: Statt „Schließen" trägt der Fuß dann
+// „Abbrechen" und den benannten Knopf. Gebraucht wird das von der
+// Ausrüstung – wer ein Gerät ausspielt, soll vorher lesen können,
+// was es tut, und nicht erst hinterher am Ergebnis raten.
+function kartenschauZeigen(k, instanz, aktion) {
   var blatt = document.getElementById("ksblatt");
   blatt.innerHTML = "";
   blatt.style.setProperty("--kf", STIL.farbe(k.klasse));
@@ -2283,10 +2565,11 @@ function kartenschauZeigen(k, instanz) {
   });
   blatt.appendChild(eigen);
 
-  if ((k.attacken || []).length) {
+  var alleAttacken = attackenVon(k);
+  if (alleAttacken.length) {
     var ab = el("div", "ksabschnitt");
     ab.appendChild(el("div", "kstitel", "Attacken"));
-    k.attacken.forEach(function (a) {
+    alleAttacken.forEach(function (a) {
       var z = el("div", "attacke");
       z.style.setProperty("--tf", STIL.typfarbe(a.typ));
       z.appendChild(el("span", "typ", a.typ));
@@ -2294,6 +2577,11 @@ function kartenschauZeigen(k, instanz) {
       z.appendChild(el("span", "sch", String(a.schaden)));
       ab.appendChild(z);
       if (a.effekt) ab.appendChild(el("div", "kseffekt", a.effekt));
+      // Damit am Tisch niemand danach sucht: Diese Attacke steht auf
+      // keiner gedruckten Karte.
+      if (a === k.appAttacke) {
+        ab.appendChild(el("div", "kseffekt", "◆ Nur in der App – auf der gedruckten Karte steht sie nicht."));
+      }
     });
     blatt.appendChild(ab);
   }
@@ -2318,9 +2606,21 @@ function kartenschauZeigen(k, instanz) {
   if (k.flavor) blatt.appendChild(el("div", "ksflavor", k.flavor));
 
   var fuss = el("div", "ksfuss");
-  var zu = el("button", "knopf haupt", "Schließen");
-  zu.addEventListener("click", kartenschauSchliessen);
-  fuss.appendChild(zu);
+  if (aktion) {
+    var ab = el("button", "knopf", "Abbrechen");
+    ab.addEventListener("click", kartenschauSchliessen);
+    fuss.appendChild(ab);
+    var tu = el("button", "knopf haupt", aktion.text);
+    tu.addEventListener("click", function () {
+      kartenschauSchliessen();
+      aktion.tun();
+    });
+    fuss.appendChild(tu);
+  } else {
+    var zu = el("button", "knopf haupt", "Schließen");
+    zu.addEventListener("click", kartenschauSchliessen);
+    fuss.appendChild(zu);
+  }
   blatt.appendChild(fuss);
 
   document.getElementById("kartenschau").classList.add("an");
@@ -2439,8 +2739,8 @@ function zielWaehlen(instanz) {
 function zugBeschreiben(zug) {
   var spieler = ichSpieler();
   if (zug.art === "angriff") {
-    var a = spieler.arena.karte.attacken[zug.index];
-    return a.name + " (" + a.typ + ")";
+    var a = attackenVon(spieler.arena.karte)[zug.index];
+    return a ? a.name + " (" + a.typ + ")" : "Angriff";
   }
   if (zug.art === "wechsel") return "Wechsel zu " + spieler.bank[zug.index].karte.name;
   if (zug.art === "synthese") {
@@ -2640,6 +2940,53 @@ function spieleEreignis(e, weiter) {
     // Schlag ("der hat gesessen").
     if (e.volltreffer) rufen("Volltreffer!", "#f0c040", von);
     geschoss(e.attacke.typ, von, nach, weiter);
+    return;
+  }
+
+  // Daneben – nur in der App. Das Geschoss fliegt trotzdem: Der
+  // Angriff hat stattgefunden, er hat nur nicht getroffen. Ohne die
+  // Flugbahn saehe es aus, als waere der Zug verschluckt worden.
+  // Die Marke steht ueber dem ZIEL, denn dort ist nichts passiert.
+  if (e.was === "daneben") {
+    var vonD = mitteVon(arenaId(e.seite)), nachD = mitteVon(arenaId(e.ziel));
+    sagen(e.angreifer + " setzt " + e.attacke.name + " ein – daneben!");
+    geschoss(e.attacke.typ, vonD, nachD, function () {
+      rufen("daneben", "#8a7d66", nachD);
+      pause(520, weiter);
+    });
+    return;
+  }
+
+  // Die Synergie wird nur gesagt, nicht gefeiert: Sie gilt die ganze
+  // Zeit und würde als Animation in jeder Runde stören. Die Begründung
+  // steht dabei — sie ist der eigentliche Ertrag der Mechanik.
+  if (e.was === "synergie") {
+    if (e.namen.length) {
+      sagen("Synergie: " + e.namen.join(", ") + " – " + e.gruende[0]);
+      pause(320, weiter);
+      return;
+    }
+    weiter();
+    return;
+  }
+
+  if (e.was === "vergiftet") {
+    rufen("vergiftet", "#8fbf5f", mitteVon(arenaId(e.seite)));
+    sagen(e.quelle + ": " + e.wert + " Schaden am Ende des nächsten Zuges");
+    pause(420, weiter);
+    return;
+  }
+
+  if (e.was === "vernebelt") {
+    rufen("vernebelt", "#9ab3c9", mitteVon(arenaId(e.seite)));
+    sagen(e.quelle + ": Angriffe gehen um " + Math.round(e.minus * 100) + " % häufiger daneben");
+    pause(420, weiter);
+    return;
+  }
+
+  if (e.was === "zustandsschaden") {
+    sagen(e.quelle + " wirkt nach");
+    pause(260, weiter);
     return;
   }
 
