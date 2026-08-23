@@ -19,7 +19,7 @@
 //  Fassung holt. Wird sie vergessen, sitzt die halbe Klasse mit
 //  der alten App da und niemand versteht, warum.
 // ------------------------------------------------------------
-var FASSUNG = 14;
+var FASSUNG = 15;
 
 var GERUEST_SPEICHER = "elementia-geruest-" + FASSUNG;
 var BILD_SPEICHER    = "elementia-bilder-" + FASSUNG;
