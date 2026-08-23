@@ -182,7 +182,7 @@ window.KARTEN_DATEN = {
       "name": "Magnesiumoxid", "formel": "MgO", "klasse": "Oxid", "lp": 50, "masse": 40,
       "eigenschaften": ["fest", "weiß"],
       "attacken": [
-        { "name": "Weißglanz-Schlag", "typ": "Wucht", "schaden": 13, "effekt": "" },
+        { "name": "Weißglanz-Schlag", "typ": "Wucht", "schaden": 15, "effekt": "" },
         { "name": "Basenbiss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       // NUR IN DER APP (appRegeln.appAttacken). Der Generator liest
@@ -208,7 +208,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["gasförmig", "erstickend"],
       "attacken": [
         { "name": "Erstickungswolke", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner darf in seinem nächsten Zug keine Feuer-Attacke einsetzen." },
-        { "name": "Schwerer Fall", "typ": "Wucht", "schaden": 13, "effekt": "" }
+        { "name": "Schwerer Fall", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       // minus: 5, nicht 10. Bei 10 war Feuer in Feuerlande praktisch
       // wirkungslos (mittlerer Schaden dort 9,6 bis 11,4) – gemessen am
@@ -295,7 +295,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["flüssig", "löschend"],
       "attacken": [
         { "name": "Dampfstoß", "typ": "Wucht", "schaden": 8, "effekt": "" },
-        { "name": "Heißer Dampf", "typ": "Gas", "schaden": 13, "effekt": "" }
+        { "name": "Heißer Dampf", "typ": "Gas", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Dampfschleier", "typ": "Gas", "schaden": 0,
         "effekt": "Nebel ist nichts anderes als feinst verteiltes Wasser: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
@@ -314,7 +314,7 @@ window.KARTEN_DATEN = {
       "name": "Schwefeldioxid", "formel": "SO₂", "klasse": "Oxid", "lp": 50, "masse": 64,
       "eigenschaften": ["gasförmig", "ätzend", "stechend"],
       "attacken": [
-        { "name": "Ätzender Atem", "typ": "Ätz", "schaden": 13, "effekt": "" },
+        { "name": "Ätzender Atem", "typ": "Ätz", "schaden": 15, "effekt": "" },
         { "name": "Stechender Geruch", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner muss sein aktives Elemental auswechseln (wenn er kann)." }
       ],
       "appAttacke": { "name": "Ätzender Hauch", "typ": "Gas", "schaden": 0,
@@ -693,7 +693,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["fest", "weiß", "ätzend", "federleicht"],
       "attacken": [
         { "name": "Staubwurf", "typ": "Wucht", "schaden": 10, "effekt": "" },
-        { "name": "Laugenhauch", "typ": "Ätz", "schaden": 13, "effekt": "" }
+        { "name": "Laugenhauch", "typ": "Ätz", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Ausgeglüht", "typ": "Feuer", "schaden": 0,
         "effekt": "Ein Metalloxid ist das Ende einer Verbrennung – es brennt kein zweites Mal. Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
@@ -712,7 +712,7 @@ window.KARTEN_DATEN = {
       "name": "Bariumoxid", "formel": "BaO", "region": "Periodika", "klasse": "Oxid", "lp": 50, "masse": 153,
       "eigenschaften": ["fest", "weiß", "ätzend", "schwer"],
       "attacken": [
-        { "name": "Schwerstaub", "typ": "Wucht", "schaden": 13, "effekt": "" },
+        { "name": "Schwerstaub", "typ": "Wucht", "schaden": 15, "effekt": "" },
         { "name": "Ätzschleier", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "appAttacke": { "name": "Gasfänger", "typ": "Gas", "schaden": 0,
@@ -751,7 +751,7 @@ window.KARTEN_DATEN = {
       "name": "Natriumchlorid", "formel": "NaCl", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 58,
       "eigenschaften": ["fest", "kristallin", "weiß", "würzig"],
       "attacken": [
-        { "name": "Kristallhagel", "typ": "Wucht", "schaden": 13, "effekt": "" }
+        { "name": "Kristallhagel", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Ionengitter", "typ": "Wucht", "schaden": 0,
         "effekt": "Im Ionengitter sind Natrium und Chlor abgesättigt – kaum etwas greift sie noch an. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
@@ -789,7 +789,7 @@ window.KARTEN_DATEN = {
       "name": "Calciumoxid", "formel": "CaO", "region": "Periodika", "klasse": "Oxid", "lp": 50, "masse": 56,
       "eigenschaften": ["fest", "weiß", "ätzend"],
       "attacken": [
-        { "name": "Branntkalk-Wurf", "typ": "Wucht", "schaden": 13, "effekt": "" },
+        { "name": "Branntkalk-Wurf", "typ": "Wucht", "schaden": 15, "effekt": "" },
         { "name": "Ätzstaub", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "appAttacke": { "name": "Kalklöschen", "typ": "Ätz", "schaden": 0,
@@ -809,7 +809,7 @@ window.KARTEN_DATEN = {
       "name": "Calciumhydroxid", "formel": "Ca(OH)₂", "region": "Periodika", "klasse": "Hydroxid", "lp": 50, "masse": 74,
       "eigenschaften": ["fest", "weiß", "ätzend", "laugig"],
       "attacken": [
-        { "name": "Kalkmilchguss", "typ": "Ätz", "schaden": 13, "effekt": "" },
+        { "name": "Kalkmilchguss", "typ": "Ätz", "schaden": 15, "effekt": "" },
         { "name": "Mörtelpanzer", "typ": "Wucht", "schaden": 0, "effekt": "Calciumhydroxid erleidet bis zu deinem nächsten Zug 5 Schaden weniger pro Attacke." }
       ],
       "appAttacke": { "name": "Neutralisation", "typ": "Ätz", "schaden": 0,
@@ -888,7 +888,7 @@ window.KARTEN_DATEN = {
       "name": "Ozon", "formel": "O₃", "region": "Aerosol", "klasse": "Molekül", "legendaer": true, "lp": 50, "masse": 48,
       "eigenschaften": ["gasförmig", "stechend", "bläulich"],
       "attacken": [
-        { "name": "Reizhauch", "typ": "Gas", "schaden": 13, "effekt": "" },
+        { "name": "Reizhauch", "typ": "Gas", "schaden": 15, "effekt": "" },
         { "name": "Höhenriss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "appAttacke": { "name": "Oxidationskraft", "typ": "Gas", "schaden": 0,
@@ -909,7 +909,7 @@ window.KARTEN_DATEN = {
       "name": "Stickstoffmonoxid", "formel": "NO", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 30,
       "eigenschaften": ["gasförmig", "farblos", "reaktionsfreudig"],
       "attacken": [
-        { "name": "Radikalbiss", "typ": "Ätz", "schaden": 13, "effekt": "" }
+        { "name": "Radikalbiss", "typ": "Ätz", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Gefäßweiter", "typ": "Gas", "schaden": 0,
         "effekt": "Stickstoffmonoxid ist im Körper ein Botenstoff, der die Blutgefäße weitet – dafür gab es einen Nobelpreis: Dein aktives Elemental erhält 10 LP zurück.",
@@ -928,7 +928,7 @@ window.KARTEN_DATEN = {
       "name": "Stickstoffdioxid", "formel": "NO₂", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 46,
       "eigenschaften": ["gasförmig", "braun", "stechend", "giftig"],
       "attacken": [
-        { "name": "Brauner Reizer", "typ": "Ätz", "schaden": 13, "effekt": "" },
+        { "name": "Brauner Reizer", "typ": "Ätz", "schaden": 15, "effekt": "" },
         { "name": "Stechhusten", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner darf in seinem nächsten Zug keine Gas-Attacke einsetzen." }
       ],
       "appAttacke": { "name": "Brauner Dunst", "typ": "Gas", "schaden": 0,
@@ -948,7 +948,7 @@ window.KARTEN_DATEN = {
       "name": "Kohlenstoffmonoxid", "formel": "CO", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 28,
       "eigenschaften": ["gasförmig", "farblos", "geruchlos", "giftig"],
       "attacken": [
-        { "name": "Stilles Gift", "typ": "Gas", "schaden": 13, "effekt": "" }
+        { "name": "Stilles Gift", "typ": "Gas", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Blutgift", "typ": "Gas", "schaden": 0,
         "effekt": "Kohlenstoffmonoxid setzt sich an das Hämoglobin und lässt keinen Sauerstoff mehr durch: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
@@ -968,7 +968,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["gasförmig", "süßlich", "treibhauswirksam"],
       "attacken": [
         { "name": "Lachkrampf", "typ": "Gas", "schaden": 5, "effekt": "Betäubt: Der Gegner darf sein aktives Elemental in seinem nächsten Zug nicht auswechseln." },
-        { "name": "Treibhausdruck", "typ": "Wucht", "schaden": 13, "effekt": "" }
+        { "name": "Treibhausdruck", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Betäubung", "typ": "Gas", "schaden": 0,
         "effekt": "Lachgas war das erste Narkosemittel der Medizin – wer es einatmet, spürt den Schlag kaum: Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
@@ -987,7 +987,7 @@ window.KARTEN_DATEN = {
       "name": "Methan", "formel": "CH₄", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 16,
       "eigenschaften": ["gasförmig", "brennbar", "farblos", "treibhauswirksam"],
       "attacken": [
-        { "name": "Sumpffeuer", "typ": "Feuer", "schaden": 13, "effekt": "" }
+        { "name": "Sumpffeuer", "typ": "Feuer", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Sumpfgas-Schwaden", "typ": "Gas", "schaden": 0,
         "effekt": "Methan verdrängt die Luft und erstickt, was darin atmet: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
@@ -1006,7 +1006,7 @@ window.KARTEN_DATEN = {
       "name": "Chlorwasserstoff", "formel": "HCl", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 36,
       "eigenschaften": ["gasförmig", "stechend", "sauer"],
       "attacken": [
-        { "name": "Salzsäure-Spritzer", "typ": "Ätz", "schaden": 13, "effekt": "" }
+        { "name": "Salzsäure-Spritzer", "typ": "Ätz", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Weißer Rauch", "typ": "Gas", "schaden": 0,
         "effekt": "Chlorwasserstoff zieht Wasser aus der Luft und raucht dabei sichtbar weiß: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
@@ -1088,7 +1088,8 @@ window.KARTEN_DATEN = {
       "name": "Wasser", "formel": "H₂O", "region": "Aquaria", "klasse": "Oxid", "lp": 50, "masse": 18,
       "eigenschaften": ["flüssig", "löschend", "Dipol"],
       "attacken": [
-        { "name": "Dampfstoß", "typ": "Wucht", "schaden": 11, "effekt": "" }
+        { "name": "Dampfstoß", "typ": "Wucht", "schaden": 8, "effekt": "" },
+        { "name": "Heißer Dampf", "typ": "Gas", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Dampfschleier", "typ": "Gas", "schaden": 0,
         "effekt": "Nebel ist nichts anderes als feinst verteiltes Wasser: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
@@ -1200,7 +1201,7 @@ window.KARTEN_DATEN = {
       "name": "Magnesiumchlorid", "formel": "MgCl₂", "region": "Salzküste", "klasse": "Salz", "lp": 50, "masse": 95,
       "eigenschaften": ["fest", "bitter", "zieht Wasser an"],
       "attacken": [
-        { "name": "Bitterbiss", "typ": "Ätz", "schaden": 13, "effekt": "" }
+        { "name": "Bitterbiss", "typ": "Ätz", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Magnesiumzufuhr", "typ": "Wucht", "schaden": 0,
         "effekt": "Magnesium löst den Krampf – deshalb steckt es in jedem Sportgetränk: Dein aktives Elemental erhält 10 LP zurück.",
@@ -1257,7 +1258,7 @@ window.KARTEN_DATEN = {
       "name": "Kupfersulfat", "formel": "CuSO₄", "region": "Salzküste", "klasse": "Salz", "lp": 50, "masse": 160,
       "eigenschaften": ["fest", "tiefblau", "kristallin"],
       "attacken": [
-        { "name": "Blaukristall", "typ": "Ätz", "schaden": 13, "effekt": "" }
+        { "name": "Blaukristall", "typ": "Ätz", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Kupferkalk", "typ": "Ätz", "schaden": 0,
         "effekt": "Im Weinberg ist Kupfersulfat seit jeher das Mittel gegen Pilzbefall: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
@@ -1490,6 +1491,82 @@ window.KARTEN_DATEN = {
     // ============================================================
 
     // ---------- SÄUREN (Acidia) ----------
+    {
+      "name": "Aluminiumoxid", "formel": "Al₂O₃", "region": "Erdhügel", "klasse": "Oxid", "lp": 50, "masse": 102,
+      "eigenschaften": ["fest", "hart", "korrosionsfest", "farblos"],
+      "attacken": [
+        { "name": "Korundschliff", "typ": "Wucht", "schaden": 15, "effekt": "" }
+      ],
+      "appAttacke": { "name": "Passivschicht", "typ": "Ätz", "schaden": 0,
+        "effekt": "Die hauchdünne Oxidschicht bildet sich sofort neu, wenn man sie abkratzt – deshalb rostet Aluminium nicht. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
+      "synthese": {
+        "wortgleichung": "Aluminium + Sauerstoff → Aluminiumoxid (Korund)",
+        "bilanz": "108 u + 96 u = 204 u (4 Al + 3 O₂; zwei Teilchen à 102 u)",
+        "edukte": ["Aluminium", "Sauerstoff"],
+        "aktivierung": true, "exotherm": 5
+      },
+      "besonderheit": "Passivschicht: Aluminium rostet nicht, weil es sich sofort mit einer hauchdünnen Schicht Aluminiumoxid überzieht – kratzt man sie ab, ist sie augenblicklich wieder da.",
+      "flavor": "Als Korund härter als Stahl, als Rubin rot und als Saphir blau – und als Haut auf dem Aluminium unsichtbar.",
+      "quest": "Erdhügel – Alu", "bild": "💎"
+    },
+    {
+      "name": "Silbersulfid", "formel": "Ag₂S", "region": "Erdhügel", "klasse": "Sulfid", "lp": 50, "masse": 248,
+      "eigenschaften": ["fest", "schwarz", "metallisch"],
+      "attacken": [
+        { "name": "Anlaufschicht", "typ": "Wucht", "schaden": 15, "effekt": "" }
+      ],
+      "appAttacke": { "name": "Blindes Silber", "typ": "Gas", "schaden": 0,
+        "effekt": "Angelaufenes Silber wirft kein Licht mehr zurück: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 20 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.20 } },
+      "synthese": {
+        "wortgleichung": "Silber + Schwefel → Silbersulfid (Anlaufen)",
+        "bilanz": "216 u + 32 u = 248 u – nichts geht verloren! (2 Ag + S)",
+        "edukte": ["Silber", "Schwefel"],
+        "aktivierung": true, "exotherm": 5
+      },
+      "besonderheit": "Anlaufen: Silber wird an der Luft schwarz, weil Spuren von Schwefel genügen. Mit Alufolie und Salzwasser lässt es sich rückgängig machen.",
+      "flavor": "Warum das Silberbesteck nach dem Frühstücksei schwarz wird: Schwefel findet Silber auch in Spuren.",
+      "quest": "Erdhügel – Agentum", "bild": "🌑"
+    },
+    {
+      "name": "Silberchlorid", "formel": "AgCl", "region": "Erdhügel", "klasse": "Salz", "lp": 50, "masse": 143,
+      "eigenschaften": ["fest", "weiß", "lichtempfindlich"],
+      "attacken": [
+        { "name": "Lichtblitz", "typ": "Feuer", "schaden": 15, "effekt": "" }
+      ],
+      "appAttacke": { "name": "Belichtung", "typ": "Feuer", "schaden": 0,
+        "effekt": "Im Licht zerfällt Silberchlorid und wird dunkel – das ist die ganze Fotografie: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
+      "synthese": {
+        "wortgleichung": "Silber + Chlor → Silberchlorid",
+        "bilanz": "216 u + 71 u = 287 u (2 Ag + Cl₂; zwei Teilchen à ca. 143 u)",
+        "edukte": ["Silber", "Chlor"],
+        "aktivierung": true, "exotherm": 5
+      },
+      "besonderheit": "Lichtempfindlich: Im Licht zerfällt Silberchlorid zu Silber und Chlor und wird dabei grau – der Nachweis für Chlorid und die Grundlage der Fotografie.",
+      "flavor": "Weiß im Dunkeln, grau im Licht. Ein Stoff, der sich merkt, wo es hell war.",
+      "quest": "Erdhügel – Agentum", "bild": "📷"
+    },
+    {
+      "name": "Zinnoxid", "formel": "SnO₂", "region": "Erdhügel", "klasse": "Oxid", "lp": 50, "masse": 151,
+      "eigenschaften": ["fest", "hart", "korrosionsfest"],
+      "attacken": [
+        { "name": "Erzbrocken", "typ": "Wucht", "schaden": 15, "effekt": "" }
+      ],
+      "appAttacke": { "name": "Weiße Glasur", "typ": "Feuer", "schaden": 0,
+        "effekt": "Zinnoxid trübt die Glasur weiß und hält die Hitze vom Ton fern. Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
+      "synthese": {
+        "wortgleichung": "Zinn + Sauerstoff → Zinnoxid (Zinnstein)",
+        "bilanz": "119 u + 32 u = 151 u – nichts geht verloren!",
+        "edukte": ["Zinn", "Sauerstoff"],
+        "aktivierung": true, "exotherm": 5
+      },
+      "besonderheit": "Erz: Zinnstein ist das Mineral, aus dem alles Zinn gewonnen wird – mit Kohle erhitzt gibt es sein Metall wieder her.",
+      "flavor": "Zinnstein: der Stein, aus dem das Zinn kommt – und ohne den es keine Bronzezeit gegeben hätte.",
+      "quest": "Erdhügel – Metallum 2", "bild": "🪨"
+    },
     {
       "name": "Kohlensäure", "formel": "H₂CO₃", "region": "Acidia", "klasse": "Säure", "lp": 50, "masse": 62,
       "eigenschaften": ["flüssig", "ätzend", "sauer", "schwach"],
