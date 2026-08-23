@@ -614,6 +614,21 @@
             if (ha !== null && ha === hb) wieviele++;
           } else if (b.gleich === "klasse") {
             if (!aktiv.klasse || aktiv.klasse !== bank[n].klasse) continue;
+            // "nurVerbindungen": Die Zeile zaehlt nur zwischen
+            // VERBINDUNGEN – Oxid neben Oxid, Sulfid neben Sulfid –,
+            // nicht zwischen zwei Metallen oder zwei Alkalimetallen.
+            //
+            // Der Grund ist das Gesetz des Kartensatzes: Eine Synergie,
+            // die nur Elemente tragen koennen, besteuert die Synthese,
+            // denn genau die verbraucht sie. Gemessen am 23.08.2026:
+            // Erdhuegel bringt Aluminium, Zinn, Silber, Gold und Platin;
+            // die Element-Paare gleicher Klasse springen von 47 auf 77,
+            // und dort faellt syntheseLohnt unter NULL.
+            //
+            // Beide Karten teilen hier bereits die Klasse, ein Blick auf
+            // die aktive genuegt. Ohne das Feld aendert sich nichts.
+            if (b.nurVerbindungen &&
+                R.elementKlassen.indexOf(aktiv.klasse) !== -1) continue;
             // Zwei Alkalimetalle teilen die Klasse UND die Hauptgruppe –
             // das ist chemisch dieselbe Aussage, und beide Zeilen zu
             // zaehlen waere doppelt gezaehlt. Wo die Hauptgruppe schon
