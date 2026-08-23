@@ -63,7 +63,9 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "",
       "flavor": "Rot glüht das Blut der Esse.",
-      "quest": "Starter – Schmiede", "bild": "bilder/eisen.jpg"
+      // Der Kopf mit den Augen sitzt rechts; mittig geschnitten liegt er
+      // im Duell genau auf der Kante. Nur in der App, der Druck bleibt.
+      "quest": "Starter – Schmiede", "bild": "bilder/eisen.jpg", "bildFokus": "65% 50%"
     },
     {
       "name": "Magnesium", "formel": "Mg", "klasse": "Metall", "lp": 30, "masse": 24,
@@ -183,6 +185,14 @@ window.KARTEN_DATEN = {
         { "name": "Weißglanz-Schlag", "typ": "Wucht", "schaden": 13, "effekt": "" },
         { "name": "Basenbiss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
+      // NUR IN DER APP (appRegeln.appAttacken). Der Generator liest
+      // ausschließlich "attacken" – diese Attacke wird nicht gedruckt,
+      // und am Tisch gibt es sie nicht. Erlaubte Wirkungen stehen in
+      // REGELN.appAttackenWirkungen. Jede hängt an einer echten
+      // Stoffeigenschaft; fachliche Richtigkeit geht vor Balance.
+      "appAttacke": { "name": "Schamottwall", "typ": "Feuer", "schaden": 0,
+        "effekt": "Feuerfest: Magnesiumoxid schmilzt erst bei 2852 °C. Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Magnesium + Sauerstoff → Magnesiumoxid",
         "bilanz": "48 u + 32 u = 80 u (zwei Teilchen à 40 u)",
@@ -200,6 +210,14 @@ window.KARTEN_DATEN = {
         { "name": "Erstickungswolke", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner darf in seinem nächsten Zug keine Feuer-Attacke einsetzen." },
         { "name": "Schwerer Fall", "typ": "Wucht", "schaden": 13, "effekt": "" }
       ],
+      // minus: 5, nicht 10. Bei 10 war Feuer in Feuerlande praktisch
+      // wirkungslos (mittlerer Schaden dort 9,6 bis 11,4) – gemessen am
+      // 22.08.2026 endeten 18 von 400 Duellen im Zuglimit, das laengste
+      // nach 298 Runden. Ein Loeschgas soll das Feuer daempfen, nicht
+      // den Angriffstyp aus dem Spiel nehmen.
+      "appAttacke": { "name": "Löschdecke aus Gas", "typ": "Gas", "schaden": 0,
+        "effekt": "Kohlenstoffdioxid ist das Löschgas jedes Feuerlöschers: Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Sauerstoff → Kohlenstoffdioxid",
         "bilanz": "12 u + 32 u = 44 u – nichts geht verloren!",
@@ -208,7 +226,9 @@ window.KARTEN_DATEN = {
       },
       "besonderheit": "",
       "flavor": "Der schwere Atem der Feuer. Kerzen ersticken in seiner Nähe.",
-      "quest": "Quest 7 – Oxide", "bild": "bilder/kohlenstoffdioxid.jpg"
+      // Der Rabe fliegt in der linken Bildhaelfte; mittig geschnitten
+      // zeigte die Duellkarte vor allem weissen Himmel.
+      "quest": "Quest 7 – Oxide", "bild": "bilder/kohlenstoffdioxid.jpg", "bildFokus": "15% 50%"
     },
     {
       "name": "Eisenoxid", "formel": "FeO", "klasse": "Oxid", "lp": 50, "masse": 72,
@@ -217,6 +237,9 @@ window.KARTEN_DATEN = {
         { "name": "Rostbiss", "typ": "Ätz", "schaden": 10, "effekt": "" },
         { "name": "Zunderbrocken", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Zunderschicht", "typ": "Wucht", "schaden": 0,
+        "effekt": "Die dichte Oxidschicht auf dem Eisen bremst jeden weiteren Angriff: Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Eisen + Sauerstoff → Eisenoxid",
         "bilanz": "112 u + 32 u = 144 u (zwei Teilchen à 72 u)",
@@ -234,6 +257,9 @@ window.KARTEN_DATEN = {
         { "name": "Schwarzmantel", "typ": "Wucht", "schaden": 15, "effekt": "" },
         { "name": "Sauerstoffgabe", "typ": "Feuer", "schaden": 10, "effekt": "" }
       ],
+      "appAttacke": { "name": "Ausgebrannt", "typ": "Feuer", "schaden": 0,
+        "effekt": "Was schon mit Sauerstoff verbunden ist, verbrennt nicht noch einmal: Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kupfer + Sauerstoff → Kupferoxid",
         "bilanz": "127 u + 32 u = 159 u (zwei Teilchen à 80 u)",
@@ -251,6 +277,9 @@ window.KARTEN_DATEN = {
         { "name": "Weißer Rauch", "typ": "Gas", "schaden": 10, "effekt": "" },
         { "name": "Pulverstoß", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Zinksalbe", "typ": "Wucht", "schaden": 0,
+        "effekt": "Zinkoxid steckt in Wundsalbe und Sonnencreme: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Zink + Sauerstoff → Zinkoxid",
         "bilanz": "131 u + 32 u = 163 u (zwei Teilchen à 81 u)",
@@ -268,6 +297,9 @@ window.KARTEN_DATEN = {
         { "name": "Dampfstoß", "typ": "Wucht", "schaden": 8, "effekt": "" },
         { "name": "Heißer Dampf", "typ": "Gas", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Dampfschleier", "typ": "Gas", "schaden": 0,
+        "effekt": "Nebel ist nichts anderes als feinst verteiltes Wasser: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Wasserstoff + Sauerstoff → Wasser (Knallgas-Reaktion!)",
         "bilanz": "4 u + 32 u = 36 u (zwei Teilchen à 18 u)",
@@ -285,6 +317,9 @@ window.KARTEN_DATEN = {
         { "name": "Ätzender Atem", "typ": "Ätz", "schaden": 13, "effekt": "" },
         { "name": "Stechender Geruch", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner muss sein aktives Elemental auswechseln (wenn er kann)." }
       ],
+      "appAttacke": { "name": "Ätzender Hauch", "typ": "Gas", "schaden": 0,
+        "effekt": "Schwefeldioxid reizt die Atemwege und wird mit Wasser zu schwefliger Säure: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Schwefel + Sauerstoff → Schwefeldioxid",
         "bilanz": "32 u + 32 u = 64 u – nichts geht verloren!",
@@ -303,8 +338,10 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Glutzorn", "typ": "Feuer", "schaden": 10, "effekt": "" },
         { "name": "Eisenschwefelhieb", "typ": "Wucht", "schaden": 15, "effekt": "" }
-
       ],
+      "appAttacke": { "name": "Faule Eier", "typ": "Gas", "schaden": 0,
+        "effekt": "Mit Säure setzt Eisensulfid Schwefelwasserstoff frei – das Gas, das nach faulen Eiern riecht und giftig ist: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Eisen + Schwefel → Eisensulfid",
         "bilanz": "56 u + 32 u = 88 u – nichts geht verloren!",
@@ -322,6 +359,9 @@ window.KARTEN_DATEN = {
         { "name": "Schimmerblitz", "typ": "Gas", "schaden": 5, "effekt": "Leuchtet nach: Die nächste Attacke des Gegners macht 5 Schaden weniger." },
         { "name": "Kristallstoß", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Nachleuchten", "typ": "Feuer", "schaden": 0,
+        "effekt": "Zinksulfid leuchtet im Dunkeln nach – so hell, dass der Gegner die Sicht verliert: Seine Angriffe gehen bis zu seinem nächsten Zug um 20 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.20 } },
       "synthese": {
         "wortgleichung": "Zink + Schwefel → Zinksulfid",
         "bilanz": "65 u + 32 u = 97 u – nichts geht verloren!",
@@ -339,6 +379,9 @@ window.KARTEN_DATEN = {
         { "name": "Schwarzglanz", "typ": "Wucht", "schaden": 15, "effekt": "" },
         { "name": "Schwefelbiss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
+      "appAttacke": { "name": "Unlöslich", "typ": "Ätz", "schaden": 0,
+        "effekt": "Kupfersulfid ist so schwer löslich, dass es sich in verdünnten Säuren nicht auflöst: Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kupfer + Schwefel → Kupfersulfid",
         "bilanz": "64 u + 32 u = 96 u – nichts geht verloren!",
@@ -347,7 +390,9 @@ window.KARTEN_DATEN = {
       },
       "besonderheit": "",
       "flavor": "Die Alten nennen es Kupferglanz.",
-      "quest": "Quest 8 – Sulfide", "bild": "bilder/kupfersulfid.jpg"
+      // Kopf und Ohren stehen ganz links; mittig geschnitten fiel die
+      // Schnauze weg.
+      "quest": "Quest 8 – Sulfide", "bild": "bilder/kupfersulfid.jpg", "bildFokus": "30% 50%"
     },
     {
       "name": "Pyrit", "formel": "FeS₂", "klasse": "Sulfid", "legendaer": true, "lp": 50, "masse": 120,
@@ -356,6 +401,9 @@ window.KARTEN_DATEN = {
         { "name": "Funkenschlag", "typ": "Feuer", "schaden": 10, "effekt": "" },
         { "name": "Kantenhieb", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Steinharte Kante", "typ": "Wucht", "schaden": 0,
+        "effekt": "Pyrit ritzt Glas und Stahl – Härte 6,5 auf der Mohsskala: Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Eisen + Schwefel → Pyrit",
         "bilanz": "56 u + 64 u = 120 u (Fe + 2 S; zwei Schwefel-Teilchen à 32 u)",
@@ -465,7 +513,9 @@ window.KARTEN_DATEN = {
       "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 0, "ziel": "eigenesElemental", "bedingung": { "eigenschaft": "metallisch" } },
       "besonderheit": "Spiele Rostschutz-Öl auf eine deiner Metall-Karten: Sie erleidet bis zu deinem nächsten Zug keinen Schaden durch Ätz-Attacken (Rost).",
       "flavor": "Ein dünner Film gegen den langsamen Feind.",
-      "quest": "Quest 11 – Feuerfurt 2", "bild": "bilder/rostschutz-oel.jpg"
+      // Die Flasche steht links; mittig geschnitten wurde sie am Rand
+      // angeschnitten und die Karte zeigte vor allem die Werkbank.
+      "quest": "Quest 11 – Feuerfurt 2", "bild": "bilder/rostschutz-oel.jpg", "bildFokus": "10% 50%"
     },
     {
       "name": "Daltons Kugel", "formel": "", "klasse": "Ausrüstung", "lp": null,
@@ -645,6 +695,9 @@ window.KARTEN_DATEN = {
         { "name": "Staubwurf", "typ": "Wucht", "schaden": 10, "effekt": "" },
         { "name": "Laugenhauch", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Ausgeglüht", "typ": "Feuer", "schaden": 0,
+        "effekt": "Ein Metalloxid ist das Ende einer Verbrennung – es brennt kein zweites Mal. Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Lithium + Sauerstoff → Lithiumoxid",
         "bilanz": "28 u + 32 u = 60 u (vier Li auf ein O₂, zwei Teilchen à 30 u)",
@@ -662,6 +715,9 @@ window.KARTEN_DATEN = {
         { "name": "Schwerstaub", "typ": "Wucht", "schaden": 13, "effekt": "" },
         { "name": "Ätzschleier", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
+      "appAttacke": { "name": "Gasfänger", "typ": "Gas", "schaden": 0,
+        "effekt": "Bariumoxid bindet Kohlenstoffdioxid und Feuchtigkeit aus der Luft. Gas-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Barium + Sauerstoff → Bariumoxid",
         "bilanz": "274 u + 32 u = 306 u (zwei Teilchen à 153 u)",
@@ -678,6 +734,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Iodidsplitter", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Jodsalz", "typ": "Wucht", "schaden": 0,
+        "effekt": "Kaliumiodid steckt in jedem Speisesalz und schützt die Schilddrüse: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Kalium + Iod → Kaliumiodid",
         "bilanz": "78 u + 254 u = 332 u (zwei Teilchen à 166 u)",
@@ -694,6 +753,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Kristallhagel", "typ": "Wucht", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Ionengitter", "typ": "Wucht", "schaden": 0,
+        "effekt": "Im Ionengitter sind Natrium und Chlor abgesättigt – kaum etwas greift sie noch an. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Natrium + Chlor → Natriumchlorid (Kochsalz)",
         "bilanz": "46 u + 71 u = 117 u – nichts geht verloren! (zwei Teilchen à ca. 58 u)",
@@ -710,6 +772,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Salzsplitter", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Violettes Flammenlicht", "typ": "Feuer", "schaden": 0,
+        "effekt": "Kalium färbt jede Flamme fahlviolett. Im Aufblitzen verliert der Gegner die Sicht: Seine Angriffe gehen bis zu seinem nächsten Zug um 20 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.20 } },
       "synthese": {
         "wortgleichung": "Kalium + Chlor → Kaliumchlorid",
         "bilanz": "78 u + 71 u = 149 u – nichts geht verloren! (zwei Teilchen à ca. 75 u)",
@@ -727,6 +792,9 @@ window.KARTEN_DATEN = {
         { "name": "Branntkalk-Wurf", "typ": "Wucht", "schaden": 13, "effekt": "" },
         { "name": "Ätzstaub", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
+      "appAttacke": { "name": "Kalklöschen", "typ": "Ätz", "schaden": 0,
+        "effekt": "Branntkalk löscht sich mit Wasser und wird dabei so heiß, dass es dampft: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Calcium + Sauerstoff → Calciumoxid (Branntkalk)",
         "bilanz": "80 u + 32 u = 112 u (zwei Teilchen à 56 u)",
@@ -744,6 +812,9 @@ window.KARTEN_DATEN = {
         { "name": "Kalkmilchguss", "typ": "Ätz", "schaden": 13, "effekt": "" },
         { "name": "Mörtelpanzer", "typ": "Wucht", "schaden": 0, "effekt": "Calciumhydroxid erleidet bis zu deinem nächsten Zug 5 Schaden weniger pro Attacke." }
       ],
+      "appAttacke": { "name": "Neutralisation", "typ": "Ätz", "schaden": 0,
+        "effekt": "Eine Lauge nimmt der Säure ihre Schärfe – zusammen werden sie zu Salz und Wasser. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Calciumoxid + Wasser → Calciumhydroxid (Löschkalk)",
         "bilanz": "56 u + 18 u = 74 u – nichts geht verloren!",
@@ -761,6 +832,9 @@ window.KARTEN_DATEN = {
         { "name": "Kalksteinbrocken", "typ": "Wucht", "schaden": 15, "effekt": "" },
         { "name": "Kreidestaub", "typ": "Gas", "schaden": 5, "effekt": "" }
       ],
+      "appAttacke": { "name": "Kalkschale", "typ": "Wucht", "schaden": 0,
+        "effekt": "Woraus Muscheln und Schnecken ihr Haus bauen, hält auch einen Schlag aus. Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Calciumhydroxid + Kohlenstoffdioxid → Calciumcarbonat + Wasser (Kalkwasserprobe)",
         "bilanz": "74 u + 44 u = 100 u + 18 u",
@@ -817,6 +891,9 @@ window.KARTEN_DATEN = {
         { "name": "Reizhauch", "typ": "Gas", "schaden": 13, "effekt": "" },
         { "name": "Höhenriss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
+      "appAttacke": { "name": "Oxidationskraft", "typ": "Gas", "schaden": 0,
+        "effekt": "Ozon ist ein starkes Oxidationsmittel – damit wird Trinkwasser entkeimt, und dabei greift es alles Lebende an: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Stickstoffdioxid + Sauerstoff → Ozon + Stickstoffmonoxid (Sommersmog)",
         "bilanz": "46 u + 32 u = 48 u + 30 u (im Sonnenlicht – so entsteht Ozon in der Stadtluft)",
@@ -834,6 +911,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Radikalbiss", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Gefäßweiter", "typ": "Gas", "schaden": 0,
+        "effekt": "Stickstoffmonoxid ist im Körper ein Botenstoff, der die Blutgefäße weitet – dafür gab es einen Nobelpreis: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Stickstoff + Sauerstoff → Stickstoffmonoxid",
         "bilanz": "28 u + 32 u = 60 u (zwei Teilchen à 30 u)",
@@ -851,6 +931,9 @@ window.KARTEN_DATEN = {
         { "name": "Brauner Reizer", "typ": "Ätz", "schaden": 13, "effekt": "" },
         { "name": "Stechhusten", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner darf in seinem nächsten Zug keine Gas-Attacke einsetzen." }
       ],
+      "appAttacke": { "name": "Brauner Dunst", "typ": "Gas", "schaden": 0,
+        "effekt": "Stickstoffdioxid ist es, das den Smog über den Städten braun färbt: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Stickstoffmonoxid + Sauerstoff → Stickstoffdioxid",
         "bilanz": "60 u + 32 u = 92 u (zwei Teilchen à 46 u)",
@@ -867,6 +950,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Stilles Gift", "typ": "Gas", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Blutgift", "typ": "Gas", "schaden": 0,
+        "effekt": "Kohlenstoffmonoxid setzt sich an das Hämoglobin und lässt keinen Sauerstoff mehr durch: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Sauerstoff → Kohlenstoffmonoxid (unvollständige Verbrennung)",
         "bilanz": "24 u + 32 u = 56 u (zwei Teilchen à 28 u)",
@@ -884,6 +970,9 @@ window.KARTEN_DATEN = {
         { "name": "Lachkrampf", "typ": "Gas", "schaden": 5, "effekt": "Betäubt: Der Gegner darf sein aktives Elemental in seinem nächsten Zug nicht auswechseln." },
         { "name": "Treibhausdruck", "typ": "Wucht", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Betäubung", "typ": "Gas", "schaden": 0,
+        "effekt": "Lachgas war das erste Narkosemittel der Medizin – wer es einatmet, spürt den Schlag kaum: Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Stickstoff + Sauerstoff → Lachgas",
         "bilanz": "56 u + 32 u = 88 u (2 N₂ + O₂; zwei Teilchen à 44 u)",
@@ -900,6 +989,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Sumpffeuer", "typ": "Feuer", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Sumpfgas-Schwaden", "typ": "Gas", "schaden": 0,
+        "effekt": "Methan verdrängt die Luft und erstickt, was darin atmet: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Wasserstoff → Methan",
         "bilanz": "12 u + 4 u = 16 u – nichts geht verloren!",
@@ -916,6 +1008,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Salzsäure-Spritzer", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Weißer Rauch", "typ": "Gas", "schaden": 0,
+        "effekt": "Chlorwasserstoff zieht Wasser aus der Luft und raucht dabei sichtbar weiß: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Wasserstoff + Chlor → Chlorwasserstoff",
         "bilanz": "2 u + 71 u = 73 u (zwei Teilchen à ~36 u; Cl gerundet)",
@@ -995,6 +1090,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Dampfstoß", "typ": "Wucht", "schaden": 11, "effekt": "" }
       ],
+      "appAttacke": { "name": "Dampfschleier", "typ": "Gas", "schaden": 0,
+        "effekt": "Nebel ist nichts anderes als feinst verteiltes Wasser: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Wasserstoff + Sauerstoff → Wasser (Knallgas-Reaktion!)",
         "bilanz": "4 u + 32 u = 36 u (zwei Teilchen à 18 u)",
@@ -1085,6 +1183,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Sulfidhieb", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Basische Lösung", "typ": "Ätz", "schaden": 0,
+        "effekt": "In Wasser reagiert Natriumsulfid stark basisch und nimmt der Säure die Schärfe. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Natrium + Schwefel → Natriumsulfid",
         "bilanz": "46 u + 32 u = 78 u (zwei Na⁺ je S²⁻)",
@@ -1101,6 +1202,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Bitterbiss", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Magnesiumzufuhr", "typ": "Wucht", "schaden": 0,
+        "effekt": "Magnesium löst den Krampf – deshalb steckt es in jedem Sportgetränk: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Magnesium + Chlor → Magnesiumchlorid",
         "bilanz": "24 u + 71 u = 95 u (ein Mg²⁺ hält zwei Cl⁻)",
@@ -1117,6 +1221,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Gitterstoß", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Laugenbildung", "typ": "Ätz", "schaden": 0,
+        "effekt": "Mit Wasser wird aus Natriumoxid Natronlauge – sie ätzt noch, wenn der Schlag längst vorbei ist: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Natrium + Sauerstoff → Natriumoxid",
         "bilanz": "92 u + 32 u = 124 u (zwei Teilchen à 62 u)",
@@ -1133,6 +1240,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Flussspat-Schlag", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Härtender Schmelz", "typ": "Ätz", "schaden": 0,
+        "effekt": "Fluorid härtet den Zahnschmelz – darum steckt es in der Zahnpasta. Säure kommt schwerer durch: Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Calcium + Fluor → Calciumfluorid",
         "bilanz": "40 u + 38 u = 78 u (ein Ca²⁺ hält zwei F⁻)",
@@ -1149,6 +1259,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Blaukristall", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Kupferkalk", "typ": "Ätz", "schaden": 0,
+        "effekt": "Im Weinberg ist Kupfersulfat seit jeher das Mittel gegen Pilzbefall: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Kupfersulfid + Sauerstoff → Kupfersulfat (Rösten)",
         "bilanz": "96 u + 64 u = 160 u (CuS + 2 O₂; zwei Sauerstoff-Teilchen à 32 u)",
@@ -1165,6 +1278,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Streusalz-Stoß", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Trockenrohr", "typ": "Gas", "schaden": 0,
+        "effekt": "Calciumchlorid zieht die Feuchtigkeit aus jedem Gas, das an ihm vorbeizieht. Gas-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Calcium + Chlor → Calciumchlorid",
         "bilanz": "40 u + 71 u = 111 u (ein Ca²⁺ hält zwei Cl⁻)",
@@ -1288,6 +1404,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Klangschlag", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Patina", "typ": "Ätz", "schaden": 0,
+        "effekt": "Messing läuft an, aber es rostet nicht durch – die Schicht oben schützt, was darunter liegt. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kupfer + Zink → Messing (Legierung)",
         "bilanz": "64 u + 65 u = 129 u – ein Gemisch, keine Verbindung!",
@@ -1304,6 +1423,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Bronzehieb", "typ": "Wucht", "schaden": 17, "effekt": "" }
       ],
+      "appAttacke": { "name": "Bronzeschild", "typ": "Wucht", "schaden": 0,
+        "effekt": "Härter als Kupfer und Zinn für sich allein – dafür ist ein ganzes Zeitalter nach ihr benannt. Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kupfer + Zinn → Bronze (Legierung)",
         "bilanz": "64 u + 119 u = 183 u – ein Gemisch, keine Verbindung!",
@@ -1320,6 +1442,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Klingenschnitt", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
+      "appAttacke": { "name": "Gehärtet", "typ": "Feuer", "schaden": 0,
+        "effekt": "Was durch Glut und Abschrecken gegangen ist, fürchtet die Hitze nicht mehr. Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Eisen + Kohlenstoff → Stahl (Legierung)",
         "bilanz": "56 u + 12 u = 68 u – Eisen mit wenig Kohlenstoff, ein Gemisch!",
@@ -1371,6 +1496,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Sprudelstoß", "typ": "Ätz", "schaden": 8, "effekt": "Prickeln: Die nächste Attacke des Gegners macht 5 Schaden weniger." }
       ],
+      "appAttacke": { "name": "Blutpuffer", "typ": "Ätz", "schaden": 0,
+        "effekt": "Das Kohlensäure-System hält den pH-Wert des Blutes stabil, ganz gleich was hineingerät. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoffdioxid + Wasser → Kohlensäure",
         "bilanz": "44 u + 18 u = 62 u",
@@ -1389,6 +1517,9 @@ window.KARTEN_DATEN = {
         { "name": "Magensäure", "typ": "Ätz", "schaden": 18, "effekt": "Rückstoß: Salzsäure erleidet selbst 5 Schaden – wer ätzt, wird auch angegriffen.",
           "wirkung": { "art": "selbstschaden", "wert": 5 } }
       ],
+      "appAttacke": { "name": "Verdauung", "typ": "Ätz", "schaden": 0,
+        "effekt": "Magensäure zersetzt, was in sie gerät – langsam und gründlich: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Chlorwasserstoff + Wasser → Salzsäure",
         "bilanz": "Das Gas (36 u) löst sich im Wasser und zerfällt: HCl → H⁺ + Cl⁻",
@@ -1405,6 +1536,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Vitriolguss", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Wasserentzug", "typ": "Ätz", "schaden": 0,
+        "effekt": "Schwefelsäure zieht dem Zucker das Wasser aus und lässt schwarze Kohle zurück: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Schwefeldioxid + Wasser → Schwefelsäure (Kontaktverfahren)",
         "bilanz": "64 u + 16 u + 18 u = 98 u (SO₂ + ½ O₂ + H₂O – der halbe Sauerstoff kommt aus der Luft)",
@@ -1421,6 +1555,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Scheidewasser", "typ": "Ätz", "schaden": 13, "effekt": "Auch edle Metall-Elementals (Silber, Kupfer) erleiden vollen Schaden – Salpetersäure greift an, wo andere Säuren aufgeben." }
       ],
+      "appAttacke": { "name": "Nitrose Gase", "typ": "Gas", "schaden": 0,
+        "effekt": "Wo Salpetersäure Kupfer löst, steigen braune Schwaden auf: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Stickstoffdioxid + Wasser → Salpetersäure + Stickstoffmonoxid (Ostwald-Verfahren)",
         "bilanz": "138 u + 18 u = 126 u + 30 u (3 NO₂ + H₂O → 2 HNO₃ + NO)",
@@ -1440,6 +1577,9 @@ window.KARTEN_DATEN = {
         { "name": "Laugenbiss", "typ": "Ätz", "schaden": 13, "effekt": "" },
         { "name": "Seifensieder", "typ": "Ätz", "schaden": 5, "effekt": "Verseifung: Eine Ausrüstungskarte des Gegners wird abgelegt – Natronlauge löst Fett und Farbe." }
       ],
+      "appAttacke": { "name": "Natronkalk", "typ": "Gas", "schaden": 0,
+        "effekt": "Natronlauge schluckt Kohlenstoffdioxid aus der Luft – genau dafür steht sie im Natronkalk-Rohr. Gas-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Natrium + Wasser → Natronlauge + Wasserstoff",
         "bilanz": "23 u + 18 u = 40 u + 1 u (heftige Reaktion!)",
@@ -1456,6 +1596,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Kalkmilchguss", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Knochenkalk", "typ": "Wucht", "schaden": 0,
+        "effekt": "Calcium ist der Baustoff jedes Skeletts: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Calciumoxid + Wasser → Calciumhydroxid (Kalkwasser)",
         "bilanz": "56 u + 18 u = 74 u (Kalklöschen – es zischt und wird heiß!)",
@@ -1525,6 +1668,9 @@ window.KARTEN_DATEN = {
         { "name": "Sumpfblase", "typ": "Gas", "schaden": 5, "effekt": "Die nächste Attacke des Gegners macht 5 Schaden weniger." },
         { "name": "Irrlichtflamme", "typ": "Feuer", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Sumpfgas-Schwaden", "typ": "Gas", "schaden": 0,
+        "effekt": "Methan verdrängt die Luft und erstickt, was darin atmet: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Wasserstoff → Methan",
         "bilanz": "12 u + 4 u = 16 u – nichts geht verloren!",
@@ -1542,6 +1688,9 @@ window.KARTEN_DATEN = {
         { "name": "Kettenschlag", "typ": "Wucht", "schaden": 13, "effekt": "" },
         { "name": "Flammenzunge", "typ": "Feuer", "schaden": 10, "effekt": "" }
       ],
+      "appAttacke": { "name": "Gesättigt", "typ": "Ätz", "schaden": 0,
+        "effekt": "An einer Einfachbindung ist kein Platz mehr – ein gesättigter Kohlenwasserstoff reagiert kaum mit etwas. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Ethen + Wasserstoff → Ethan (Hydrierung)",
         "bilanz": "28 u + 2 u = 30 u – nichts geht verloren!",
@@ -1559,6 +1708,9 @@ window.KARTEN_DATEN = {
         { "name": "Feuerzeugfunke", "typ": "Feuer", "schaden": 13, "effekt": "" },
         { "name": "Druckstoß", "typ": "Wucht", "schaden": 10, "effekt": "" }
       ],
+      "appAttacke": { "name": "Kältenebel", "typ": "Gas", "schaden": 0,
+        "effekt": "Butan verdampft und kühlt dabei so stark, dass die Luft ringsum beschlägt: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 20 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.20 } },
       "synthese": {
         "wortgleichung": "Ethen + Ethan → Butan (die Kette wächst)",
         "bilanz": "28 u + 30 u = 58 u – nichts geht verloren!",
@@ -1575,6 +1727,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Superzündung", "typ": "Feuer", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Benzindunst", "typ": "Gas", "schaden": 0,
+        "effekt": "Octan verdunstet und legt sich als schwerer Dunst über den Boden: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 20 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.20 } },
       "synthese": {
         "wortgleichung": "Ethen + Wasserstoff → Octan (vier Bausteine werden eine Kette)",
         "bilanz": "112 u + 2 u = 114 u (4 C₂H₄ + H₂; vier Ethen-Teilchen à 28 u)",
@@ -1594,6 +1749,9 @@ window.KARTEN_DATEN = {
         { "name": "Reifehauch", "typ": "Gas", "schaden": 5, "effekt": "" },
         { "name": "Doppelgriff", "typ": "Wucht", "schaden": 13, "effekt": "Addition: Die Doppelbindung greift zu – der Gegner kann in seinem nächsten Zug nicht wechseln." }
       ],
+      "appAttacke": { "name": "Überreif", "typ": "Gas", "schaden": 0,
+        "effekt": "Ethen lässt Früchte reifen – ein einziger Apfel genügt für eine ganze Kiste. Und danach verderben sie: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Ethin + Wasserstoff → Ethen (Teilhydrierung)",
         "bilanz": "26 u + 2 u = 28 u – nichts geht verloren!",
@@ -1610,6 +1768,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Schweißflamme", "typ": "Feuer", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Schweißnaht", "typ": "Feuer", "schaden": 0,
+        "effekt": "Über 3000 °C – damit fügt man zusammen, was zerschlagen war: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Wasserstoff → Ethin (Lichtbogenverfahren)",
         "bilanz": "24 u + 2 u = 26 u (2 C + H₂; zwei Kohlenstoff-Teilchen à 12 u)",
@@ -1682,6 +1843,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Zuckerschub", "typ": "Wucht", "schaden": 17, "effekt": "Ein eigenes Elemental erhält 5 LP zurück – Traubenzucker ist reine Energie." }
       ],
+      "appAttacke": { "name": "Sofortenergie", "typ": "Wucht", "schaden": 0,
+        "effekt": "Traubenzucker ist reine Energie – der schnellste Weg zurück auf die Beine: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Kohlenstoffdioxid + Wasser → Traubenzucker + Sauerstoff (Fotosynthese)",
         "bilanz": "264 u + 108 u = 180 u + 192 u (6 CO₂ + 6 H₂O → C₆H₁₂O₆ + 6 O₂)",
@@ -1699,6 +1863,9 @@ window.KARTEN_DATEN = {
         { "name": "Spiritusflamme", "typ": "Feuer", "schaden": 13, "effekt": "" },
         { "name": "Lösungsmittel", "typ": "Ätz", "schaden": 5, "effekt": "Eine Ausrüstungskarte des Gegners wird abgelegt – Ethanol löst fast alles." }
       ],
+      "appAttacke": { "name": "Spiritusdunst", "typ": "Gas", "schaden": 0,
+        "effekt": "Ethanol verdunstet rasch und steht als unsichtbarer Dunst über der Flüssigkeit: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 20 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.20 } },
       "synthese": {
         "wortgleichung": "Traubenzucker → Ethanol + Kohlenstoffdioxid (alkoholische Gärung)",
         "bilanz": "180 u → 2 × 46 u + 2 × 44 u",
@@ -1715,6 +1882,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Holzgeist", "typ": "Gas", "schaden": 13, "effekt": "Blendung: Die nächste Attacke des Gegners macht nur halben Schaden." }
       ],
+      "appAttacke": { "name": "Blindmacher", "typ": "Gas", "schaden": 0,
+        "effekt": "Im Körper wird Methanol zu Ameisensäure – ein Kohlenstoff weniger als Ethanol, und aus dem Trinkbaren wird Gift: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoffmonoxid + Wasserstoff → Methanol",
         "bilanz": "28 u + 4 u = 32 u (CO + 2 H₂; zwei Wasserstoff-Teilchen à 2 u)",
@@ -1731,6 +1901,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Sirupfessel", "typ": "Wucht", "schaden": 15, "effekt": "Der Gegner kann in seinem nächsten Zug nicht wechseln – zäh wie Sirup." }
       ],
+      "appAttacke": { "name": "Nebelfluid", "typ": "Gas", "schaden": 0,
+        "effekt": "Glycerin ist der Stoff, aus dem Nebelmaschinen ihren Nebel machen: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Traubenzucker + Wasserstoff → Glycerin",
         "bilanz": "180 u + 4 u = 184 u (C₆H₁₂O₆ + 2 H₂ → 2 C₃H₈O₃; zwei Glycerin-Teilchen à 92 u)",
@@ -1749,6 +1922,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Stechender Hauch", "typ": "Gas", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Katerstoff", "typ": "Gas", "schaden": 0,
+        "effekt": "Ethanal entsteht, wenn der Körper Alkohol abbaut – es macht das Elend danach: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Ethanol + Kupferoxid → Ethanal + Kupfer + Wasser",
         "bilanz": "46 u + 80 u = 44 u + 64 u + 18 u (Oxidation: dem Molekül wird Wasserstoff entzogen)",
@@ -1767,6 +1943,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Ameisensäure-Sprühregen", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Brennnessel", "typ": "Ätz", "schaden": 0,
+        "effekt": "Was die Ameise versprüht und die Brennnessel sticht, brennt noch lange nach: Der Gegner erleidet am Ende seines nächsten Zuges 5 Schaden.",
+        "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoffmonoxid + Wasser → Methansäure",
         "bilanz": "28 u + 18 u = 46 u – nichts geht verloren!",
@@ -1783,6 +1962,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Entkalker", "typ": "Ätz", "schaden": 13, "effekt": "Gegen Salz- und Kalk-Elementals: zusätzlich 5 Schaden – der Kalk sprudelt weg." }
       ],
+      "appAttacke": { "name": "Hausmittel", "typ": "Ätz", "schaden": 0,
+        "effekt": "Essig ist die Säure, die man essen kann – und gegen Laugen das Mittel der Wahl. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Ethanol + Sauerstoff → Essigsäure + Wasser (Essigsäuregärung)",
         "bilanz": "46 u + 32 u = 60 u + 18 u",
@@ -1800,6 +1982,9 @@ window.KARTEN_DATEN = {
         { "name": "Stinkwolke", "typ": "Gas", "schaden": 5, "effekt": "Der Gegner muss sein aktives Elemental auf die Bank wechseln – niemand kämpft freiwillig daneben." },
         { "name": "Säurespritzer", "typ": "Ätz", "schaden": 13, "effekt": "" }
       ],
+      "appAttacke": { "name": "Gestankswolke", "typ": "Gas", "schaden": 0,
+        "effekt": "Noch in millionenfacher Verdünnung wahrnehmbar – der Gegner denkt an nichts anderes mehr: Seine Angriffe gehen bis zu seinem nächsten Zug um 25 % häufiger daneben.",
+        "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Traubenzucker → Buttersäure + Kohlenstoffdioxid + Wasserstoff (Buttersäuregärung)",
         "bilanz": "180 u = 88 u + 88 u + 4 u (C₆H₁₂O₆ → C₃H₇COOH + 2 CO₂ + 2 H₂)",
@@ -1818,6 +2003,9 @@ window.KARTEN_DATEN = {
       "attacken": [
         { "name": "Duftschleier", "typ": "Gas", "schaden": 8, "effekt": "Verstecken: Dein Elemental kann im nächsten Zug des Gegners nicht angegriffen werden." }
       ],
+      "appAttacke": { "name": "Fruchtduft", "typ": "Gas", "schaden": 0,
+        "effekt": "Aus Säure und Alkohol wird der Duft von Birne und Ananas – der Lohn der ganzen Veredelungsleiter: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Essigsäure + Ethanol → Essigsäureethylester + Wasser (Kondensation)",
         "bilanz": "60 u + 46 u = 88 u + 18 u",
@@ -1863,6 +2051,9 @@ window.KARTEN_DATEN = {
         { "name": "Ringschluss", "typ": "Wucht", "schaden": 17, "effekt": "" },
         { "name": "Klammergriff", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
+      "appAttacke": { "name": "Geschlossener Ring", "typ": "Wucht", "schaden": 0,
+        "effekt": "Ein geschlossener Ring hält, was ein offener Faden nicht hält. Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Stickstoff + Wasserstoff → Porphyrin-Ring",
         "bilanz": "240 u + 56 u + 14 u = 310 u (20 C + 2 N₂ + 7 H₂ – der Ring wird aus seinen Elementen aufgebaut)",
@@ -1880,6 +2071,9 @@ window.KARTEN_DATEN = {
         { "name": "Sauerstoffstrom", "typ": "Wucht", "schaden": 17, "effekt": "" },
         { "name": "Atemzug", "typ": "Gas", "schaden": 0, "effekt": "Heile alle deine Elementals um 10 LP – Hämoglobin bringt jedem, was er zum Leben braucht." }
       ],
+      "appAttacke": { "name": "Sauerstoffvorrat", "typ": "Gas", "schaden": 0,
+        "effekt": "Wer den Sauerstoff selbst mit sich trägt, dem nimmt kein Gas die Luft. Gas-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Eisen(II)-Ion + Porphyrin-Ring → Häm; Häm + Globin → Hämoglobin",
         "bilanz": "Fe (56 u) im Zentrum eines Riesenmoleküls von rund 64 500 u",
@@ -1897,6 +2091,9 @@ window.KARTEN_DATEN = {
         { "name": "Lichternte", "typ": "Feuer", "schaden": 18, "effekt": "" },
         { "name": "Fotosynthese", "typ": "Gas", "schaden": 0, "effekt": "Nimm eine abgelegte Karte zurück auf die Hand – aus Licht und Luft entsteht Neues." }
       ],
+      "appAttacke": { "name": "Lichtnahrung", "typ": "Feuer", "schaden": 0,
+        "effekt": "Aus Licht und Kohlenstoffdioxid baut Chlorophyll Zucker – und mit ihm Kraft: Dein aktives Elemental erhält 10 LP zurück.",
+        "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Magnesium-Ion + Porphyrin-Ring → Chlorophyll",
         "bilanz": "Mg (24 u) im Zentrum eines Moleküls von rund 893 u",
