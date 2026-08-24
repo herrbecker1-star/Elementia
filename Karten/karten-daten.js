@@ -191,7 +191,7 @@ window.KARTEN_DATEN = {
       // REGELN.appAttackenWirkungen. Jede hängt an einer echten
       // Stoffeigenschaft; fachliche Richtigkeit geht vor Balance.
       "appAttacke": { "name": "Schamottwall", "typ": "Feuer", "schaden": 0,
-        "effekt": "Feuerfest: Magnesiumoxid schmilzt erst bei 2852 °C. Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Feuerfest: Magnesiumoxid schmilzt erst bei 2852 °C. Feuer-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Magnesium + Sauerstoff → Magnesiumoxid",
@@ -216,7 +216,7 @@ window.KARTEN_DATEN = {
       // nach 298 Runden. Ein Loeschgas soll das Feuer daempfen, nicht
       // den Angriffstyp aus dem Spiel nehmen.
       "appAttacke": { "name": "Löschdecke aus Gas", "typ": "Gas", "schaden": 0,
-        "effekt": "Kohlenstoffdioxid ist das Löschgas jedes Feuerlöschers: Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Kohlenstoffdioxid ist das Löschgas jedes Feuerlöschers: Feuer-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Sauerstoff → Kohlenstoffdioxid",
@@ -238,7 +238,7 @@ window.KARTEN_DATEN = {
         { "name": "Zunderbrocken", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Zunderschicht", "typ": "Wucht", "schaden": 0,
-        "effekt": "Die dichte Oxidschicht auf dem Eisen bremst jeden weiteren Angriff: Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Die dichte Oxidschicht auf dem Eisen bremst jeden weiteren Angriff: Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Eisen + Sauerstoff → Eisenoxid",
@@ -258,7 +258,7 @@ window.KARTEN_DATEN = {
         { "name": "Sauerstoffgabe", "typ": "Feuer", "schaden": 10, "effekt": "" }
       ],
       "appAttacke": { "name": "Ausgebrannt", "typ": "Feuer", "schaden": 0,
-        "effekt": "Was schon mit Sauerstoff verbunden ist, verbrennt nicht noch einmal: Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Was schon mit Sauerstoff verbunden ist, verbrennt nicht noch einmal: Feuer-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kupfer + Sauerstoff → Kupferoxid",
@@ -380,7 +380,7 @@ window.KARTEN_DATEN = {
         { "name": "Schwefelbiss", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "appAttacke": { "name": "Unlöslich", "typ": "Ätz", "schaden": 0,
-        "effekt": "Kupfersulfid ist so schwer löslich, dass es sich in verdünnten Säuren nicht auflöst: Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Kupfersulfid ist so schwer löslich, dass es sich in verdünnten Säuren nicht auflöst: Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kupfer + Schwefel → Kupfersulfid",
@@ -402,7 +402,7 @@ window.KARTEN_DATEN = {
         { "name": "Kantenhieb", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Steinharte Kante", "typ": "Wucht", "schaden": 0,
-        "effekt": "Pyrit ritzt Glas und Stahl – Härte 6,5 auf der Mohsskala: Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Pyrit ritzt Glas und Stahl – Härte 6,5 auf der Mohsskala: Wucht-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Eisen + Schwefel → Pyrit",
@@ -696,7 +696,7 @@ window.KARTEN_DATEN = {
         { "name": "Laugenhauch", "typ": "Ätz", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Ausgeglüht", "typ": "Feuer", "schaden": 0,
-        "effekt": "Ein Metalloxid ist das Ende einer Verbrennung – es brennt kein zweites Mal. Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Ein Metalloxid ist das Ende einer Verbrennung – es brennt kein zweites Mal. Feuer-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Lithium + Sauerstoff → Lithiumoxid",
@@ -716,7 +716,7 @@ window.KARTEN_DATEN = {
         { "name": "Ätzschleier", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "appAttacke": { "name": "Gasfänger", "typ": "Gas", "schaden": 0,
-        "effekt": "Bariumoxid bindet Kohlenstoffdioxid und Feuchtigkeit aus der Luft. Gas-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Bariumoxid bindet Kohlenstoffdioxid und Feuchtigkeit aus der Luft. Gas-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Barium + Sauerstoff → Bariumoxid",
@@ -754,7 +754,7 @@ window.KARTEN_DATEN = {
         { "name": "Kristallhagel", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Ionengitter", "typ": "Wucht", "schaden": 0,
-        "effekt": "Im Ionengitter sind Natrium und Chlor abgesättigt – kaum etwas greift sie noch an. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Im Ionengitter sind Natrium und Chlor abgesättigt – kaum etwas greift sie noch an. Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Natrium + Chlor → Natriumchlorid (Kochsalz)",
@@ -813,7 +813,7 @@ window.KARTEN_DATEN = {
         { "name": "Mörtelpanzer", "typ": "Wucht", "schaden": 0, "effekt": "Calciumhydroxid erleidet bis zu deinem nächsten Zug 5 Schaden weniger pro Attacke." }
       ],
       "appAttacke": { "name": "Neutralisation", "typ": "Ätz", "schaden": 0,
-        "effekt": "Eine Lauge nimmt der Säure ihre Schärfe – zusammen werden sie zu Salz und Wasser. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Eine Lauge nimmt der Säure ihre Schärfe – zusammen werden sie zu Salz und Wasser. Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Calciumoxid + Wasser → Calciumhydroxid (Löschkalk)",
@@ -833,7 +833,7 @@ window.KARTEN_DATEN = {
         { "name": "Kreidestaub", "typ": "Gas", "schaden": 5, "effekt": "" }
       ],
       "appAttacke": { "name": "Kalkschale", "typ": "Wucht", "schaden": 0,
-        "effekt": "Woraus Muscheln und Schnecken ihr Haus bauen, hält auch einen Schlag aus. Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Woraus Muscheln und Schnecken ihr Haus bauen, hält auch einen Schlag aus. Wucht-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Calciumhydroxid + Kohlenstoffdioxid → Calciumcarbonat + Wasser (Kalkwasserprobe)",
@@ -971,7 +971,7 @@ window.KARTEN_DATEN = {
         { "name": "Treibhausdruck", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Betäubung", "typ": "Gas", "schaden": 0,
-        "effekt": "Lachgas war das erste Narkosemittel der Medizin – wer es einatmet, spürt den Schlag kaum: Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Lachgas war das erste Narkosemittel der Medizin – wer es einatmet, spürt den Schlag kaum: Wucht-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Stickstoff + Sauerstoff → Lachgas",
@@ -1185,7 +1185,7 @@ window.KARTEN_DATEN = {
         { "name": "Sulfidhieb", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Basische Lösung", "typ": "Ätz", "schaden": 0,
-        "effekt": "In Wasser reagiert Natriumsulfid stark basisch und nimmt der Säure die Schärfe. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "In Wasser reagiert Natriumsulfid stark basisch und nimmt der Säure die Schärfe. Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Natrium + Schwefel → Natriumsulfid",
@@ -1242,7 +1242,7 @@ window.KARTEN_DATEN = {
         { "name": "Flussspat-Schlag", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Härtender Schmelz", "typ": "Ätz", "schaden": 0,
-        "effekt": "Fluorid härtet den Zahnschmelz – darum steckt es in der Zahnpasta. Säure kommt schwerer durch: Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Fluorid härtet den Zahnschmelz – darum steckt es in der Zahnpasta. Säure kommt schwerer durch: Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Calcium + Fluor → Calciumfluorid",
@@ -1280,7 +1280,7 @@ window.KARTEN_DATEN = {
         { "name": "Streusalz-Stoß", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Trockenrohr", "typ": "Gas", "schaden": 0,
-        "effekt": "Calciumchlorid zieht die Feuchtigkeit aus jedem Gas, das an ihm vorbeizieht. Gas-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Calciumchlorid zieht die Feuchtigkeit aus jedem Gas, das an ihm vorbeizieht. Gas-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Calcium + Chlor → Calciumchlorid",
@@ -1406,7 +1406,7 @@ window.KARTEN_DATEN = {
         { "name": "Klangschlag", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Patina", "typ": "Ätz", "schaden": 0,
-        "effekt": "Messing läuft an, aber es rostet nicht durch – die Schicht oben schützt, was darunter liegt. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Messing läuft an, aber es rostet nicht durch – die Schicht oben schützt, was darunter liegt. Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kupfer + Zink → Messing (Legierung)",
@@ -1425,7 +1425,7 @@ window.KARTEN_DATEN = {
         { "name": "Bronzehieb", "typ": "Wucht", "schaden": 17, "effekt": "" }
       ],
       "appAttacke": { "name": "Bronzeschild", "typ": "Wucht", "schaden": 0,
-        "effekt": "Härter als Kupfer und Zinn für sich allein – dafür ist ein ganzes Zeitalter nach ihr benannt. Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Härter als Kupfer und Zinn für sich allein – dafür ist ein ganzes Zeitalter nach ihr benannt. Wucht-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kupfer + Zinn → Bronze (Legierung)",
@@ -1444,7 +1444,7 @@ window.KARTEN_DATEN = {
         { "name": "Klingenschnitt", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Gehärtet", "typ": "Feuer", "schaden": 0,
-        "effekt": "Was durch Glut und Abschrecken gegangen ist, fürchtet die Hitze nicht mehr. Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Was durch Glut und Abschrecken gegangen ist, fürchtet die Hitze nicht mehr. Feuer-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Eisen + Kohlenstoff → Stahl (Legierung)",
@@ -1498,7 +1498,7 @@ window.KARTEN_DATEN = {
         { "name": "Korundschliff", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Passivschicht", "typ": "Ätz", "schaden": 0,
-        "effekt": "Die hauchdünne Oxidschicht bildet sich sofort neu, wenn man sie abkratzt – deshalb rostet Aluminium nicht. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Die hauchdünne Oxidschicht bildet sich sofort neu, wenn man sie abkratzt – deshalb rostet Aluminium nicht. Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Aluminium + Sauerstoff → Aluminiumoxid (Korund)",
@@ -1555,7 +1555,7 @@ window.KARTEN_DATEN = {
         { "name": "Erzbrocken", "typ": "Wucht", "schaden": 15, "effekt": "" }
       ],
       "appAttacke": { "name": "Weiße Glasur", "typ": "Feuer", "schaden": 0,
-        "effekt": "Zinnoxid trübt die Glasur weiß und hält die Hitze vom Ton fern. Feuer-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Zinnoxid trübt die Glasur weiß und hält die Hitze vom Ton fern. Feuer-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Zinn + Sauerstoff → Zinnoxid (Zinnstein)",
@@ -1574,7 +1574,7 @@ window.KARTEN_DATEN = {
         { "name": "Sprudelstoß", "typ": "Ätz", "schaden": 8, "effekt": "Prickeln: Die nächste Attacke des Gegners macht 5 Schaden weniger." }
       ],
       "appAttacke": { "name": "Blutpuffer", "typ": "Ätz", "schaden": 0,
-        "effekt": "Das Kohlensäure-System hält den pH-Wert des Blutes stabil, ganz gleich was hineingerät. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Das Kohlensäure-System hält den pH-Wert des Blutes stabil, ganz gleich was hineingerät. Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoffdioxid + Wasser → Kohlensäure",
@@ -1655,7 +1655,7 @@ window.KARTEN_DATEN = {
         { "name": "Seifensieder", "typ": "Ätz", "schaden": 5, "effekt": "Verseifung: Eine Ausrüstungskarte des Gegners wird abgelegt – Natronlauge löst Fett und Farbe." }
       ],
       "appAttacke": { "name": "Natronkalk", "typ": "Gas", "schaden": 0,
-        "effekt": "Natronlauge schluckt Kohlenstoffdioxid aus der Luft – genau dafür steht sie im Natronkalk-Rohr. Gas-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Natronlauge schluckt Kohlenstoffdioxid aus der Luft – genau dafür steht sie im Natronkalk-Rohr. Gas-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Natrium + Wasser → Natronlauge + Wasserstoff",
@@ -1766,7 +1766,7 @@ window.KARTEN_DATEN = {
         { "name": "Flammenzunge", "typ": "Feuer", "schaden": 10, "effekt": "" }
       ],
       "appAttacke": { "name": "Gesättigt", "typ": "Ätz", "schaden": 0,
-        "effekt": "An einer Einfachbindung ist kein Platz mehr – ein gesättigter Kohlenwasserstoff reagiert kaum mit etwas. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "An einer Einfachbindung ist kein Platz mehr – ein gesättigter Kohlenwasserstoff reagiert kaum mit etwas. Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Ethen + Wasserstoff → Ethan (Hydrierung)",
@@ -2040,7 +2040,7 @@ window.KARTEN_DATEN = {
         { "name": "Entkalker", "typ": "Ätz", "schaden": 13, "effekt": "Gegen Salz- und Kalk-Elementals: zusätzlich 5 Schaden – der Kalk sprudelt weg." }
       ],
       "appAttacke": { "name": "Hausmittel", "typ": "Ätz", "schaden": 0,
-        "effekt": "Essig ist die Säure, die man essen kann – und gegen Laugen das Mittel der Wahl. Ätz-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Essig ist die Säure, die man essen kann – und gegen Laugen das Mittel der Wahl. Ätz-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Ethanol + Sauerstoff → Essigsäure + Wasser (Essigsäuregärung)",
@@ -2129,7 +2129,7 @@ window.KARTEN_DATEN = {
         { "name": "Klammergriff", "typ": "Ätz", "schaden": 10, "effekt": "" }
       ],
       "appAttacke": { "name": "Geschlossener Ring", "typ": "Wucht", "schaden": 0,
-        "effekt": "Ein geschlossener Ring hält, was ein offener Faden nicht hält. Wucht-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Ein geschlossener Ring hält, was ein offener Faden nicht hält. Wucht-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Stickstoff + Wasserstoff → Porphyrin-Ring",
@@ -2149,7 +2149,7 @@ window.KARTEN_DATEN = {
         { "name": "Atemzug", "typ": "Gas", "schaden": 0, "effekt": "Heile alle deine Elementals um 10 LP – Hämoglobin bringt jedem, was er zum Leben braucht." }
       ],
       "appAttacke": { "name": "Sauerstoffvorrat", "typ": "Gas", "schaden": 0,
-        "effekt": "Wer den Sauerstoff selbst mit sich trägt, dem nimmt kein Gas die Luft. Gas-Attacken machen bis zu deinem nächsten Zug 5 Schaden weniger.",
+        "effekt": "Wer den Sauerstoff selbst mit sich trägt, dem nimmt kein Gas die Luft. Gas-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Eisen(II)-Ion + Porphyrin-Ring → Häm; Häm + Globin → Hämoglobin",
