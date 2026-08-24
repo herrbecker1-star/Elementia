@@ -227,6 +227,9 @@ body.spielt { overflow: hidden; position: fixed; inset: 0; }
 }
 .leiste .schub { margin-left: auto; }
 .leiste .amzug { color: var(--gold-hell); border-color: var(--gold); background: rgba(200,162,74,.14); }
+/* Bank-Synergie: sie gilt, solange die Lage gilt – also steht sie da,
+   statt als Ruf zu verschwinden. Der Grund hängt als title daran. */
+.leiste .synergie { color: #c9e6a8; border-color: rgba(140,190,90,.5); background: rgba(77,139,82,.16); }
 
 /* --- Bankreihe ------------------------------------------------ */
 .bank { display: flex; gap: 6px; justify-content: center; align-items: flex-start; min-height: 0; }
@@ -394,6 +397,33 @@ body.spielt { overflow: hidden; position: fixed; inset: 0; }
 }
 .spielkarte.stumpf { opacity: .55; }
 .spielkarte[disabled] { cursor: default; }
+
+/* Die Wahl, wer nachrückt. Derselbe Ring wie beim Zielen, aber in Gold:
+   Es ist eine eigene Wahl, kein Angriff. */
+.spielkarte.nachruecker {
+  outline: 2px dashed var(--gold); outline-offset: 3px;
+  animation: zielpulsen 1.1s ease-in-out infinite;
+}
+body.ruhig .spielkarte.nachruecker { animation: none; outline-style: solid; }
+
+/* Was gerade an einem Elemental hängt: Schutz, Gift, Nebel.
+   Über den LP-Balken gelegt, damit es keine Kartenhöhe kostet – auf
+   360 × 640 ist jeder Pixel schon vergeben. */
+.kzustaende {
+  position: absolute; left: 2px; right: 2px; bottom: 8px; z-index: 3;
+  display: flex; flex-wrap: wrap; gap: 2px; justify-content: center;
+  pointer-events: none;
+}
+.kzustand {
+  font-size: 8px; font-weight: 700; line-height: 1.5;
+  border-radius: 20px; padding: 0 4px;
+  background: rgba(0,0,0,.72); border: 1px solid rgba(255,255,255,.18);
+  white-space: nowrap;
+}
+.k-arena .kzustand { font-size: 10px; padding: 0 6px; }
+.kzustand.schutz { color: #a8c8ff; border-color: rgba(134,176,255,.55); }
+.kzustand.gift   { color: #c9e6a8; border-color: rgba(140,190,90,.55); }
+.kzustand.nebel  { color: #d9d2c4; border-color: rgba(220,215,200,.45); }
 body:not(.ruhig) .k-hand:not([disabled]):hover { transform: translateY(-8px); z-index: 4; }
 
 /* Der Zielring: die Karte, auf die der gewählte Zug wirkt.
@@ -423,6 +453,12 @@ body.ruhig .spielkarte.ziel { animation: none; outline-style: solid; }
 .leerplatz {
   flex: 1 1 auto; display: grid; place-items: center; color: var(--leise);
   font-size: 13px; border: 1px dashed rgba(200,162,74,.2); border-radius: 10px;
+}
+/* Die Arena steht leer, weil gewählt werden muss – das ist keine
+   Leerstelle, sondern eine Aufforderung. */
+.leerplatz.wartet {
+  color: var(--gold-hell); border-color: var(--gold);
+  background: rgba(200,162,74,.08); text-align: center; padding: 6px;
 }
 
 .eigen { display: flex; flex-wrap: wrap; gap: 3px; }
@@ -1773,6 +1809,20 @@ function lauschen(d) {
   d.bei("elemental-erschöpft", function (x) {
     ereignisse.push({ was: "erschoepft", seite: x.spieler.index, name: x.instanz.karte.name });
   });
+  // Die Arena bleibt jetzt leer, bis gewählt ist (Regelwerk Abschnitt 4).
+  // Der Bildschirm muss das sagen, sonst sieht es aus wie ein Hänger.
+  d.bei("nachruecken-noetig", function (x) {
+    ereignisse.push({ was: "nachruecken-noetig", seite: x.spieler.index,
+      name: x.spieler.name });
+  });
+  // Ein Schutz, der noch hält, ist eine gute Nachricht – und die einzige
+  // Stelle, an der die drei Runden überhaupt sichtbar werden.
+  d.bei("zustand-haelt", function (x) {
+    if (x.zustand.art !== "schutz") return;
+    ereignisse.push({ was: "haelt", seite: x.spieler.index,
+      quelle: x.zustand.quelle, gegen: x.zustand.gegen,
+      runden: x.zustand.runden, name: x.instanz.karte.name });
+  });
   d.bei("synthese-gelungen", function (x) {
     ereignisse.push({ was: "synthese", seite: x.spieler.index, verbindung: x.verbindung,
       edukte: (x.verbindung.synthese.edukte || []).slice(), inArena: x.inArena });
@@ -1791,9 +1841,18 @@ function lauschen(d) {
 // ============================================================
 function ichSpieler()   { return duell.spieler[ansichtSeite]; }
 function gegenSpieler() { return duell.spieler[1 - ansichtSeite]; }
+// amHandeln(), nicht amZug: Nach einem erschöpften Elemental wählt sein
+// Besitzer den Ersatz – auch mitten im Zug des Gegners (Regelwerk
+// Abschnitt 4). Solange das aussteht, bedient NUR er.
 function darfBedienen() {
   return spielLaeuft && !duell.vorbei &&
-         duell.amZug === ansichtSeite && kanal.steuert(ansichtSeite);
+         duell.amHandeln() === ansichtSeite && kanal.steuert(ansichtSeite);
+}
+
+// Muss ICH gerade ein Elemental von der Bank wählen?
+function wartetAufWahl() {
+  return !!(duell && duell.nachruecken && duell.nachruecken.length &&
+            duell.nachruecken[0] === ansichtSeite);
 }
 
 function zeichne() {
@@ -1822,6 +1881,22 @@ function zeichneLeiste(ziel, spieler, istGegner) {
   ziel.appendChild(el("span", "marke",
     "▣ " + imTeam + (imTeam === 1 ? " Elemental" : " Elementals")));
 
+  // Bank-Synergien stehen, solange die Lage steht – also gehören sie
+  // auf die Leiste und nicht in einen Ruf, der nach zwei Sekunden weg
+  // ist. Das ist die Stelle, an der die Mechanik nebenbei Chemie
+  // unterrichtet: Der Grund hängt als title an der Marke.
+  if (duell.synergienVon) {
+    duell.synergienVon(spieler).forEach(function (s) {
+      var w = s.wirkung || {};
+      var zusatz = w.art === "schadensbonus"
+        ? " +" + w.wert + (w.typ ? " " + w.typ : "")
+        : (w.art === "schutz" ? " −" + w.minus + " " + w.gegen : "");
+      var m = el("span", "marke synergie", "⚛ " + s.name + zusatz);
+      m.title = s.begruendung || "";
+      ziel.appendChild(m);
+    });
+  }
+
   var schub = el("span", "schub");
   ziel.appendChild(schub);
 
@@ -1830,7 +1905,9 @@ function zeichneLeiste(ziel, spieler, istGegner) {
   // wäre sinnlos gewesen. Jetzt ist er notwendig: Wer sein Gerät
   // gespielt hat und nicht angreifen kann (Duftphiole, leere Bank),
   // säße sonst fest.
-  if (!istGegner && !duell.vorbei && darfBedienen()) {
+  // Nicht, solange eine Nachrück-Wahl aussteht: Abgeben statt zu wählen
+  // ließe die Arena leer stehen, und der Gegner schlüge ins Nichts.
+  if (!istGegner && !duell.vorbei && darfBedienen() && !wartetAufWahl()) {
     var passen = el("button", "knopf klein", "Zug beenden");
     passen.title = "Ausrüstung und Synthese kosten keinen Zug — hiermit gibst du ab.";
     passen.addEventListener("click", function () {
@@ -1884,6 +1961,19 @@ function baueBankkarte(instanz, index, istGegner) {
     return b;
   }
 
+  // Die Nachrück-Wahl: EIN Antippen führt aus, nicht zwei. Die
+  // Zwei-Tipp-Geste ist eine Rücknahmemöglichkeit – hier gibt es nichts
+  // zurückzunehmen, denn ein anderer Zug steht gar nicht zur Wahl.
+  if (wartetAufWahl() && darfBedienen() && ichSpieler().bank[index] === instanz) {
+    b.classList.add("waehlbar");
+    b.classList.add("nachruecker");
+    b.addEventListener("click", function () {
+      auswahl = null;
+      ausfuehren({ art: "nachruecken", index: index });
+    });
+    return b;
+  }
+
   if (darfBedienen() && ichSpieler().bank[index] === instanz) {
     b.classList.add("waehlbar");
     if (auswahl && auswahl.art === "wechsel" && auswahl.index === index) b.classList.add("gewaehlt");
@@ -1906,6 +1996,39 @@ function baueBankkarte(instanz, index, istGegner) {
 //  allein wäre Farbe als einzige Information (rot-grün-blind),
 //  die Zahl allein wäre aus zwei Metern nicht ablesbar.
 // ------------------------------------------------------------
+// Die Zustände einer Instanz in kurze Marken übersetzt. Kurz genug für
+// eine 140-px-Karte, der ganze Satz hängt als title daran.
+//
+// Synergie-Zustände bleiben draußen: Sie stehen als eigene Marke auf
+// der Leiste (zeichneLeiste) und wären hier doppelt.
+function zustaendeBeschreiben(instanz) {
+  var raus = [];
+  if (!instanz || !instanz.zustaende) return raus;
+  instanz.zustaende.forEach(function (z) {
+    if (z.synergie) return;
+    var wie = z.runden > 1 ? " ·" + z.runden : "";
+    if (z.art === "schutz") {
+      var wieviel = z.faktor !== undefined && z.faktor < 1
+        ? (z.faktor === 0 ? "kein Schaden" : "halber Schaden")
+        : "−" + z.minus;
+      raus.push({
+        klasse: "schutz", kurz: "🛡 " + (z.gegen === "alle" ? "" : z.gegen + " ") + wieviel + wie,
+        lang: z.quelle + ": " + (z.gegen === "alle" ? "Alle Attacken" : z.gegen + "-Attacken") +
+          " machen " + wieviel + " Schaden" +
+          (z.runden > 1 ? ", noch " + z.runden + " Runden." : ".")
+      });
+    } else if (z.art === "zustandsschaden") {
+      raus.push({ klasse: "gift", kurz: "☠ " + z.wert + wie,
+        lang: z.quelle + ": " + z.wert + " Schaden am Ende des nächsten Zuges." });
+    } else if (z.art === "vernebelt") {
+      raus.push({ klasse: "nebel", kurz: "🌫 " + Math.round((z.minus || 0) * 100) + "%" + wie,
+        lang: z.quelle + ": Angriffe gehen um " + Math.round((z.minus || 0) * 100) +
+          " Prozentpunkte häufiger daneben." });
+    }
+  });
+  return raus;
+}
+
 function baueSpielkarte(instanz, groesse, zusatz) {
   zusatz = zusatz || {};
   var k = instanz.karte ? instanz.karte : instanz;      // Instanz oder nackte Karte
@@ -1959,6 +2082,24 @@ function baueSpielkarte(instanz, groesse, zusatz) {
     b.appendChild(balken);
   }
 
+  // --- Was gerade an diesem Elemental hängt --------------------
+  // Bis zum 24.08.2026 gab es das gar nicht: Schutz, Gift und Nebel
+  // erschienen als Ruf und waren nach zwei Sekunden weg. Solange ein
+  // Schutz genau eine Runde hielt, ging das gerade noch. Er hält jetzt
+  // drei — und ein Schutz, den niemand sieht, ist kein Spielzug,
+  // sondern ein Rätsel.
+  var zustandstext = zustaendeBeschreiben(instanz);
+  if (zustandstext.length) {
+    var leiste = el("div", "kzustaende");
+    zustandstext.forEach(function (z) {
+      var s = el("span", "kzustand " + z.klasse, z.kurz);
+      s.title = z.lang;
+      leiste.appendChild(s);
+    });
+    b.appendChild(leiste);
+    b.classList.add("mitzustand");
+  }
+
   b.setAttribute("aria-label", k.name + ", " + k.klasse +
     (lp !== null && lp !== undefined ? ", " + lp + " von " + maxLp + " Lebenspunkten" : "") +
     (zusatz.beschreibung ? ", " + zusatz.beschreibung : ""));
@@ -1973,7 +2114,19 @@ function zeichneArena(ziel, spieler, istGegner) {
   var platz = el("div", "kampfplatz");
 
   if (!spieler.arena) {
-    platz.appendChild(el("div", "leerplatz", "Kein Elemental in der Arena"));
+    // Wer wählen muss, soll nicht raten müssen, wo. Der Satz steht
+    // dort, wo die leere Arena ist, und zeigt auf die Bank.
+    var wartet = duell.nachruecken && duell.nachruecken.length &&
+                 duell.nachruecken[0] === spieler.index;
+    var text = "Kein Elemental in der Arena";
+    if (wartet) {
+      text = (spieler.index === ansichtSeite && kanal.steuert(ansichtSeite))
+        ? "Wähle von der Bank, wer nachrückt"
+        : spieler.name + " wählt von der Bank …";
+    }
+    var leer = el("div", "leerplatz", text);
+    if (wartet) leer.classList.add("wartet");
+    platz.appendChild(leer);
     ziel.appendChild(platz);
     return;
   }
@@ -2689,10 +2842,12 @@ function sagen(text, dauer) {
   if (sageZeit) { clearTimeout(sageZeit); sageZeit = null; }
   if (!text) {
     if (duell && !duell.vorbei) {
-      var dran = duell.spieler[duell.amZug];
+      var dran = duell.spieler[duell.amHandeln()];
+      var wahl = duell.nachruecken && duell.nachruecken.length;
       s.textContent = darfBedienen()
-        ? (auswahl ? hinweisZurAuswahl() : "Du bist am Zug.")
-        : dran.name + " überlegt …";
+        ? (wahl ? "Wähle dein nächstes Elemental von der Bank."
+                : (auswahl ? hinweisZurAuswahl() : "Du bist am Zug."))
+        : dran.name + (wahl ? " wählt ein neues Elemental …" : " überlegt …");
     } else { s.textContent = ""; }
     return;
   }
@@ -2743,9 +2898,22 @@ function zugBeschreiben(zug) {
     return a ? a.name + " (" + a.typ + ")" : "Angriff";
   }
   if (zug.art === "wechsel") return "Wechsel zu " + spieler.bank[zug.index].karte.name;
+  if (zug.art === "nachruecken") return spieler.bank[zug.index].karte.name + " rückt nach";
   if (zug.art === "synthese") {
     var v = spieler.hand.verbindungen[zug.index];
-    return "Reaktion zu " + v.name;
+    // WO die Edukte stehen, gehört dazu. „Die Elemente auf der Bank
+    // reagieren mit" ist der Satz, der die Bank zu mehr macht als zu
+    // einer Warteschlange – und genau daran hängen die Synergien:
+    // Zwei Verbindungen nebeneinander tragen „Verwandte Stoffklasse".
+    var vonBank = 0, ausArena = 0;
+    (zug.edukteImTeam || []).forEach(function (i) {
+      if (spieler.arena === i) ausArena++; else vonBank++;
+    });
+    var wo = "";
+    if (vonBank && ausArena) wo = " — aus der Arena und von der Bank";
+    else if (vonBank) wo = " — " + (vonBank === 1 ? "das Edukt steht" : "beide Edukte stehen") +
+      " auf der Bank";
+    return "Reaktion zu " + v.name + wo;
   }
   if (zug.art === "ausruestung") {
     var k = spieler.hand.ausruestung[zug.index];
@@ -2769,7 +2937,13 @@ function zugPruefen(spieler, zug) {
   // gelegentlich einfach passen. Hier muss es trotzdem durch — seit
   // Ausrüstung frei ist, ist Abgeben ein echter Spielzug. Gefährlich
   // ist es nicht: Aussetzen verändert nichts, es reicht den Zug weiter.
-  if (zug.art === "aussetzen") return { art: "aussetzen" };
+  //
+  // Eine Ausnahme gibt es seit dem 24.08.2026: Solange eine
+  // Nachrück-Wahl aussteht, verändert Aussetzen sehr wohl etwas – es
+  // ließe die Arena leer, und der Gegner schlüge ins Nichts. Dann gilt
+  // wieder die harte Regel: nur, was in moeglicheZuege steht.
+  var wahlSteht = duell.nachruecken && duell.nachruecken.length;
+  if (zug.art === "aussetzen") return wahlSteht ? null : { art: "aussetzen" };
 
   var moeglich = duell.moeglicheZuege(spieler);
   for (var i = 0; i < moeglich.length; i++) {
@@ -2797,7 +2971,9 @@ function zugPruefen(spieler, zug) {
 // und die Zugnummern haben es gefangen, statt es zu verschlucken.
 function ausfuehren(zug, erwartetePruefsumme, vonAussen) {
   if (!spielLaeuft || duell.vorbei) return;
-  var spieler = duell.spieler[duell.amZug];
+  // amHandeln: Die Nachrück-Wahl trifft der, dessen Arena leer ist,
+  // auch wenn der Gegner am Zug bleibt.
+  var spieler = duell.spieler[duell.amHandeln()];
   var echt = zugPruefen(spieler, zug);
   if (!echt) {
     // Über das Netz ist das die Stelle, an der Schummeln endet:
@@ -2854,7 +3030,10 @@ function auseinandergelaufen(grund) {
 // ============================================================
 function amZugPruefen(ersterZug) {
   if (!duell || duell.vorbei) { if (duell) zeigeEnde(); return; }
-  var index = duell.amZug;
+  // amHandeln, nicht amZug: Steht eine Nachrück-Wahl aus, wird der
+  // Wählende gefragt — auch wenn der Gegner am Zug bleibt. Im Hot-Seat
+  // dreht sich das Brett damit von selbst auf ihn.
+  var index = duell.amHandeln();
 
   // Hot-Seat: Das Brett dreht sich auf den, der dran ist, und
   // davor kommt der Vorhang. Beim allerersten Zug auch – sonst
@@ -2870,7 +3049,9 @@ function amZugPruefen(ersterZug) {
   if (kanal.steuert(index)) { auswahl = null; zeichne(); sagen(null); return; }
 
   zeichne();
-  sagen(duell.spieler[index].name + " überlegt …");
+  sagen(duell.spieler[index].name +
+    ((duell.nachruecken && duell.nachruecken.length)
+      ? " wählt ein neues Elemental …" : " überlegt …"));
   kanal.fordereZug(duell, duell.spieler[index], function (zug, nummer, pruefsumme) {
     if (!duell || duell.vorbei) return;
     // Beim Netzduell trägt jeder Zug seine Nummer. Kommt eine, die
@@ -3010,6 +3191,23 @@ function spieleEreignis(e, weiter) {
   if (e.was === "erschoepft") {
     rufen(e.name + " ist erschöpft", "#d4513f", mitteVon(arenaId(e.seite)));
     pause(760, weiter);
+    return;
+  }
+
+  if (e.was === "nachruecken-noetig") {
+    // Neu zeichnen, damit die Arena leer dasteht und die Bank die
+    // wählbaren Karten zeigt. Der Satz dazu kommt aus sagen(null),
+    // das die Lage selbst liest.
+    zeichne();
+    sagen(null);
+    pause(360, weiter);
+    return;
+  }
+
+  if (e.was === "haelt") {
+    sagen(e.quelle + " hält weiter (noch " + e.runden +
+      (e.runden === 1 ? " Runde" : " Runden") + ")");
+    pause(340, weiter);
     return;
   }
 
@@ -3392,8 +3590,8 @@ if (PARAM.get("probe")) {
         return;
       }
       if (duell.vorbei || !spielLaeuft) return;
-      if (duell.amZug !== ansichtSeite || !kanal.steuert(ansichtSeite)) return;
-      ausfuehren(KI.entscheide(duell, duell.spieler[duell.amZug], "vorsichtig"));
+      if (duell.amHandeln() !== ansichtSeite || !kanal.steuert(ansichtSeite)) return;
+      ausfuehren(KI.entscheide(duell, duell.spieler[duell.amHandeln()], "vorsichtig"));
     }, 30);
   }
 } else {

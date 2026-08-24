@@ -287,6 +287,40 @@
     });
   }
 
+  // Wer rückt nach? Seit dem 24.08.2026 wählt der Besitzer (Regelwerk
+  // Abschnitt 4), also muss auch der Bot wählen können.
+  //
+  // Bewusst NICHT über `erwartung` aus entscheide(): Die Arena ist hier
+  // leer, und erwartung() steht in entscheide erst hinter dem Zugriff
+  // auf `spieler.arena.karte`. Diese Rechnung ist die schlichtere — reiner
+  // Erwartungsschaden gegen das, was drüben steht, ohne Wirkungswerte.
+  // Sie ist damit auch die einzige, die Schritt 4 in entscheide NICHT
+  // verändert; dessen Zahlen bleiben, was sie gemessen waren.
+  function besterBankplatz(duell, spieler, gegner) {
+    let bestes = 0, besterWert = -1;
+    for (let b = 0; b < spieler.bank.length; b++) {
+      const instanz = spieler.bank[b];
+      let wert = 0;
+      if (gegner.arena) {
+        const attacken = duell.attackenVon
+          ? duell.attackenVon(instanz.karte)
+          : (instanz.karte.attacken || []);
+        for (let i = 0; i < attacken.length; i++) {
+          const s = E.schadenBerechnen(attacken[i], gegner.arena.karte).schaden;
+          const q = duell.trefferQuote ? duell.trefferQuote(attacken[i], spieler) : null;
+          const roh = q === null ? s : s * q;
+          if (roh > wert) wert = roh;
+        }
+      }
+      // Die Lebenspunkte entscheiden bei Gleichstand – und allein dann,
+      // wenn drüben auch niemand steht. Klein genug, um den Schaden
+      // nicht zu überstimmen: 40 LP wiegen 4.
+      wert += instanz.lp / 10;
+      if (wert > besterWert) { besterWert = wert; bestes = b; }
+    }
+    return bestes;
+  }
+
   function wirkungWert(w, spieler, gegner) {
     if (!w) return 0;
     // Grobes Maß für „ein Schlag" in diesem Spiel: zehn Schaden.
@@ -318,7 +352,30 @@
       }
       const wert = (w.minus || 0) +
         (w.faktor !== undefined && w.faktor < 1 ? SCHLAG * (1 - w.faktor) : 0);
-      return wert * anteil;
+
+      // Wie oft greift der Schutz? Seit dem 24.08.2026 hält der einer
+      // App-Attacke mehrere Runden (REGELN.appZusatz.schutzRunden), und
+      // ohne diese Zeile bliebe die Bewertung bei einer einzigen —
+      // dann spielte der Bot die Karte weiter nie und die Werkstatt
+      // maße ein Spiel, das niemand spielt. Genau der blinde Fleck, der
+      // beim Volltreffer ein halbes Balancing gekostet hat.
+      //
+      // GEDECKELT auf drei, und das ist kein runder Wert, sondern die
+      // Lehre vom 22.08.2026: Ein überschätzter Schutz führt dazu, dass
+      // beide Seiten nur noch abdecken — damals endeten so 18 von 400
+      // Feuerlande-Duellen im Zuglimit. Die Zahl „Duelle im Zuglimit"
+      // ist die Kontrollzahl für diese Zeile.
+      //
+      // Bei der geltenden Regel (schutzRunden: 2) greift der Deckel
+      // nicht. Er steht trotzdem: Wer den Wert hochdreht, um etwas
+      // auszuprobieren, soll den Bot nicht zugleich in die Deckungsfalle
+      // schicken und dann die Zahlen falsch lesen.
+      const R = window.REGELN;
+      let runden = w.runden ||
+        ((R.appZusatz && R.appZusatz.schutzRunden) ? R.appZusatz.schutzRunden : 1);
+      if (runden > 3) runden = 3;
+
+      return wert * anteil * runden;
     }
     if (w.art === "vernebeln") {
       if (hatZustand(gegner.arena, "vernebelt")) return 0;
@@ -345,6 +402,15 @@
 
   function entscheide(duell, spieler, strategie) {
     const gegner = duell.gegner(spieler);
+
+    // Ganz oben, VOR jedem Zugriff auf spieler.arena: Steht eine
+    // Nachrück-Wahl aus, ist die Arena leer und es gibt genau einen
+    // erlaubten Zug — die Wahl von der Bank.
+    if (duell.nachruecken && duell.nachruecken.length &&
+        duell.nachruecken[0] === spieler.index) {
+      return { art: "nachruecken", index: besterBankplatz(duell, spieler, gegner) };
+    }
+
     // Über attackenVon, nicht über karte.attacken: In der App hängt an
     // manchen Verbindungen eine zusätzliche Attacke, und zug.index
     // adressiert die Attacke über ihre Position.

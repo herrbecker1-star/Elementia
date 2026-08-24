@@ -194,6 +194,21 @@
     this.zugZaehler = 0;
     this.rundenZaehler = 0;
     this.syntheseGenutzt = false;
+
+    // --- Wer muss ein Elemental von der Bank nachziehen? -------
+    // Regelwerk Abschnitt 4: "Sein Besitzer WAEHLT sofort (ohne einen
+    // Zug zu verbrauchen) ein neues aktives Elemental von der Bank."
+    // Bis zum 24.08.2026 nahm die Engine stumm den ersten Bankplatz.
+    //
+    // Eine Liste, kein einzelner Index: Zwei Seiten koennen gleichzeitig
+    // faellig werden – etwa wenn ein toedlicher Angriff die eine Arena
+    // leert und der Selbstschaden derselben Attacke (Fluor) danach die
+    // eigene. Gewaehlt wird in der Reihenfolge, in der es passiert ist.
+    this.nachruecken = [];
+    // Der Zug, der dabei unterbrochen wurde. Er wird nachgeholt, sobald
+    // alle Wahlen getroffen sind – sonst bliebe der Angreifer ewig am Zug.
+    this.schwebend = null;
+
     this.vorbei = false;
     this.sieger = null;
     this.grund = null;
@@ -274,6 +289,18 @@
     return (spieler.arena ? [spieler.arena] : []).concat(spieler.bank);
   };
 
+  // Wer ist JETZT an der Reihe? Nicht immer der, der am Zug ist: Steht
+  // eine Nachrueck-Wahl aus, handelt zuerst der, dessen Arena leer ist –
+  // auch wenn der Gegner am Zug bleibt.
+  //
+  // Diese Frage und "wer ist am Zug" sind seit dem 24.08.2026 zwei
+  // verschiedene. amZug bleibt, was es war: Es traegt den Rundenwechsel
+  // und die Pruefsumme (kanal.js). Alles, was fragt "wen bediene ich
+  // gerade", fragt amHandeln().
+  Duell.prototype.amHandeln = function () {
+    return this.nachruecken.length ? this.nachruecken[0] : this.amZug;
+  };
+
   // Darf dieser Spieler in der geschenkten Aktion noch eine zweite
   // Synthese durchfuehren? Der Gasbrenner zaehlt herunter, der
   // Platin-Katalysator bleibt liegen (ein Katalysator wird nicht
@@ -288,6 +315,18 @@
   // ------------------------------------------------------------
   Duell.prototype.moeglicheZuege = function (spieler) {
     const zuege = [];
+
+    // Steht eine Nachrueck-Wahl aus, gibt es nur SIE – und nur fuer den,
+    // dessen Arena leer ist. Der andere hat gar keinen Zug: Sein Angriff
+    // haette kein Ziel, und ein zweiter Schlag in die leere Arena waere
+    // ein Freischlag, den es am Tisch nicht gibt.
+    if (this.nachruecken.length) {
+      if (spieler.index !== this.nachruecken[0]) return zuege;
+      for (let i = 0; i < spieler.bank.length; i++) {
+        zuege.push({ art: "nachruecken", index: i });
+      }
+      return zuege;
+    }
 
     // Angreifen – es sei denn, eine Duftphiole hat den Angriff
     // gesperrt ("Der Gegner kann in seinem naechsten Zug nicht
@@ -437,7 +476,9 @@
   // ------------------------------------------------------------
   Duell.prototype.fuehreAus = function (zug) {
     if (this.vorbei) return false;
-    const spieler = this.spieler[this.amZug];
+    // amHandeln, nicht amZug: Die Nachrueck-Wahl trifft der, dessen
+    // Arena leer ist – auch mitten im Zug des Gegners.
+    const spieler = this.spieler[this.amHandeln()];
 
     // Kein Zug moeglich – seit es die Duftphiole gibt, kann das
     // vorkommen: Angriff gesperrt, Bank leer, nichts auf der Hand.
@@ -450,29 +491,72 @@
     else if (zug.art === "wechsel") this.wechseln(spieler, zug.index);
     else if (zug.art === "synthese") this.synthetisieren(spieler, zug);
     else if (zug.art === "ausruestung") this.ausruestungSpielen(spieler, zug);
+    else if (zug.art === "nachruecken") this.nachrueckenAusfuehren(spieler, zug.index);
 
     this.melde("zug-ende", { spieler: spieler, zug: zug });
 
     // zugZaehler zaehlt AKTIONEN, nicht Runden. Daran haengen die
-    // Netz-Zugnummern und die Pruefsumme – er muss das bleiben.
+    // Netz-Zugnummern und die Pruefsumme – er muss das bleiben. Die
+    // Nachrueck-Wahl zaehlt mit: Sie geht als Zug uebers Netz, und beide
+    // Geraete muessen dieselbe Nummer dafuer vergeben.
     this.zugZaehler++;
 
-    if (!this.vorbei) {
-      if (this.zugZaehler >= window.REGELN.maxZuege) {
-        this.beenden(null, "zuglimit");
-      } else if (this.istFreieAktion(zug, spieler)) {
-        // Derselbe Spieler bleibt am Zug. Das kann nicht ewig gehen:
-        // Jede Ausruestung verlaesst dabei die Hand, die Synthese ist
-        // auf eine je Zug begrenzt – und die App-Attacke ebenso, sonst
-        // stuende das Duell still.
-        if (zug.art === "synthese") this.syntheseGenutzt = true;
-        if (zug.art === "angriff") this.appAttackeGenutzt = true;
-        this.melde("zusatzaktion", { spieler: spieler, zug: zug });
-      } else {
-        this.zugBeenden(spieler);
-      }
+    if (this.vorbei) return true;
+
+    if (this.zugZaehler >= window.REGELN.maxZuege) {
+      this.beenden(null, "zuglimit");
+      return true;
+    }
+
+    // Steht (noch) eine Wahl aus, endet hier gar nichts: Der Betroffene
+    // waehlt zuerst. Der unterbrochene Zug wird gemerkt und danach
+    // nachgeholt – sonst bliebe der Angreifer fuer immer am Zug.
+    //
+    // Die Wahl selbst darf sich nicht merken: Bei zwei gleichzeitigen
+    // Wahlen wuerde sie den echten Zug ueberschreiben.
+    if (this.nachruecken.length) {
+      if (zug.art !== "nachruecken") this.schwebend = { spieler: spieler, zug: zug };
+      return true;
+    }
+
+    // Alle Wahlen getroffen: Wenn diese Aktion eine Wahl war, gilt jetzt
+    // wieder der unterbrochene Zug – mit SEINEM Spieler und SEINER Art.
+    let endeZug = zug, endeSpieler = spieler;
+    if (zug.art === "nachruecken") {
+      // Ohne gemerkten Zug ist die Wahl in zugBeenden entstanden
+      // (Gift, Kalium). Dann hat der Zugwechsel schon stattgefunden und
+      // es ist nichts nachzuholen.
+      if (!this.schwebend) return true;
+      endeZug = this.schwebend.zug;
+      endeSpieler = this.schwebend.spieler;
+      this.schwebend = null;
+    }
+
+    if (this.istFreieAktion(endeZug, endeSpieler)) {
+      // Derselbe Spieler bleibt am Zug. Das kann nicht ewig gehen:
+      // Jede Ausruestung verlaesst dabei die Hand, die Synthese ist
+      // auf eine je Zug begrenzt – und die App-Attacke ebenso, sonst
+      // stuende das Duell still.
+      if (endeZug.art === "synthese") this.syntheseGenutzt = true;
+      if (endeZug.art === "angriff") this.appAttackeGenutzt = true;
+      this.melde("zusatzaktion", { spieler: endeSpieler, zug: endeZug });
+    } else {
+      this.zugBeenden(endeSpieler);
     }
     return true;
+  };
+
+  // Die Wahl von der Bank. Anders als wechseln() ist die Arena hier
+  // leer – es wird nicht getauscht, sondern besetzt.
+  Duell.prototype.nachrueckenAusfuehren = function (spieler, bankIndex) {
+    const pos = this.nachruecken.indexOf(spieler.index);
+    if (pos !== -1) this.nachruecken.splice(pos, 1);
+
+    const neu = spieler.bank.splice(bankIndex, 1)[0];
+    if (!neu) return;
+    spieler.arena = neu;
+    this.synergienAktualisieren();
+    this.melde("wechsel", { spieler: spieler, instanz: neu, erzwungen: true });
   };
 
   // Welche Aktionen kosten den Zug NICHT? Seit Fassung X sind das
@@ -832,15 +916,44 @@
 
   // "bis zu deinem naechsten Zug" – also genau hier, wenn der eigene
   // Zug wieder beginnt. Ein Schutz, der nie ablaeuft, waere keiner.
+  //
+  // Seit dem 24.08.2026 traegt ein Zustand ein Feld "runden": So oft
+  // ueberlebt er diesen Augenblick. Ohne das Feld gilt die 1, und dann
+  // rechnet diese Stelle auf die Stelle genau wie vorher – Nebel und
+  // Gift sind davon also unberuehrt.
+  //
+  // Synergie-Zustaende sind ausgenommen: Sie werden bei jedem
+  // Rundenbeginn ohnehin abgeraeumt und neu gesetzt (synergienSetzen).
+  // Ein Zaehler an ihnen waere wirkungslos und wuerde nur verwirren.
+  //
+  // --- Gesucht wird auf BEIDEN Seiten (Fehler, gefunden 24.08.2026) ---
+  // Diese Stelle lief bis heute nur ueber das EIGENE Team. Fuer Schutz
+  // ging das auf: Er liegt auf der eigenen Arena. "vernebeln" und
+  // "gift" tragen aber ausdruecklich die Seite des ERZEUGERS und
+  // liegen auf der Instanz des GEGNERS – sie standen damit in keinem
+  // Team, das je durchsucht wurde, und liefen NIE ab.
+  //
+  // Gemessen: Ein Gift von 5, das einmal wirken soll, kostete ueber
+  // acht Zuege 20 LP; der Nebel lag nach acht Zuegen noch da. Der
+  // Kommentar an wirkungAnwenden ("haelt genau einen gegnerischen Zug")
+  // beschrieb also eine Absicht, keine Wirkung.
+  //
+  // Das verschiebt die Messwerte vom 23.08.2026 fuer die 15 Gift- und
+  // 13 Nebel-Attacken – sie waren dort staerker, als sie sein sollten.
   Duell.prototype.zustaendeAblaufen = function (spieler) {
-    const alle = this.team(spieler);
+    const alle = this.team(this.spieler[0]).concat(this.team(this.spieler[1]));
     for (let t = 0; t < alle.length; t++) {
       const instanz = alle[t];
       for (let i = instanz.zustaende.length - 1; i >= 0; i--) {
-        if (instanz.zustaende[i].seite === spieler.index) {
-          const weg = instanz.zustaende.splice(i, 1)[0];
-          this.melde("zustand-abgelaufen", { spieler: spieler, instanz: instanz, zustand: weg });
+        const z = instanz.zustaende[i];
+        if (z.seite !== spieler.index) continue;
+        if (!z.synergie && z.runden > 1) {
+          z.runden -= 1;
+          this.melde("zustand-haelt", { spieler: spieler, instanz: instanz, zustand: z });
+          continue;
         }
+        instanz.zustaende.splice(i, 1);
+        this.melde("zustand-abgelaufen", { spieler: spieler, instanz: instanz, zustand: z });
       }
     }
   };
@@ -908,7 +1021,7 @@
     else if (HILFT[wirkung.art]) zielInstanz = spieler.arena;
     else zielInstanz = gegner.arena;
 
-    this.wirkungAnwenden(spieler, wirkung, attacke.name, zielInstanz);
+    this.wirkungAnwenden(spieler, wirkung, attacke.name, zielInstanz, "attacke");
   };
 
   // Sammelt die Schadensboni ein, die auf diese Attacke passen, und
@@ -988,6 +1101,19 @@
 
   // Abschnitt 4: LP auf 0 -> erschoepft, ablegen, sofort und ohne
   // Zugverbrauch nachruecken. Kein Elemental mehr -> Niederlage.
+  //
+  // Seit dem 24.08.2026 rueckt hier NIEMAND mehr nach. Das Regelwerk
+  // sagt in Abschnitt 4 "sein Besitzer WAEHLT sofort"; die Engine nahm
+  // stattdessen stumm den ersten Bankplatz (bank.shift()). Gewaehlt
+  // werden kann hier aber nicht: erschoepfen laeuft mitten in
+  // schadenZufuegen, also mitten in der Aufloesung eines fremden Zuges,
+  // und die Engine ist anzeigefrei – sie kann niemanden fragen.
+  //
+  // Deshalb bleibt die Arena leer und der Spieler kommt auf die Liste
+  // this.nachruecken. Die Wahl ist danach ein Zug wie jeder andere
+  // ({art:"nachruecken", index}) und erbt damit zugPruefen, die
+  // Zugnummer und die Pruefsumme – ohne das liefen zwei Netzgeraete
+  // auseinander, denn die Bankreihenfolge steckt in KANAL.pruefsumme.
   Duell.prototype.erschoepfen = function (spieler) {
     const gefallen = spieler.arena;
     gefallen.lp = 0;
@@ -1000,9 +1126,28 @@
       this.beenden(this.gegner(spieler), "keine-elementals");
       return;
     }
-    spieler.arena = spieler.bank.shift();
+
+    // Die alte Automatik als Messvariante (REGELN.nachrueckenWaehlen).
+    if (window.REGELN.nachrueckenWaehlen === false) {
+      spieler.arena = spieler.bank.shift();
+      this.synergienAktualisieren();
+      this.melde("wechsel", { spieler: spieler, instanz: spieler.arena, erzwungen: true });
+      return;
+    }
+
+    // Nur einmal in der Liste: Ohne Arena kann er kein zweites Mal fallen.
+    if (this.nachruecken.indexOf(spieler.index) === -1) {
+      this.nachruecken.push(spieler.index);
+    }
+    // Die Synergien haengen an der Lage, und die Lage hat sich geaendert –
+    // ohne Arena setzt synergienSetzen sie ohnehin nur zurueck.
     this.synergienAktualisieren();
-    this.melde("wechsel", { spieler: spieler, instanz: spieler.arena, erzwungen: true });
+
+    // Hier gemeldet und nicht in fuehreAus: Eine Wahl kann auch mitten
+    // in zugBeenden entstehen (Gift, Kalium), und dann kaeme fuehreAus
+    // gar nicht mehr an die Stelle. An EINER Stelle heisst: in jedem
+    // Fall, egal wer das Elemental umgeworfen hat.
+    this.melde("nachruecken-noetig", { spieler: spieler });
   };
 
   // ------------------------------------------------------------
@@ -1027,7 +1172,7 @@
       ziel: zug.ziel || null, instanz: zielInstanz
     });
 
-    this.wirkungAnwenden(spieler, w, karte.name, zielInstanz);
+    this.wirkungAnwenden(spieler, w, karte.name, zielInstanz, "ausruestung");
   };
 
   // ------------------------------------------------------------
@@ -1046,8 +1191,14 @@
   //  quelleName ist der Name der Karte oder Attacke, die wirkt; er
   //  landet in den Zustaenden und Boni, damit der Bildschirm sagen
   //  kann, WORAN es liegt.
+  //
+  //  herkunft ist "attacke", "ausruestung" oder "synergie". Sie
+  //  entscheidet nur EINES: wie lange ein Schutz haelt. Eine
+  //  Ausruestungskarte ist GEDRUCKT ("bis zu deinem naechsten Zug") und
+  //  darf ohne Neudruck nichts anderes bedeuten; eine App-Attacke steht
+  //  auf keinem Druckbogen und darf laenger halten.
   // ------------------------------------------------------------
-  Duell.prototype.wirkungAnwenden = function (spieler, w, quelleName, zielInstanz) {
+  Duell.prototype.wirkungAnwenden = function (spieler, w, quelleName, zielInstanz, herkunft) {
     if (!w || !w.art) return;
 
     if (w.art === "heilung" && zielInstanz) {
@@ -1065,14 +1216,24 @@
       }
 
     } else if (w.art === "schutz" && zielInstanz) {
-      // Gilt bis zum naechsten eigenen Zug – dort wird er geloescht.
       // "faktor" halbiert oder loescht den Schaden, "minus" zieht einen
       // festen Betrag ab. Beides zusammen ist erlaubt; gerechnet wird
       // erst der Faktor, dann der Abzug (schutzAnwenden).
+      //
+      // Wie lange? Eine Ausruestung gilt bis zum naechsten eigenen Zug –
+      // so steht es GEDRUCKT auf der Karte. Eine App-Attacke haelt
+      // R.appZusatz.schutzRunden lang; sie steht auf keinem Druckbogen.
+      // Ein "runden" an der Wirkung selbst geht in jedem Fall vor.
+      // Die zweite Haelfte der Dauer kommt geschenkt: Der Zustand haengt
+      // an der INSTANZ, und die geht beim Erschoepfen samt Zustaenden weg.
+      const R = window.REGELN;
+      const dauer = w.runden ||
+        (herkunft === "attacke" && R.appZusatz && R.appZusatz.schutzRunden
+          ? R.appZusatz.schutzRunden : 1);
       zielInstanz.zustaende.push({
         art: "schutz", gegen: w.gegen || "alle",
         faktor: (w.faktor === undefined ? 1 : w.faktor),
-        minus: w.minus || 0,
+        minus: w.minus || 0, runden: dauer,
         nurEinmal: !!w.nurEinmal, quelle: quelleName, seite: spieler.index
       });
 

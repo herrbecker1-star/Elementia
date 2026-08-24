@@ -179,6 +179,21 @@ window.REGELN = {
   // (am Tisch: Schere-Stein-Papier).
   initiative: "kleinereMasse",
 
+  // --- Abschnitt 4: Wer rueckt nach? --------------------------
+  // Gedruckt steht seit jeher: "Sein Besitzer WAEHLT sofort (ohne einen
+  // Zug zu verbrauchen) ein neues aktives Elemental von der Bank."
+  // Die Engine hat bis zum 24.08.2026 stattdessen stumm den ersten
+  // Bankplatz genommen – eine Abweichung vom Regelwerk, keine Regel.
+  //
+  // Das ist mehr als Bequemlichkeit: Wer waehlen darf, kann nach dem
+  // Erschoepfen auf den Typ des Gegners antworten, und die Bank hoert
+  // auf, eine Warteschlange zu sein.
+  //
+  // Auf false steht wieder die alte Automatik – als Messvariante
+  // ("nachruecken-automatisch"), damit sich beziffern laesst, was die
+  // freie Wahl im Gleichgewicht bewegt.
+  nachrueckenWaehlen: true,
+
   // --- Abschnitt 6: Synthese ----------------------------------
   syntheseProZug: 1,
 
@@ -496,6 +511,44 @@ window.REGELN = {
     // frei (wie syntheseProZug: 1), sonst stuende das Duell still.
     appAttackeIstFreieAktion: false,
 
+    // --- Wie lange haelt ein Schutz? (24.08.2026) -------------
+    // Wie viele eigene Zuege ueberlebt ein Schutz, der aus einer
+    // APP-ATTACKE stammt. Bis hierher war es einer ("bis zu deinem
+    // naechsten Zug"), und genau das war das Problem:
+    //
+    // Gemessen am 23.08.2026 ueber alle acht Regionen, 400 Duelle je
+    // Region, hat der Bot von 24 Schutz-App-Attacken KEINE EINZIGE je
+    // gespielt (heilung 3 von 9, vernebeln 1 von 11, gift 1 von 14,
+    // schutz 0 von 24). Der Grund steht in derselben Zeile: Ein Zug
+    // ohne Schaden, der 5 Schaden verhindert, ist ein Verlustgeschaeft,
+    // wenn ein Zug rund 11 Schaden macht. Bei zwei Runden sind es bis zu
+    // 10 – erst damit wird die Karte ueberhaupt eine Entscheidung.
+    //
+    // ZWEI, NICHT DREI – und das ist eine Entscheidung des Nutzers, keine
+    // Rechnung: Drei Runden haben sich am Bildschirm zu lang angefuehlt.
+    // Gemessen wurden beide (24.08.2026, 200 Duelle je Karte, zwei
+    // Saaten); die Zahlen stehen in App\LIESMICH.md. Kurz: Drei Runden
+    // heben vorsprung und syntheseLohnt etwas hoeher, verbreitern aber
+    // auch die Spanne staerker. Der Unterschied ist klein genug, dass
+    // das Spielgefuehl entscheiden darf – so wie bei den Fassungen IX
+    // und X, die ebenfalls aus dem Spielen kamen und nicht aus einer
+    // Kennzahl.
+    //
+    // GILT NICHT FUER AUSRUESTUNG. Loeschdecke, Schutzbrille und
+    // Erlenmeyerkolben tragen "bis zu deinem naechsten Zug" GEDRUCKT auf
+    // dem Kartenbild; sie duerfen ohne Neudruck nichts anderes bedeuten.
+    // Die Trennung macht engine.js ueber das Feld "herkunft" in
+    // wirkungAnwenden. App-Attacken stehen auf keinem Druckbogen
+    // (generator.html liest nur "attacken") – dort kostet es nichts.
+    //
+    // ACHTUNG: Wer diesen Wert aendert, muss die 26 Kartentexte in
+    // karten-daten.js mitaendern ("zwei Runden lang"). pruefer.js meldet
+    // es, wenn Text und Zahl auseinanderlaufen – es prueft das Zahlwort,
+    // nicht mehr nur einen einzelnen Satz.
+    // Gegenmessen laesst sich beides ueber die Varianten
+    // "schutz-1-runde" und "schutz-3-runden" (varianten.js).
+    schutzRunden: 2,
+
     // --- Bank-Synergien (22.08.2026) --------------------------
     // Wer inaktiv auf der Bank steht, tat bisher genau nichts, bis er
     // nachrueckte. Hier bekommt die Bank eine Rolle: Elementals, die
@@ -567,9 +620,29 @@ window.REGELN = {
     // hebt Periodikas vorsprung trotzdem ueber den Ausgangswert. Der
     // Preis ist eine um 2 bis 3 Punkte breitere Spanne in Periodika.
     synergien: [
+      // Seit dem 24.08.2026 mit "nurVerbindungen": Die Zeile zaehlt nur
+      // noch zwischen VERBINDUNGEN – Oxid neben Oxid, Sulfid neben
+      // Sulfid. Zwei Alkalimetalle auf der Bank zaehlen nicht mehr.
+      //
+      // Zwei Gruende, und beide zeigen in dieselbe Richtung:
+      //
+      // 1. Der Wunsch aus dem Spielen: "Im eigenen Zug Verbindungen aus
+      //    den Elementen der Bank bilden, um Synergien freizuschalten."
+      //    Genau das tut diese Fassung – vorher war die Synergie schon
+      //    da, BEVOR man etwas gebaut hatte.
+      // 2. Der offene Befund vom 23.08.2026: In der bisherigen Fassung
+      //    drueckte diese Zeile ab Erdhuegel syntheseLohnt unter NULL
+      //    (Erdhuegel 4,0 -> -2,1 %, Acidia 3,1 -> -3,2 %, Organica
+      //    0,4 -> -5,6 %) und war dort der groesste einzelne
+      //    Negativposten – groesser als Volltreffer und Daneben
+      //    zusammen. Der Grund ist das Gesetz des Kartensatzes: Je
+      //    groesser der Pool, desto mehr ELEMENTE teilen sich eine
+      //    Klasse, und die Synthese verbraucht genau die.
+      //
+      // Der Weg zurueck bleibt als Variante "synergie-klasse-alle".
       { name: "Verwandte Stoffklasse", inKraft: true,
         geltung: "bank-zu-aktiv", mindestens: 1,
-        bedingung: { gleich: "klasse" },
+        bedingung: { gleich: "klasse", nurVerbindungen: true },
         wirkung: { art: "schadensbonus", wert: 3 },
         begruendung: "Stoffe derselben Klasse reagieren nach demselben Muster – " +
           "zwei Oxide, zwei Salze, zwei Alkane. Die einzige Zeile, die eine " +
