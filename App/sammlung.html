@@ -442,7 +442,7 @@
      Ein Streiflicht und ein feines Streifenmuster in der
      Klassenfarbe, beide an die Neigung gekoppelt. Kein Bild,
      kein Video – reines CSS, deshalb kostet es keine Ladezeit
-     und funktioniert auf jeder der 124 Karten sofort. */
+     und funktioniert auf jeder der 133 Karten sofort. */
   /* Zwei Ebenen, weil die Streifen NUR dort erscheinen dürfen, wo gerade
      das Streiflicht liegt – so verhält sich eine echte Holo-Karte. Läge
      das Streifenmuster über der ganzen Fläche, sähe es nach Druckfehler
@@ -805,14 +805,14 @@ function regionVon(k) { return k.region || "Feuerlande"; }
 // Der Bildpfad steht in den Daten relativ zum Ordner Karten
 // ("bilder/eisen.jpg"), weil generator.html dort liegt. Von App aus
 // fehlt ein Schritt nach oben. Das hier ist der einzige Grund, warum
-// nicht alle 124 bild-Felder geändert werden mussten.
+// nicht alle 133 bild-Felder geändert werden mussten.
 function urbildPfad(k) {
   return "../Karten/" + k.bild;
 }
 
 // Die App benutzt nicht die Druckvorlagen, sondern die verkleinerten
 // Fassungen aus Karten\bilder-app (erzeugt von App\bilder-verkleinern.ps1).
-// Zwei Größen, weil das Raster 124 Bilder gleichzeitig zeigt und die
+// Zwei Größen, weil das Raster 133 Kacheln gleichzeitig zeigt und die
 // Kartenansicht eines: 25,6 MB Vorlagen werden so zu 4 MB.
 //
 // Fehlt der Ordner – etwa weil das Skript nach neuen Bildern noch
@@ -883,11 +883,32 @@ function istRuhig() { return document.body.classList.contains("ruhig"); }
 // ============================================================
 
 var SPEICHER_STAND = "elementia.sammlung";
-var STAND_FASSUNG = 1;
-var gefundene = {};          // "Region|Name" -> true
+var STAND_FASSUNG = 2;
+
+// "Region|Name" -> Herkunft. NICHT mehr nur `true`: Seit Fassung 2 merkt
+// sich der Stand, WIE eine Karte aufging.
+//
+//   "code"       an der Station gescannt oder der Code eingetippt
+//   "lehrer"     im Lehrermodus ohne Stationscode aufgeschlossen
+//   "unbekannt"  aus einem Stand der Fassung 1 übernommen
+//
+// Das ist die zweite Hälfte der Antwort auf den Lehrerzugang, der durch
+// die Klassen gewandert ist. Die erste Hälfte (das Passwort oben) macht
+// das Aufschließen schwer; diese hier macht es wertlos: Eine Sammlung,
+// die nicht an den Stationen entstanden ist, sieht man ihr an – auch
+// noch, nachdem sie über Datei oder Code auf ein anderes Gerät gezogen
+// ist, denn die Herkunft reist mit.
+//
+// Was das ausdrücklich NICHT kann: verhindern, dass zwei Kinder ihre
+// Sammlungen tauschen. Das geht mit dem Sicherungscode und muss gehen –
+// er ist der einzige Weg auf ein neues Gerät und nach iOS' 7-Tage-
+// Löschung. Aber wer tauscht, bekommt nur, was der andere hat, und der
+// hat es an den Stationen geholt. Der Griff, der auf einen Schlag alle
+// 133 Karten gab, war der Lehrermodus – und der ist jetzt zu.
+var gefundene = {};
 
 // ============================================================
-//  Lehrermodus – sammlung.html?lehrer=1
+//  Lehrermodus – sammlung.html?lehrer=1 + Passwort
 //
 //  Ohne ihn kann eine Karte NUR über ihren Stationscode aufgehen.
 //  Das ist der ganze Sinn der Kärtchen: Wer die Karte will, geht an
@@ -899,17 +920,86 @@ var gefundene = {};          // "Region|Name" -> true
 //  Klasse streikt, und um die Sammlung vorzuführen, ohne vorher
 //  neunzig Kärtchen abzuscannen.
 //
+//  Bis zum 03.09.2026 reichte der Zusatz „?lehrer=1" allein. Er ist
+//  durch die Klassen gewandert, wie es jede Adresse tut, die man
+//  einmal vor einer Klasse in die Adresszeile tippt. Deshalb jetzt
+//  ein Passwort – und zwar per Abfrage, NICHT als zweiter Zusatz in
+//  der Adresse: Was in der Adresse steht, steht im Verlauf des
+//  geteilten Tablets und ist übermorgen wieder herum.
+//
+//  Verglichen wird gegen einen SHA-256-Hash. Der Quelltext dieser
+//  Seite ist öffentlich (kostenlose GitHub Pages verlangen ein
+//  öffentliches Repository) – ein Passwort im Klartext wäre also
+//  keins. Aus dem Hash liest niemand das Wort zurück. Gehasht wird
+//  LEHRER_SALZ + Wort, sonst fände eine Hash-Suche im Netz ein
+//  einzelnes Wörterbuchwort in Sekunden.
+//
+//  Passwort wechseln: App\lehrer-passwort.ps1 aufrufen, den
+//  ausgegebenen Wert unten eintragen, FASSUNG in sw.js erhöhen,
+//  hochladen. Das Wort selbst steht nirgends im Projekt.
+//
 //  Bewusst NICHT gemerkt. Der Modus gilt nur für diesen einen
 //  Seitenaufruf – auf einem geteilten Tablet soll er nicht liegen
 //  bleiben und dem nächsten Kind in die Hände fallen.
 //
-//  Das ist eine Schwelle, kein Schloss. Wer die Adresse kennt oder
-//  im Browserspeicher herumschreibt, kommt daran vorbei. Es geht
-//  darum, dass niemand versehentlich oder beiläufig darüber
-//  stolpert – nicht darum, Zwölfjährige auszusperren, die es
-//  wirklich darauf anlegen.
+//  Auf der eigenen Platte und auf localhost fragt niemand: Das ist
+//  der Rechner des Lehrers, und crypto.subtle gibt es unter file://
+//  ohnehin nicht.
 // ============================================================
-var LEHRER = new URLSearchParams(location.search).get("lehrer") === "1";
+var LEHRER = false;
+
+var LEHRER_SALZ = "elementia:";
+var LEHRER_HASH = "5d6203265687751afe6466dbc41828bd4a9974df1ddf07d4d2d338fec6cd4544";
+
+function oertlich() {
+  return location.protocol === "file:" ||
+         location.hostname === "localhost" ||
+         location.hostname === "127.0.0.1";
+}
+
+function sha256Hex(text) {
+  var daten = new TextEncoder().encode(text);
+  return crypto.subtle.digest("SHA-256", daten).then(function (puffer) {
+    var bytes = new Uint8Array(puffer), hex = "";
+    for (var i = 0; i < bytes.length; i++) {
+      hex += (bytes[i] < 16 ? "0" : "") + bytes[i].toString(16);
+    }
+    return hex;
+  });
+}
+
+// Der Modus wird NACH dem Aufbau der Seite eingeschaltet, nicht davor.
+// So muss die Verdrahtung nicht auf eine Passwortprüfung warten, die es
+// im Normalfall (kein Zusatz) gar nicht gibt: Ohne „?lehrer=1" läuft
+// diese ganze Datei wie bisher, ohne eine einzige Verzögerung.
+function lehrerAnschalten() {
+  LEHRER = true;
+  document.getElementById("allesAuf").hidden = false;
+  zeichneGefundenKnopf();
+  document.getElementById("zaehler").insertAdjacentHTML("beforebegin",
+    '<span style="font-size:11px;font-weight:600;color:#d8cfa8;' +
+    'border:1px solid #7a6a4e;border-radius:5px;padding:1px 6px">Lehrermodus</span> ');
+}
+
+function lehrerAnmelden() {
+  if (new URLSearchParams(location.search).get("lehrer") !== "1") return;
+  if (oertlich()) { lehrerAnschalten(); return; }
+
+  if (!window.crypto || !crypto.subtle) {
+    alert("Auf diesem Gerät lässt sich das Passwort nicht prüfen. Kein Lehrermodus.");
+    return;
+  }
+
+  var wort = prompt("Passwort für den Lehrermodus:");
+  if (!wort) return;
+
+  sha256Hex(LEHRER_SALZ + wort).then(function (hash) {
+    if (hash === LEHRER_HASH) lehrerAnschalten();
+    else alert("Falsches Passwort. Kein Lehrermodus.");
+  })["catch"](function () {
+    alert("Die Passwortprüfung ist fehlgeschlagen. Kein Lehrermodus.");
+  });
+}
 
 function schluessel(k) { return regionVon(k) + "|" + k.name; }
 
@@ -925,13 +1015,23 @@ function standLaden() {
 }
 
 // Die Fassungsnummer entscheidet, ob ein gespeicherter Stand eine
-// Regeländerung überlebt. Heute gibt es nur Fassung 1; künftige
-// Fassungen wandeln hier um, statt den Stand wegzuwerfen.
+// Regeländerung überlebt. Hier wird UMGEWANDELT, nicht weggeworfen –
+// das ist keine Feinheit: Ein `d.fassung !== STAND_FASSUNG → false`
+// hätte beim Sprung auf Fassung 2 jedem Kind die Sammlung gelöscht,
+// stillschweigend, beim ersten Laden nach dem Hochladen.
 function standUebernehmen(d) {
   if (!d || !d.karten || !d.karten.length) return false;
-  if (d.fassung !== STAND_FASSUNG) return false;
+  if (d.fassung !== 1 && d.fassung !== STAND_FASSUNG) return false;
+
+  // Fassung 1 kannte keine Herkunft. Sie nachträglich als "code" zu
+  // buchen wäre geschmeichelt, als "lehrer" verleumdet – also
+  // "unbekannt". Das ist die einzige ehrliche Antwort.
+  var herkunft = (d.fassung === STAND_FASSUNG && d.herkunft) || {};
   gefundene = {};
-  for (var i = 0; i < d.karten.length; i++) gefundene[d.karten[i]] = true;
+  for (var i = 0; i < d.karten.length; i++) {
+    var k = d.karten[i];
+    gefundene[k] = herkunft[k] || "unbekannt";
+  }
   return true;
 }
 
@@ -945,20 +1045,29 @@ function standObjekt() {
   return {
     fassung: STAND_FASSUNG,
     stand: new Date().toISOString().slice(0, 10),
-    karten: Object.keys(gefundene)
+    karten: Object.keys(gefundene),
+    herkunft: gefundene
   };
 }
 
-function istGefunden(k) { return gefundene[schluessel(k)] === true; }
+function istGefunden(k) { return !!gefundene[schluessel(k)]; }
 
-function gefundenSetzen(k, an) {
-  if (an) gefundene[schluessel(k)] = true;
+function herkunftVon(k) { return gefundene[schluessel(k)] || null; }
+
+// `herkunft` ist Pflicht, wenn aufgeschlossen wird – wer eine neue
+// Stelle einbaut, die Karten vergibt, soll dazusagen müssen, woher.
+function gefundenSetzen(k, an, herkunft) {
+  if (an) gefundene[schluessel(k)] = herkunft || "unbekannt";
   else delete gefundene[schluessel(k)];
   standSichern();
 }
 
 function anzahlGefunden(karten) {
   return karten.filter(istGefunden).length;
+}
+
+function anzahlMitCode(karten) {
+  return karten.filter(function (k) { return herkunftVon(k) === "code"; }).length;
 }
 
 // Nachschlagen in der Gegenrichtung: vom Schlüssel zur Karte. Braucht
@@ -1057,7 +1166,7 @@ function bildFlaeche(k, klein) {
     var img = document.createElement("img");
     img.src = bildPfad(k, !klein);
     img.alt = k.name;
-    img.loading = klein ? "lazy" : "eager";   // 124 Bilder nicht auf einmal
+    img.loading = klein ? "lazy" : "eager";   // 133 Kacheln nicht auf einmal
     img.decoding = "async";
     // Rückfall auf die Druckvorlage, wenn die verkleinerte Fassung
     // fehlt. Genau einmal – sonst dreht sich das im Kreis, wenn auch
@@ -1121,8 +1230,15 @@ function zeichneRaster() {
 
   document.getElementById("leer").hidden = karten.length > 0;
 
+  // "79 an der Station" steht nur da, wenn es einen Unterschied gibt.
+  // Wer ehrlich sammelt, soll keine Rechtfertigungszeile lesen müssen –
+  // die Zeile erscheint genau dann, wenn Karten dabei sind, die nicht
+  // an einem Kärtchen geholt wurden.
+  var gefundenZahl = anzahlGefunden(karten);
+  var codeZahl = anzahlMitCode(karten);
   document.getElementById("zaehler").textContent =
-    anzahlGefunden(karten) + " von " + karten.length + " gefunden" +
+    gefundenZahl + " von " + karten.length + " gefunden" +
+    (gefundenZahl > codeZahl ? " · " + codeZahl + " an der Station" : "") +
     (karten.length === KARTEN.length ? "" : " (Auswahl)");
   zeichneFortschritt();
 }
@@ -1403,9 +1519,16 @@ function zeichneGefundenKnopf() {
   if (!aktuelleKarte) return;
   var offen = istGefunden(aktuelleKarte);
 
+  // Eine Karte, die nicht an einer Station geholt wurde, sagt das auf
+  // dem Knopf. Nicht als Rüge – als Auskunft: Man soll einer Sammlung
+  // ansehen, wie sie entstanden ist.
+  var herkunft = herkunftVon(aktuelleKarte);
+
   b.hidden = !offen && !LEHRER;
-  b.textContent = offen ? "✓ Gefunden" : "○ Freischalten";
-  b.title = offen ? "Aus der Sammlung nehmen"
+  b.textContent = offen ? (herkunft === "code" ? "✓ Gefunden" : "✓ Gefunden (ohne Code)")
+                        : "○ Freischalten";
+  b.title = offen ? (herkunft === "code" ? "Aus der Sammlung nehmen"
+                                         : "Nicht an einer Station geholt · aus der Sammlung nehmen")
                   : "Lehrermodus: ohne Stationscode freischalten";
   b.setAttribute("aria-pressed", offen ? "true" : "false");
 }
@@ -1619,9 +1742,19 @@ function codeVerarbeiten(text) {
     return { art: "fehler",
              meldung: "„" + gelesen.name + "“ steht nicht (mehr) im Kartensatz." };
   }
-  if (istGefunden(karte)) return { art: "schon", karte: karte };
+  // Schon da – aber ein Stationscode ist die Wahrheit über die
+  // Herkunft, und zwar eine bessere als alles, was vorher dastand.
+  // Wer eine Karte aus einem alten Stand ("unbekannt") oder aus einer
+  // Vorführung ("lehrer") später WIRKLICH am Kärtchen holt, bekommt
+  // sie gutgeschrieben. Nur nach oben, nie zurück: aus "code" wird
+  // nichts anderes mehr.
+  if (istGefunden(karte)) {
+    if (herkunftVon(karte) === "code") return { art: "schon", karte: karte };
+    gefundenSetzen(karte, true, "code");
+    return { art: "bestaetigt", karte: karte };
+  }
 
-  gefundenSetzen(karte, true);
+  gefundenSetzen(karte, true, "code");
   return { art: "neu", karte: karte };
 }
 
@@ -1666,6 +1799,12 @@ function trefferZeigen(ergebnis) {
     rasterNachScan = true;
     zeichneFortschritt();
     scannerLage("Nächstes Kärtchen vor die Kamera halten.");
+  } else if (ergebnis.art === "bestaetigt") {
+    lage.className = "tlage neu";
+    lage.textContent = "Jetzt an der Station geholt · " + k.klasse;
+    rasterNachScan = true;
+    zeichneFortschritt();
+    scannerLage("Die Karte hattest du schon – jetzt zählt sie an der Station.");
   } else {
     lage.className = "tlage";
     lage.textContent = "Hattest du schon · " + k.klasse;
@@ -1876,6 +2015,10 @@ document.getElementById("codeLesen").addEventListener("click", function () {
     var e = codeVerarbeiten(code);
     if (e.art === "fehler")     melden(e.meldung, true);
     else if (e.art === "schon") melden(e.karte.name + " war schon in deiner Sammlung.");
+    else if (e.art === "bestaetigt") {
+      zeichneRaster();
+      melden(e.karte.name + " hattest du schon – jetzt zählt die Karte an der Station.");
+    }
     else { zeichneRaster(); melden(e.karte.name + " freigeschaltet."); }
     return;
   }
@@ -1921,12 +2064,13 @@ document.getElementById("dateiwahl").addEventListener("change", function () {
 
 // Die größere Tür: Ein Antippen, und die ganze Sammlung steht offen.
 // Sie ist zum Vorführen gemacht und gehört nicht in Schülerhände –
-// im Lehrermodus ist sie da, sonst gar nicht erst im Fußbereich.
-document.getElementById("allesAuf").hidden = !LEHRER;
+// deshalb ist sie erst einmal gar nicht im Fußbereich. Sichtbar macht
+// sie allein `lehrerAnschalten`, also nach bestandener Passwortprüfung.
+document.getElementById("allesAuf").hidden = true;
 
 document.getElementById("allesAuf").addEventListener("click", function () {
   if (!LEHRER) return;
-  KARTEN.forEach(function (k) { gefundene[schluessel(k)] = true; });
+  KARTEN.forEach(function (k) { gefundene[schluessel(k)] = "lehrer"; });
   standSichern();
   zeichneRaster();
   melden("Alle " + KARTEN.length + " Karten freigeschaltet.");
@@ -2046,16 +2190,6 @@ function appVorbereiten() {
 //  Verdrahtung
 // ============================================================
 
-// Der Lehrermodus muss sichtbar sein. Wer ihn versehentlich anhat und
-// vor der Klasse etwas freischaltet, soll es merken – und wer das
-// Tablet weitergibt, soll sehen, dass er die Seite ohne den Zusatz
-// neu laden muss.
-if (LEHRER) {
-  document.getElementById("zaehler").insertAdjacentHTML("beforebegin",
-    '<span style="font-size:11px;font-weight:600;color:#d8cfa8;' +
-    'border:1px solid #7a6a4e;border-radius:5px;padding:1px 6px">Lehrermodus</span> ');
-}
-
 standLaden();
 filterAufbauen();
 effekteSetzen(effekteAn());
@@ -2101,7 +2235,8 @@ document.getElementById("gefunden").addEventListener("click", function () {
   if (!offen && !LEHRER) return;
   if (offen && !confirm("„" + aktuelleKarte.name + "“ wieder aus der Sammlung nehmen?")) return;
 
-  gefundenSetzen(aktuelleKarte, !offen);
+  // Dieser Knopf gibt nur im Lehrermodus – also ist die Herkunft klar.
+  gefundenSetzen(aktuelleKarte, !offen, "lehrer");
   zeichneGefundenKnopf();
   // Beide Seiten neu bauen: Die Karte soll sich sofort zeigen, statt
   // erst beim nächsten Öffnen. Der Augenblick, in dem die Silhouette
@@ -2181,6 +2316,11 @@ if (urlRegion) {
     if (feld.options[i].value === urlRegion) { feld.value = urlRegion; zeichneRaster(); break; }
   }
 }
+
+// Zuletzt, mit Absicht: Die Passwortabfrage hält einen Dialog vor die
+// Seite. Sie soll vor einer fertig aufgebauten Sammlung stehen, nicht
+// vor einer leeren Fläche – und ohne „?lehrer=1" passiert hier nichts.
+lehrerAnmelden();
 </script>
 </body>
 </html>

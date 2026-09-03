@@ -1,3 +1,24 @@
+/*!
+ * jsQR - QR-Code-Decoder
+ * Copyright the jsQR authors
+ * https://github.com/cozmo/jsQR
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Die vollstaendige Lizenz liegt daneben in App/lib/LICENSE-jsQR.txt.
+ * Die Datei stammt nicht aus diesem Vorhaben. Einzige Aenderung
+ * gegenueber jsqr@1.4.0: dieser Lizenzkopf, am 03.09.2026 ergaenzt.
+ */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
