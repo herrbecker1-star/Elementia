@@ -56,6 +56,27 @@
     return KENNUNG + kern + TRENNER + pruefzeichen(kern);
   }
 
+  // --- Erzeugen als Adresse ------------------------------------
+  // Dieselbe Zeichenkette, nur in eine Web-Adresse gewickelt:
+  //   https://…/Elementia/#code=ELEMENTIA1%3AFeuerlande%7CEisen%7CF
+  // Das ist die Form, die seit dem 03.09.2026 auf die Kaertchen
+  // gedruckt wird. Ihr Sinn: Die eingebaute Kamera-App jedes Handys
+  // erkennt sie als Link und oeffnet die Sammlung direkt – ohne dass
+  // jemand erst die App startet und die Kameraerlaubnis erteilt.
+  //
+  // Sie steht absichtlich HIER, direkt neben lesen(): Dessen
+  // Adress-Zweig ist das Gegenstueck. Stuende das Zusammensetzen im
+  // Druckbogen und das Zerlegen hier, liefen die beiden Seiten
+  // irgendwann auseinander – und zwar erst dann, wenn die Kaertchen
+  // schon laminiert sind.
+  //
+  // Die Basis ist ein Argument und keine Konstante. Die App soll
+  // nichts darueber wissen muessen, wo sie veroeffentlicht ist; der
+  // Druckbogen weiss es, weil dort der Mensch sitzt, der druckt.
+  function adresse(karte, basis) {
+    return String(basis || "") + "#code=" + encodeURIComponent(bauen(karte));
+  }
+
   // --- Lesen ---------------------------------------------------
   // Gibt immer ein Objekt zurueck, nie null und nie eine Ausnahme:
   // { ok: true, region, name, schluessel } oder { ok: false, grund }.
@@ -129,6 +150,16 @@
       } else if (gelesen.name !== k.name || gelesen.region !== regionVon(k)) {
         fehler.push(k.name + ": gelesen als " + gelesen.region + "|" + gelesen.name);
       }
+      // Dasselbe noch einmal ueber die Adressform – das ist die, die
+      // auf den Kaertchen steht. Die Basis ist hier beliebig; geprueft
+      // wird nur, dass adresse() und der Adress-Zweig von lesen()
+      // zueinander passen.
+      var ueberAdresse = lesen(adresse(k, "https://beispiel.test/Elementia/"));
+      if (!ueberAdresse.ok) {
+        fehler.push(k.name + " (als Adresse): " + ueberAdresse.grund);
+      } else if (ueberAdresse.schluessel !== regionVon(k) + TRENNER + k.name) {
+        fehler.push(k.name + " (als Adresse): ergibt " + ueberAdresse.schluessel);
+      }
     }
     return { gesamt: karten.length, fehler: fehler };
   }
@@ -136,6 +167,7 @@
   window.STATIONSCODE = {
     kennung: KENNUNG,
     bauen: bauen,
+    adresse: adresse,
     lesen: lesen,
     selbsttest: selbsttest,
     regionVon: regionVon

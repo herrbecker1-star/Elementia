@@ -34,7 +34,7 @@
   }
 
   // --- Kumulative Regions-Pools --------------------------------
-  // Niemand spielt mit allen 124 Karten. Der Unterricht beginnt mit
+  // Niemand spielt mit allen 133 Karten. Der Unterricht beginnt mit
   // Feuerlande allein (11 teamfaehige Karten), dann kommt Periodika
   // dazu und so fort. Jede dieser Stufen ist ein eigenes Spiel.
   // "bis" nennt die zuletzt freigeschaltete Region; der Pool ist alles
