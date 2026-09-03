@@ -8,9 +8,24 @@
      App/sammlung.html – dort, wo sie auch auf der Festplatte liegt, damit
      es keine zweite Fassung für das Web gibt. Das Manifest nennt als
      Startpunkt deshalb direkt sammlung.html; diese Seite ist nur der
-     Wegweiser für die von Hand eingetippte Adresse. -->
-<meta http-equiv="refresh" content="0; url=App/sammlung.html">
+     Wegweiser für die von Hand eingetippte Adresse.
+
+     Seit 03.09.2026 ist sie mehr als das: Auf den Stationskärtchen steht
+     der QR-Code als Adresse dieser Seite mit angehängtem "#code=…", damit
+     ihn auch die normale Kamera-App eines Handys öffnen kann. Deshalb
+     MUSS die Weiterleitung den Teil hinter der Raute mitnehmen – und
+     genau das kann eine <meta http-equiv="refresh"> nicht: Der Browser
+     wirft das Fragment weg, das Kärtchen führt zur leeren Sammlung.
+     Also drei Zeilen Skript, und die Meta-Zeile bleibt als Rückfall in
+     <noscript> stehen. Diese Datei steht im GERUEST von sw.js, der Weg
+     funktioniert damit auch ohne Netz. -->
 <link rel="canonical" href="App/sammlung.html">
+<script>
+  // replace() statt href: Sonst liegt der Wegweiser im Verlauf und der
+  // Zurück-Knopf schickt den Schüler im Kreis.
+  location.replace("App/sammlung.html" + location.search + location.hash);
+</script>
+<noscript><meta http-equiv="refresh" content="0; url=App/sammlung.html"></noscript>
 <style>
   body {
     background: #14120f; color: #ece5d8; margin: 0;
