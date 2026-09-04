@@ -1204,7 +1204,19 @@ function ruheSetzen() {
 function istRuhig() { return document.body.classList.contains("ruhig"); }
 
 // --- Sammelstand: welche Karten hat dieses Gerät gefunden? ----
-var SPEICHER_STAND = "elementia.sammlung", STAND_FASSUNG = 1;
+//
+// STAND_FASSUNG muss mit sammlung.html übereinstimmen. Hier stand bis
+// zum 04.09.2026 eine 1, während die Sammlung längst auf 2 war — das
+// Kästchen „nur gefundene" sah deshalb einen Tag lang IMMER eine leere
+// Sammlung, und niemand hat es gemerkt: Das Kästchen ist standardmäßig
+// aus, und dass im Duell alle Karten bereitstehen, ist der dokumentierte
+// Normalfall. Ein Fehler, der wie eine Absicht aussieht.
+//
+// Hier wird nur der Kartenschlüssel gebraucht, nicht die Herkunft.
+// Trotzdem exakt vergleichen und nicht „alles ab Fassung 1 nehmen":
+// Sonst brächte das Duell nach dem Schnitt vom 04.09. genau die
+// Sammelstände zurück, die die Sammlung gerade verworfen hat.
+var SPEICHER_STAND = "elementia.sammlung", STAND_FASSUNG = 3;
 var gefundene = {};
 function schluessel(k) { return regionVon(k) + "|" + k.name; }
 function standLaden() {

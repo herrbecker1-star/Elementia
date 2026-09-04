@@ -156,6 +156,25 @@
   }
   #leer { padding: 40px 14px; text-align: center; color: var(--gedaempft); }
 
+  /* ====== Hinweis zum einmaligen Zurücksetzen ======
+     Dieselbe Bauform wie #ablegehinweis unten: abgesetzter Kasten mit
+     Kante links. Nicht rot – es ist keine Fehlermeldung und kein
+     Vorwurf, sondern eine Ansage, die jeder einmal liest und dann
+     wegtippt. */
+  #neustart {
+    margin: 10px 14px 0; padding: 10px 13px;
+    background: #241f19; border-left: 3px solid #7a6a4e;
+    border-radius: 0 6px 6px 0; color: #d8cfa8;
+    font-size: 13px; line-height: 1.5;
+  }
+  #neustart p { margin: 0 0 7px; }
+  #neustart b { color: #f0e7d2; }
+  #neustart button {
+    background: var(--erhoben); color: var(--text);
+    border: 1px solid var(--rand); border-radius: 7px;
+    padding: 7px 14px; font: inherit; font-size: 12.5px; cursor: pointer; min-height: 38px;
+  }
+
   /* ====== Gesperrte Karten ======
      Silhouette statt Lücke. Das Sichtbarmachen des Fehlenden ist der
      halbe Sammelreiz – und der Fundort daneben macht aus der Sammlung
@@ -687,6 +706,18 @@
   </div>
 </header>
 
+<!-- Der Hinweis zum einmaligen Zurücksetzen (04.09.2026). Er steht
+     oben und nicht im zugeklappten Sammelstand-Fach: Wer seine Karten
+     vermisst, soll die Erklärung sehen, ohne sie zu suchen. -->
+<div id="neustart" hidden>
+  <p><b>Alle Sammlungen fangen einmal neu an.</b> Vor dem Start waren Karten im Umlauf, die
+  nicht an einer Station geholt worden waren. Damit alle mit demselben Stand beginnen, ist
+  jede Sammlung einmalig zurückgesetzt worden — auch deine, falls du schon etwas hattest.</p>
+  <p>Ab jetzt geht jede Karte <b>nur über ihren Stationscode</b> auf. Es war noch nichts
+  erspielt, dir fehlt also nichts.</p>
+  <button id="neustartweg">Verstanden</button>
+</div>
+
 <nav id="fortschritt" aria-label="Fortschritt je Region"></nav>
 <main id="raster"></main>
 <p id="leer" hidden>Keine Karte passt zu dieser Auswahl.</p>
@@ -886,14 +917,34 @@ function istRuhig() { return document.body.classList.contains("ruhig"); }
 // ============================================================
 
 var SPEICHER_STAND = "elementia.sammlung";
-var STAND_FASSUNG = 2;
+
+// ------------------------------------------------------------
+//  Fassung 3 = der Schnitt vom 04.09.2026
+//
+//  Diese Zahl wird hier AUSNAHMSWEISE benutzt, um alte Stände
+//  wegzuwerfen statt sie umzuwandeln – und das ist genau das, was
+//  beim Sprung 1 → 2 um jeden Preis vermieden werden musste.
+//
+//  Der Unterschied ist der Zeitpunkt: Es war noch nichts erspielt.
+//  Die Karten, die auf den Geräten lagen, stammten aus dem offenen
+//  Lehrerzugang, nicht von den Stationen. Ein Zurücksetzen kostet
+//  jetzt niemanden etwas und ist in einer Woche nicht mehr
+//  möglich, ohne echte Sammlungen zu vernichten.
+//
+//  Deshalb: einmalig alle auf null, alle mit demselben Stand. Nicht
+//  stillschweigend – standLaden() sagt es (#neustart).
+//
+//  Wer diese Zahl das nächste Mal erhöht, hat vermutlich NICHT
+//  diesen Sonderfall und muss wieder umwandeln statt wegwerfen.
+// ------------------------------------------------------------
+var STAND_FASSUNG = 3;
 
 // "Region|Name" -> Herkunft. NICHT mehr nur `true`: Seit Fassung 2 merkt
 // sich der Stand, WIE eine Karte aufging.
 //
 //   "code"       an der Station gescannt oder der Code eingetippt
 //   "lehrer"     ohne Stationscode aufgeschlossen – siehe unten
-//   "unbekannt"  aus einem Stand der Fassung 1 übernommen
+//   "unbekannt"  Herkunft fehlt im Stand (sollte nicht vorkommen)
 //
 // Eine Sammlung, die nicht an den Stationen entstanden ist, sieht man
 // ihr an – auch noch, nachdem sie über Datei oder Code auf ein anderes
@@ -959,6 +1010,12 @@ var gefundene = {};
 
 function schluessel(k) { return regionVon(k) + "|" + k.name; }
 
+// Wird wahr, wenn beim Start ein Stand aus der Zeit vor dem Schnitt
+// dalag. Die Seite sagt das dann – siehe #neustart. Ein Zurücksetzen,
+// das niemand bemerkt, ist ein Datenverlust; eines, das sich erklärt,
+// ist eine Ansage.
+var standVerworfen = false;
+
 function standLaden() {
   gefundene = {};
   var roh = null;
@@ -966,23 +1023,32 @@ function standLaden() {
   if (!roh) return;
   try {
     var d = JSON.parse(roh);
-    standUebernehmen(d);
+    if (!standUebernehmen(d)) {
+      standVerworfen = true;
+      // Den alten Stand wegräumen, sonst meldet sich der Hinweis bei
+      // jedem Laden aufs Neue.
+      try { localStorage.removeItem(SPEICHER_STAND); } catch (e) { }
+    }
   } catch (e) { /* unlesbar: als leer behandeln, nicht abstürzen */ }
 }
 
 // Die Fassungsnummer entscheidet, ob ein gespeicherter Stand eine
-// Regeländerung überlebt. Hier wird UMGEWANDELT, nicht weggeworfen –
-// das ist keine Feinheit: Ein `d.fassung !== STAND_FASSUNG → false`
-// hätte beim Sprung auf Fassung 2 jedem Kind die Sammlung gelöscht,
-// stillschweigend, beim ersten Laden nach dem Hochladen.
+// Änderung überlebt.
+//
+// Beim Sprung 1 → 2 wurde UMGEWANDELT, nicht weggeworfen, und das war
+// richtig: Ein `d.fassung !== STAND_FASSUNG → false` hätte damals jedem
+// Kind die Sammlung gelöscht, stillschweigend, beim ersten Laden nach
+// dem Hochladen.
+//
+// Beim Sprung 2 → 3 wird ausdrücklich WEGGEWORFEN. Die Begründung
+// steht oben bei STAND_FASSUNG: Es war noch nichts erspielt, und die
+// Karten auf den Geräten kamen aus dem offenen Lehrerzugang. Das ist
+// ein einmaliger Sonderfall, kein neues Vorgehen.
 function standUebernehmen(d) {
   if (!d || !d.karten || !d.karten.length) return false;
-  if (d.fassung !== 1 && d.fassung !== STAND_FASSUNG) return false;
+  if (d.fassung !== STAND_FASSUNG) return false;
 
-  // Fassung 1 kannte keine Herkunft. Sie nachträglich als "code" zu
-  // buchen wäre geschmeichelt, als "lehrer" verleumdet – also
-  // "unbekannt". Das ist die einzige ehrliche Antwort.
-  var herkunft = (d.fassung === STAND_FASSUNG && d.herkunft) || {};
+  var herkunft = d.herkunft || {};
   gefundene = {};
   for (var i = 0; i < d.karten.length; i++) {
     var k = d.karten[i];
@@ -1946,12 +2012,25 @@ function codeErzeugen() {
   return btoa(unescape(encodeURIComponent(JSON.stringify(standObjekt()))));
 }
 
+// Der Fehler wird UNTERSCHIEDEN, nicht bloß gemeldet: Seit dem Schnitt
+// vom 04.09.2026 gibt es Codes, die technisch einwandfrei sind und
+// trotzdem abgelehnt werden. „Lässt sich nicht lesen" wäre da schlicht
+// gelogen und schickte jemanden auf die Suche nach einem Tippfehler,
+// den es nicht gibt.
 function codeEinlesen(code) {
   var d = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
-  if (!standUebernehmen(d)) throw new Error("leer oder falsche Fassung");
+  if (d && d.fassung && d.fassung !== STAND_FASSUNG) throw new Error("alt");
+  if (!standUebernehmen(d)) throw new Error("leer");
   standSichern();
   zeichneRaster();
   return d.karten.length;
+}
+
+function einleseFehler(e) {
+  return e && e.message === "alt"
+    ? "Dieser Code stammt aus der Zeit vor dem Neuanfang und gilt nicht mehr. " +
+      "Die Karten holst du an den Stationen."
+    : "Der Code lässt sich nicht lesen. Wurde beim Kopieren etwas abgeschnitten?";
 }
 
 document.getElementById("standCode").addEventListener("click", function () {
@@ -1983,7 +2062,7 @@ document.getElementById("codeLesen").addEventListener("click", function () {
   try {
     melden(codeEinlesen(code) + " Karten übernommen.");
   } catch (e) {
-    melden("Der Code lässt sich nicht lesen. Wurde beim Kopieren etwas abgeschnitten?", true);
+    melden(einleseFehler(e), true);
   }
 });
 
@@ -2007,12 +2086,19 @@ document.getElementById("dateiwahl").addEventListener("change", function () {
   var leser = new FileReader();
   leser.onload = function () {
     try {
-      if (!standUebernehmen(JSON.parse(leser.result))) throw new Error("leer");
+      var d = JSON.parse(leser.result);
+      // Dieselbe Unterscheidung wie beim Code: Eine Sicherung von
+      // vorgestern ist nicht kaputt, sie gilt nur nicht mehr.
+      if (d && d.fassung && d.fassung !== STAND_FASSUNG) throw new Error("alt");
+      if (!standUebernehmen(d)) throw new Error("leer");
       standSichern();
       zeichneRaster();
       melden(Object.keys(gefundene).length + " Karten aus der Datei übernommen.");
     } catch (e) {
-      melden("Die Datei ist keine gültige Elementia-Sicherung.", true);
+      melden(e && e.message === "alt"
+        ? "Diese Sicherung stammt aus der Zeit vor dem Neuanfang und gilt nicht mehr. " +
+          "Die Karten holst du an den Stationen."
+        : "Die Datei ist keine gültige Elementia-Sicherung.", true);
     }
   };
   leser.readAsText(datei);
@@ -2148,6 +2234,16 @@ zeichneRaster();
 baueFusszeile();
 sensorAnbieten();
 appVorbereiten();
+
+// Der Hinweis erscheint nur, wenn wirklich etwas weggeräumt wurde –
+// wer die App neu bekommt, soll keine Erklärung für etwas lesen, das
+// ihn nie betroffen hat.
+if (standVerworfen) {
+  document.getElementById("neustart").hidden = false;
+  document.getElementById("neustartweg").addEventListener("click", function () {
+    document.getElementById("neustart").hidden = true;
+  });
+}
 
 document.getElementById("offlineladen").addEventListener("click", bilderVorladen);
 
