@@ -19,7 +19,7 @@
 //  Fassung holt. Wird sie vergessen, sitzt die halbe Klasse mit
 //  der alten App da und niemand versteht, warum.
 // ------------------------------------------------------------
-var FASSUNG = 18;
+var FASSUNG = 19;
 
 var GERUEST_SPEICHER = "elementia-geruest-" + FASSUNG;
 var BILD_SPEICHER    = "elementia-bilder-" + FASSUNG;
@@ -102,20 +102,66 @@ self.addEventListener("activate", function (e) {
 // ============================================================
 //  Ausliefern
 //
-//  Zwei Verhalten, weil die App zwei Sorten Dateien hat:
+//  DREI Verhalten, weil die App drei Sorten Dateien hat:
 //
 //  Bilder – aus dem Speicher, sonst holen und behalten. Sie ändern
 //  sich nie: Ein neues Bild bekommt einen neuen Dateinamen, ein
 //  geändertes wird von bilder-verkleinern.ps1 neu geschrieben und
 //  landet über die erhöhte FASSUNG in einem neuen Speicher.
 //
-//  Alles andere – aus dem Speicher, aber im Hintergrund erneuern.
-//  So startet die App auch im schlechten Schul-WLAN sofort und ist
-//  beim nächsten Mal aktuell.
+//  Seiten (HTML) – erst das Netz, nach kurzer Frist der Speicher.
+//  Das ist seit dem 04.09.2026 umgedreht, und zwar aus einem
+//  Vorfall heraus: Der Lehrerzugang wurde am 03.09. mit einem
+//  Passwort versehen, aber Geräte mit der App auf dem Startbild-
+//  schirm lieferten weiter die zwischengespeicherte Seite von
+//  vorher aus. Dort reichte „?lehrer=1“ allein – die Schüler kamen
+//  am Tag darauf immer noch herein, obwohl die Reparatur längst
+//  oben war.
+//
+//  Daraus die Regel: Ein Schutz, der erst beim übernächsten Start
+//  ankommt, ist im Unterricht keiner. Nur SEITEN werden so geholt;
+//  sie sind klein, und der Rest bleibt schnell. Die Frist hält das
+//  Versprechen aus dem schlechten Schul-WLAN: Antwortet das Netz
+//  nicht binnen FRIST_MS, kommt die Seite aus dem Speicher, und
+//  offline läuft alles wie bisher.
+//
+//  Alles andere (Skripte, Kartendaten, Manifest) – aus dem
+//  Speicher, aber im Hintergrund erneuern. So startet die App auch
+//  im schlechten Schul-WLAN sofort und ist beim nächsten Mal
+//  aktuell.
 // ============================================================
+var FRIST_MS = 1500;
+
 function istBild(url) {
   return url.pathname.indexOf("/bilder-app/") >= 0 ||
          /\.(jpg|jpeg|png|webp)$/i.test(url.pathname);
+}
+
+// Eine "Seite" ist, was der Browser als Navigation holt – dazu der
+// direkte Aufruf einer .html und der Ordnerpfad, der auf index.html
+// hinausläuft. request.mode allein genügt nicht: Ein Aufruf aus dem
+// Verlauf oder ein Vorabruf kann anders ankommen.
+function istSeite(anfrage, url) {
+  return anfrage.mode === "navigate" ||
+         /\.html$/i.test(url.pathname) ||
+         /\/$/.test(url.pathname);
+}
+
+// Warten, aber nicht ewig. Löst mit undefined auf, wenn die Frist
+// abläuft ODER das Netz scheitert – beides heißt hier "nimm den
+// Speicher". Das Versprechen selbst läuft weiter und legt seine
+// Antwort noch ab, auch wenn es zu spät kam.
+function mitFrist(versprechen, ms) {
+  return new Promise(function (aufloesen) {
+    var erledigt = false;
+    function fertig(wert) {
+      if (erledigt) return;
+      erledigt = true;
+      aufloesen(wert);
+    }
+    setTimeout(function () { fertig(undefined); }, ms);
+    versprechen.then(fertig, function () { fertig(undefined); });
+  });
 }
 
 // Jeder Zugriff auf den Zwischenspeicher kann fehlschlagen (siehe
@@ -152,18 +198,43 @@ self.addEventListener("fetch", function (e) {
     return;
   }
 
+  // Ein Abruf, den beide Zweige benutzen: Er legt seine Antwort in
+  // jedem Fall ab, auch wenn die Frist ihn überholt hat.
+  var ausDemNetz = fetch(e.request).then(function (antwort) {
+    if (antwort && antwort.ok) inSpeicher(GERUEST_SPEICHER, e.request, antwort.clone());
+    return antwort;
+  });
+  // Zweierlei auf einmal: Der Ablegevorgang darf weiterlaufen, auch
+  // wenn schon aus dem Speicher geantwortet wurde (sonst schläft der
+  // Worker mitten im Schreiben ein), und die Ablehnung ist behandelt –
+  // ohne das stünde sie als "unhandled rejection" in der Konsole.
+  e.waitUntil(ausDemNetz["catch"](function () {}));
+
+  if (istSeite(e.request, url)) {
+    e.respondWith(
+      mitFrist(ausDemNetz, FRIST_MS).then(function (antwort) {
+        if (antwort) return antwort;
+        return ausSpeicher(e.request).then(function (treffer) {
+          if (treffer) return treffer;
+          // Weder rechtzeitig aus dem Netz noch im Speicher. Jetzt
+          // doch auf das Netz warten; scheitert auch das, bleibt die
+          // eigene Startseite – besser als der Dinosaurier des
+          // Browsers.
+          return ausDemNetz["catch"](function () {
+            return ausSpeicher("App/sammlung.html");
+          });
+        });
+      })
+    );
+    return;
+  }
+
   e.respondWith(
     ausSpeicher(e.request).then(function (treffer) {
-      var ausDemNetz = fetch(e.request).then(function (antwort) {
-        if (antwort && antwort.ok) inSpeicher(GERUEST_SPEICHER, e.request, antwort.clone());
-        return antwort;
-      })["catch"](function () {
-        // Kein Netz. Wenn es auch nichts im Speicher gab, bleibt für
-        // eine Seite die eigene Startseite – besser als der
-        // Dinosaurier des Browsers.
-        return treffer || ausSpeicher("App/sammlung.html");
+      if (treffer) return treffer;
+      return ausDemNetz["catch"](function () {
+        return ausSpeicher("App/sammlung.html");
       });
-      return treffer || ausDemNetz;
     })
   );
 });
