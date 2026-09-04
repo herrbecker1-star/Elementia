@@ -706,7 +706,6 @@
     <textarea id="standfeld" placeholder="Hier erscheint der Sicherungscode – oder einen vorhandenen Code hier einfügen und „Code einlesen“ drücken. Ein einzelner Stationscode (ELEMENTIA1:…) geht hier auch." spellcheck="false"></textarea>
     <div class="knopfreihe">
       <button id="codeLesen">Code einlesen</button>
-      <button id="allesAuf">Alles freischalten</button>
       <button id="allesZu" class="warnung">Sammlung zurücksetzen</button>
     </div>
     <span id="standmeldung"></span>
@@ -766,7 +765,11 @@
     </div>
   </div>
   <div id="werkzeuge">
-    <button id="gefunden">✓ Gefunden</button>
+    <!-- Von Haus aus versteckt: Der Knopf gehört nur zu einer bereits
+         gefundenen Karte (er nimmt weg, er gibt nicht). Ohne das stünde
+         beim Öffnen einer verschlossenen Karte einen Wimpernschlag lang
+         „✓ Gefunden“ da, bis zeichneGefundenKnopf() ihn wegnimmt. -->
+    <button id="gefunden" hidden>✓ Gefunden</button>
     <button id="drehen">↻ Umdrehen</button>
     <button id="neigung" hidden>📱 Neigung erlauben</button>
   </div>
@@ -889,117 +892,70 @@ var STAND_FASSUNG = 2;
 // sich der Stand, WIE eine Karte aufging.
 //
 //   "code"       an der Station gescannt oder der Code eingetippt
-//   "lehrer"     im Lehrermodus ohne Stationscode aufgeschlossen
+//   "lehrer"     ohne Stationscode aufgeschlossen – siehe unten
 //   "unbekannt"  aus einem Stand der Fassung 1 übernommen
 //
-// Das ist die zweite Hälfte der Antwort auf den Lehrerzugang, der durch
-// die Klassen gewandert ist. Die erste Hälfte (das Passwort oben) macht
-// das Aufschließen schwer; diese hier macht es wertlos: Eine Sammlung,
-// die nicht an den Stationen entstanden ist, sieht man ihr an – auch
-// noch, nachdem sie über Datei oder Code auf ein anderes Gerät gezogen
-// ist, denn die Herkunft reist mit.
+// Eine Sammlung, die nicht an den Stationen entstanden ist, sieht man
+// ihr an – auch noch, nachdem sie über Datei oder Code auf ein anderes
+// Gerät gezogen ist, denn die Herkunft reist mit. Die Kopfzeile sagt
+// es aber nur, wenn die beiden Zahlen auseinandergehen: Wer ehrlich
+// sammelt, soll keine Rechtfertigungszeile lesen müssen.
+//
+// "lehrer" kann diese Seite seit dem 04.09.2026 nicht mehr vergeben –
+// den Lehrermodus gibt es nicht mehr (Block direkt darunter). Der Wert
+// bleibt trotzdem, und zwar aus zwei Gründen: Alte Sammelstände und
+// alte Sicherungscodes tragen ihn, und der vorbereitete Vorführcode
+// aus App\vollsammlung-code.ps1 trägt ihn auch. Wer den weiterreicht,
+// verteilt also eine sichtbar gekennzeichnete Sammlung.
 //
 // Was das ausdrücklich NICHT kann: verhindern, dass zwei Kinder ihre
 // Sammlungen tauschen. Das geht mit dem Sicherungscode und muss gehen –
 // er ist der einzige Weg auf ein neues Gerät und nach iOS' 7-Tage-
 // Löschung. Aber wer tauscht, bekommt nur, was der andere hat, und der
-// hat es an den Stationen geholt. Der Griff, der auf einen Schlag alle
-// 133 Karten gab, war der Lehrermodus – und der ist jetzt zu.
+// hat es an den Stationen geholt.
 var gefundene = {};
 
 // ============================================================
-//  Lehrermodus – sammlung.html?lehrer=1 + Passwort
+//  Es gibt keinen Lehrerzugang mehr (04.09.2026)
 //
-//  Ohne ihn kann eine Karte NUR über ihren Stationscode aufgehen.
-//  Das ist der ganze Sinn der Kärtchen: Wer die Karte will, geht an
-//  die Station. Ein Knopf „gefunden" in der Kartenansicht hob die
-//  Sperre mit einem Antippen wieder auf – dann hätte man sich das
-//  Drucken sparen können.
+//  Eine Karte geht NUR über ihren Stationscode auf. Ohne Ausnahme,
+//  ohne Adresszusatz, ohne Passwort. Das ist der ganze Sinn der
+//  gedruckten Kärtchen: Wer die Karte will, geht an die Station.
 //
-//  Der Lehrer braucht den Weg trotzdem: wenn eine Kamera vor der
-//  Klasse streikt, und um die Sammlung vorzuführen, ohne vorher
-//  neunzig Kärtchen abzuscannen.
+//  Hier saß eine Hintertür, und sie ist dreimal gefallen:
 //
-//  Bis zum 03.09.2026 reichte der Zusatz „?lehrer=1" allein. Er ist
-//  durch die Klassen gewandert, wie es jede Adresse tut, die man
-//  einmal vor einer Klasse in die Adresszeile tippt. Deshalb jetzt
-//  ein Passwort – und zwar per Abfrage, NICHT als zweiter Zusatz in
-//  der Adresse: Was in der Adresse steht, steht im Verlauf des
-//  geteilten Tablets und ist übermorgen wieder herum.
+//    13.08.2026  „?lehrer=1“ allein  – wurde weitererzählt
+//    03.09.2026  dazu ein Passwort   – Schüler kamen weiter herein
+//    04.09.2026  entfernt
 //
-//  Verglichen wird gegen einen SHA-256-Hash. Der Quelltext dieser
-//  Seite ist öffentlich (kostenlose GitHub Pages verlangen ein
-//  öffentliches Repository) – ein Passwort im Klartext wäre also
-//  keins. Aus dem Hash liest niemand das Wort zurück. Gehasht wird
-//  LEHRER_SALZ + Wort, sonst fände eine Hash-Suche im Netz ein
-//  einzelnes Wörterbuchwort in Sekunden.
+//  Warum nicht ein viertes Mal geflickt: Diese Seite läuft vollständig
+//  im Browser des Schülers, ihr Quelltext ist öffentlich (kostenlose
+//  GitHub Pages verlangen ein öffentliches Repository), das Repository
+//  ist als ZIP herunterladbar, und ein Passwort muss irgendwann vor
+//  einer Klasse eingetippt werden. Jede verborgene Tür in so einer
+//  Seite ist dieselbe Wette, und sie ist dreimal verloren gegangen.
 //
-//  Passwort wechseln: App\lehrer-passwort.ps1 aufrufen, den
-//  ausgegebenen Wert unten eintragen, FASSUNG in sw.js erhöhen,
-//  hochladen. Das Wort selbst steht nirgends im Projekt.
+//  Die zwei Löcher, an denen es zuletzt scheiterte – als Merkposten,
+//  falls jemand das hier wieder einbauen möchte:
 //
-//  Bewusst NICHT gemerkt. Der Modus gilt nur für diesen einen
-//  Seitenaufruf – auf einem geteilten Tablet soll er nicht liegen
-//  bleiben und dem nächsten Kind in die Hände fallen.
+//    – Eine Ausnahme für file:// und localhost ist auf einem
+//      öffentlichen Repository keine Ausnahme, sondern der
+//      Haupteingang: herunterladen, doppelklicken, drin.
+//    – prompt() hat kein Passwortfeld. Einmal vor der Klasse
+//      eingetippt heißt vorgelesen.
 //
-//  Auf der eigenen Platte und auf localhost fragt niemand: Das ist
-//  der Rechner des Lehrers, und crypto.subtle gibt es unter file://
-//  ohnehin nicht.
+//  Was an die Stelle tritt:
+//
+//    Kamera streikt  → Code abtippen, Feld im Sammelstand-Fach
+//    Duell vorführen → braucht nichts: dort stehen ohnehin alle
+//                      Karten bereit, „nur gefundene“ ist aus
+//    Sammlung zeigen → App\vollsammlung-code.ps1 erzeugt einen
+//                      Sicherungscode für das eigene Gerät
+//
+//  Die Herkunft im Sammelstand (oben) bleibt, obwohl niemand mehr
+//  „lehrer“ vergeben kann: Alte Stände und alte Sicherungscodes
+//  tragen den Wert, und sie müssen weiter lesbar bleiben.
 // ============================================================
-var LEHRER = false;
-
-var LEHRER_SALZ = "elementia:";
-var LEHRER_HASH = "5d6203265687751afe6466dbc41828bd4a9974df1ddf07d4d2d338fec6cd4544";
-
-function oertlich() {
-  return location.protocol === "file:" ||
-         location.hostname === "localhost" ||
-         location.hostname === "127.0.0.1";
-}
-
-function sha256Hex(text) {
-  var daten = new TextEncoder().encode(text);
-  return crypto.subtle.digest("SHA-256", daten).then(function (puffer) {
-    var bytes = new Uint8Array(puffer), hex = "";
-    for (var i = 0; i < bytes.length; i++) {
-      hex += (bytes[i] < 16 ? "0" : "") + bytes[i].toString(16);
-    }
-    return hex;
-  });
-}
-
-// Der Modus wird NACH dem Aufbau der Seite eingeschaltet, nicht davor.
-// So muss die Verdrahtung nicht auf eine Passwortprüfung warten, die es
-// im Normalfall (kein Zusatz) gar nicht gibt: Ohne „?lehrer=1" läuft
-// diese ganze Datei wie bisher, ohne eine einzige Verzögerung.
-function lehrerAnschalten() {
-  LEHRER = true;
-  document.getElementById("allesAuf").hidden = false;
-  zeichneGefundenKnopf();
-  document.getElementById("zaehler").insertAdjacentHTML("beforebegin",
-    '<span style="font-size:11px;font-weight:600;color:#d8cfa8;' +
-    'border:1px solid #7a6a4e;border-radius:5px;padding:1px 6px">Lehrermodus</span> ');
-}
-
-function lehrerAnmelden() {
-  if (new URLSearchParams(location.search).get("lehrer") !== "1") return;
-  if (oertlich()) { lehrerAnschalten(); return; }
-
-  if (!window.crypto || !crypto.subtle) {
-    alert("Auf diesem Gerät lässt sich das Passwort nicht prüfen. Kein Lehrermodus.");
-    return;
-  }
-
-  var wort = prompt("Passwort für den Lehrermodus:");
-  if (!wort) return;
-
-  sha256Hex(LEHRER_SALZ + wort).then(function (hash) {
-    if (hash === LEHRER_HASH) lehrerAnschalten();
-    else alert("Falsches Passwort. Kein Lehrermodus.");
-  })["catch"](function () {
-    alert("Die Passwortprüfung ist fehlgeschlagen. Kein Lehrermodus.");
-  });
-}
 
 function schluessel(k) { return regionVon(k) + "|" + k.name; }
 
@@ -1509,11 +1465,14 @@ function grossOeffnen(k, kachel) {
   });
 }
 
-// Der Knopf kann eine Karte nur noch WEGNEHMEN, nicht geben – außer
-// im Lehrermodus. Eine gefundene Karte wieder zuzumachen ist harmlos
-// (falscher Scan, Tablet weitergeben); sie ohne Stationscode zu
-// öffnen hebt die Sperre auf, und dann ist der ganze Bogen mit den
-// Kärtchen Makulatur.
+// Der Knopf kann eine Karte nur noch WEGNEHMEN, nie geben. Eine
+// gefundene Karte wieder zuzumachen ist harmlos (falscher Scan,
+// Tablet weitergeben) und schadet nur einem selbst; sie ohne
+// Stationscode zu öffnen hebt die Sperre auf, und dann ist der ganze
+// Bogen mit den Kärtchen Makulatur.
+//
+// Bei einer noch nicht gefundenen Karte ist der Knopf deshalb gar
+// nicht da – kein „○ Freischalten“ mehr, das ins Leere greift.
 function zeichneGefundenKnopf() {
   var b = document.getElementById("gefunden");
   if (!aktuelleKarte) return;
@@ -1524,12 +1483,10 @@ function zeichneGefundenKnopf() {
   // ansehen, wie sie entstanden ist.
   var herkunft = herkunftVon(aktuelleKarte);
 
-  b.hidden = !offen && !LEHRER;
-  b.textContent = offen ? (herkunft === "code" ? "✓ Gefunden" : "✓ Gefunden (ohne Code)")
-                        : "○ Freischalten";
-  b.title = offen ? (herkunft === "code" ? "Aus der Sammlung nehmen"
-                                         : "Nicht an einer Station geholt · aus der Sammlung nehmen")
-                  : "Lehrermodus: ohne Stationscode freischalten";
+  b.hidden = !offen;
+  b.textContent = herkunft === "code" ? "✓ Gefunden" : "✓ Gefunden (ohne Code)";
+  b.title = herkunft === "code" ? "Aus der Sammlung nehmen"
+                                : "Nicht an einer Station geholt · aus der Sammlung nehmen";
   b.setAttribute("aria-pressed", offen ? "true" : "false");
 }
 
@@ -2062,20 +2019,14 @@ document.getElementById("dateiwahl").addEventListener("change", function () {
   this.value = "";
 });
 
-// Die größere Tür: Ein Antippen, und die ganze Sammlung steht offen.
-// Sie ist zum Vorführen gemacht und gehört nicht in Schülerhände –
-// deshalb ist sie erst einmal gar nicht im Fußbereich. Sichtbar macht
-// sie allein `lehrerAnschalten`, also nach bestandener Passwortprüfung.
-document.getElementById("allesAuf").hidden = true;
-
-document.getElementById("allesAuf").addEventListener("click", function () {
-  if (!LEHRER) return;
-  KARTEN.forEach(function (k) { gefundene[schluessel(k)] = "lehrer"; });
-  standSichern();
-  zeichneRaster();
-  melden("Alle " + KARTEN.length + " Karten freigeschaltet.");
-});
-
+// Hier saß „Alles freischalten“ – ein Antippen für alle 133 Karten.
+// Der Knopf ist samt Lehrermodus weg (Begründung ganz oben). Wer die
+// volle Sammlung zum Vorführen braucht, erzeugt sich den passenden
+// Sicherungscode mit App\vollsammlung-code.ps1 und liest ihn hier
+// nebenan ein.
+//
+// „Sammlung zurücksetzen“ bleibt: Es nimmt weg, statt zu geben, und
+// wird beim Weitergeben eines Tablets gebraucht.
 document.getElementById("allesZu").addEventListener("click", function () {
   if (!confirm("Wirklich die ganze Sammlung zurücksetzen? Das lässt sich nur mit einer " +
                "vorher erzeugten Sicherung rückgängig machen.")) return;
@@ -2230,21 +2181,19 @@ document.getElementById("gefunden").addEventListener("click", function () {
   if (!aktuelleKarte) return;
   var offen = istGefunden(aktuelleKarte);
   // Zweiter Riegel, nicht nur der versteckte Knopf: Auch ein Aufruf
-  // von außen (Tastatur, Vorlese-Hilfe) darf ohne Lehrermodus nichts
-  // freischalten.
-  if (!offen && !LEHRER) return;
-  if (offen && !confirm("„" + aktuelleKarte.name + "“ wieder aus der Sammlung nehmen?")) return;
+  // von außen (Tastatur, Vorlese-Hilfe) darf hier nichts freischalten.
+  // Dieser Knopf nimmt nur weg.
+  if (!offen) return;
+  if (!confirm("„" + aktuelleKarte.name + "“ wieder aus der Sammlung nehmen?")) return;
 
-  // Dieser Knopf gibt nur im Lehrermodus – also ist die Herkunft klar.
-  gefundenSetzen(aktuelleKarte, !offen, "lehrer");
+  gefundenSetzen(aktuelleKarte, false);
   zeichneGefundenKnopf();
-  // Beide Seiten neu bauen: Die Karte soll sich sofort zeigen, statt
-  // erst beim nächsten Öffnen. Der Augenblick, in dem die Silhouette
-  // dem Bild weicht, ist der ganze Lohn – zeigen und belohnen.
+  // Beide Seiten neu bauen, damit die Karte sofort wieder zur
+  // Silhouette wird und nicht erst beim nächsten Öffnen. Kein
+  // Aufblenden: Das feiert das Finden, und hier wird weggenommen.
   vorneZeigen();
   baueVorderseite(aktuelleKarte);
   baueRueckseite(aktuelleKarte);
-  if (istGefunden(aktuelleKarte)) aufblenden();
   // Das Raster wird erst beim Schließen neu gezeichnet: Es liegt ohnehin
   // hinter der Großansicht, und ein Neuaufbau würde die Kachel wegwerfen,
   // zu der der Übergang beim Schließen zurücklaufen soll.
@@ -2317,10 +2266,9 @@ if (urlRegion) {
   }
 }
 
-// Zuletzt, mit Absicht: Die Passwortabfrage hält einen Dialog vor die
-// Seite. Sie soll vor einer fertig aufgebauten Sammlung stehen, nicht
-// vor einer leeren Fläche – und ohne „?lehrer=1" passiert hier nichts.
-lehrerAnmelden();
+// Hier stand zuletzt `lehrerAnmelden()`. „?lehrer=1“ ist heute ein
+// Adresszusatz wie jeder andere unbekannte: Er wird nicht gelesen und
+// tut nichts. Siehe den Block ganz oben.
 </script>
 </body>
 </html>
