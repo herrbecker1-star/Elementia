@@ -5,12 +5,14 @@
 //  Das Rollenspiel teilt mit der Karten-App keinen Code und keinen
 //  Zwischenspeicher.
 //
-//  Strategie: Erst der Zwischenspeicher, dann das Netz. Beim Testen
-//  mit ?probe=1 wird kein Worker angemeldet (spiel\start.js).
+//  Strategie: Erst das Netz, dann der Zwischenspeicher (unten beim
+//  fetch begründet). Beim Testen mit ?probe=1 wird kein Worker
+//  angemeldet (spiel\start.js) – ein schon angemeldeter bleibt aber
+//  zuständig, bis er ersetzt wird.
 // ============================================================
 
 // Bei JEDER Veröffentlichung erhöhen – sonst holt kein Handy die neue Fassung.
-var FASSUNG = 2;
+var FASSUNG = 3;
 var SPEICHER = "elementia-abenteuer-" + FASSUNG;
 
 var DATEIEN = [
@@ -22,6 +24,10 @@ var DATEIEN = [
   "kern/spielstand.js",
   "kern/kampf.js",
   "kern/fangen.js",
+  "kern/welt.js",
+  "kern/auftreten.js",
+  "daten/auftreten.js",
+  "spiel/buch.js",
   "daten/elementals.js",
   "spiel/kampfszene.js",
   "grafik/elementals/eisen.png",
@@ -72,11 +78,26 @@ self.addEventListener("activate", function (e) {
   );
 });
 
+// Erst das Netz, dann der Zwischenspeicher (seit Fassung 3).
+// Vorher kam alles zuerst aus dem Speicher – beim ersten Öffnen nach
+// einer Veröffentlichung lief dann noch das alte Spiel, und der neue
+// Kampf war nicht zu sehen. Jetzt gilt: mit Netz immer das Neueste
+// (und der Speicher wird nebenbei aufgefrischt), ohne Netz das Letzte.
 self.addEventListener("fetch", function (e) {
   if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then(function (treffer) {
-      return treffer || fetch(e.request);
+    fetch(e.request).then(function (antwort) {
+      if (antwort && antwort.ok && new URL(e.request.url).origin === location.origin) {
+        var kopie = antwort.clone();
+        caches.open(SPEICHER).then(function (s) {
+          // Ohne Suchteil ablegen, damit ?probe=1 und Co. offline dieselbe Seite finden.
+          var u = new URL(e.request.url); u.search = "";
+          s.put(u.toString(), kopie);
+        })["catch"](function () {});
+      }
+      return antwort;
+    })["catch"](function () {
+      return caches.match(e.request, { ignoreSearch: true });
     })
   );
 });

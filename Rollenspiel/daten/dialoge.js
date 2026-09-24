@@ -56,6 +56,16 @@ var DIALOGE = {
     { sag: "Mara", text: "Eines Tages, Kind, erkennst du jeden Stoff am Glanz und am Klang. Bis dahin: Finger weg vom gelben Pulver. Es stinkt beim Anzünden." }
   ],
 
+  // Das Labor von Stoffingen: Mutters Werkstatt. Hier – und nur in
+  // Laboren – erholen sich erschöpfte Elementals.
+  labor_stoffingen: [
+    { erzaehl: "Mutters Werkstatt. Es riecht nach Ringelblumen, Asche und Salbe. Auf dem Regal stehen Tiegel, Mörser und ein Stapel sauberer Reagenzgläser." },
+    { heilen: true },
+    { erzaehl: "Deine Elementals ruhen sich aus. Sie sind wieder bei Kräften." },
+    { speichern: true },
+    { erzaehl: "(Gespeichert.)" }
+  ],
+
   schild_ost: [
     { erzaehl: "Ein verwittertes Schild: „Nach Osten – Kolbenwald. Gläserne Früchte bitte nicht pflücken.“" }
   ],

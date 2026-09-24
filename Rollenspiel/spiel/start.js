@@ -56,7 +56,7 @@
     fps: { forceSetTimeOut: /[?&]takt=1\b/.test(location.search) },
     input: { activePointers: 3 },     // Stick und Aktionsknopf gleichzeitig
     physics: { default: "arcade", arcade: { debug: /[?&]koerper=1\b/.test(location.search) } },
-    scene: [LadeSzene, TitelSzene, OberweltSzene, UiSzene, KampfSzene]
+    scene: [LadeSzene, TitelSzene, OberweltSzene, UiSzene, KampfSzene, BuchSzene]
   });
 
   // Drehen, Adressleiste ein/aus, Fenster ziehen: Die Leinwand folgt.

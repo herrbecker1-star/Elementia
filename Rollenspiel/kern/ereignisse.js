@@ -17,6 +17,8 @@
 //    { kampf: { art: "zink", stufe: 3, wild: true, feld: { … } } }
 //                                                 Kampf; die Anzeige
 //                                                 braucht dafür kampf()
+//    { heilen: true }     alle Elementals erholen sich (nur in Laboren!)
+//    { speichern: true }  Spielstand sichern
 //
 //  Die Anzeige ist ein Objekt mit zwei Funktionen, die Promises
 //  liefern: sag(sprecher, text) und wahl(frage, texte) → Index.
@@ -57,6 +59,9 @@ var EREIGNISSE = (function () {
         }).then(weiter);
       }
 
+      if (s.heilen) return Promise.resolve(anzeige.heilen()).then(weiter);
+      if (s.speichern) return Promise.resolve(anzeige.speichern()).then(weiter);
+
       if (s.setze !== undefined) {
         flags[s.setze] = s.wert === undefined ? true : s.wert;
         return weiter();
@@ -94,7 +99,7 @@ var EREIGNISSE = (function () {
           if (s.sonst) gehe(s.sonst, hier + ".sonst");
         } else if (s.kampf !== undefined) {
           if (!s.kampf.art || typeof ARTEN !== "undefined" && !ARTEN[s.kampf.art]) fehler.push(hier + ": Kampf gegen unbekannte Art " + s.kampf.art);
-        } else if (s.setze === undefined) {
+        } else if (s.setze === undefined && !s.heilen && !s.speichern) {
           fehler.push(hier + ": unbekannter Schritt");
         }
       });

@@ -24,6 +24,7 @@ class UiSzene extends Phaser.Scene {
     this.aktionGedrueckt = false;
     this.weiterWartet = null;     // resolve-Funktion der offenen Sprechblase
 
+    this.baueHimmel();
     this.baueStick();
     this.baueKnoepfe();
     this.baueDialog();
@@ -41,7 +42,70 @@ class UiSzene extends Phaser.Scene {
     var suche = new URLSearchParams(location.search);
     var probeDialog = suche.get("dialog"), probeKampf = suche.get("kampf");
     if (probeDialog && DIALOGE[probeDialog]) this.dialogFuehren(DIALOGE[probeDialog], this.oberwelt.stand.flags);
+    else if (suche.get("buch")) {
+      // Prüfschalter ?buch=gruppe|stoffbuch|gepaeck
+      this.menueOffen = true;
+      this.scene.launch("buch", { stand: this.oberwelt.stand, reiter: suche.get("buch") });
+    }
     else if (probeKampf && ARTEN[probeKampf]) this.dialogFuehren([{ kampf: { art: probeKampf, stufe: Number(suche.get("stufe")) || 5, ort: suche.get("ort") || "dorf" } }], this.oberwelt.stand.flags);
+  }
+
+  // ============================================================
+  //  Himmel: Tageszeit und Wetter über der Welt, unter den Knöpfen
+  // ============================================================
+  baueHimmel() {
+    this.himmel = this.add.graphics().setDepth(-10);
+    // Regentropfen als Partikel; die Textur ist ein schmaler Strich.
+    if (!this.textures.exists("tropfen")) {
+      var g = this.make.graphics({ add: false });
+      g.fillStyle(0xbfd8ff, 0.8).fillRect(0, 0, MASS.px(1.5), MASS.px(12));
+      g.generateTexture("tropfen", Math.max(2, MASS.px(1.5)), MASS.px(12));
+      g.destroy();
+    }
+    this.regen = null;
+    this.uhr = this.add.text(0, 0, "", {
+      fontFamily: SCHRIFT.familie, fontSize: MASS.px(13) + "px", color: "#f4ead5",
+      backgroundColor: "#101418aa", padding: { x: MASS.px(8), y: MASS.px(4) }
+    }).setOrigin(0.5, 0).setDepth(5);
+    this.blitzUhr = null;
+    this.himmelZeichnen();
+  }
+
+  himmelZeichnen() {
+    var stand = this.oberwelt.stand;
+    var b = this.scale.width, h = this.scale.height;
+    var ph = WELT.phase(stand.zeit), wetter = stand.wetter.art;
+    var farbe = { morgen: [0xffb070, 0.10], tag: [0x000000, 0], abend: [0xff6030, 0.16], nacht: [0x0b1840, 0.45] }[ph];
+    var wf = { klar: [0, 0], hitze: [0xffa040, 0.08], nebel: [0xe8eef2, 0.32], regen: [0x203040, 0.18], gewitter: [0x101830, 0.28] }[wetter];
+    this.himmel.clear();
+    if (farbe[1]) this.himmel.fillStyle(farbe[0], farbe[1]).fillRect(0, 0, b, h);
+    if (wf[1]) this.himmel.fillStyle(wf[0], wf[1]).fillRect(0, 0, b, h);
+
+    // Der Regen wird mit der aktuellen Breite neu angelegt – nach dem
+    // Drehen des Handys soll er über den ganzen Bildschirm fallen.
+    var regnet = wetter === "regen" || wetter === "gewitter";
+    if (this.regen) { this.regen.destroy(); this.regen = null; }
+    if (regnet) {
+      this.regen = this.add.particles(0, 0, "tropfen", {
+        x: { min: 0, max: b }, y: -MASS.px(20), lifespan: Math.round(1000 * h / MASS.px(600)),
+        speedY: { min: MASS.px(520), max: MASS.px(680) }, speedX: -MASS.px(60),
+        quantity: 2, frequency: 25, alpha: { start: 0.7, end: 0.25 }
+      }).setDepth(-9);
+    }
+
+    if (this.blitzUhr) { this.blitzUhr.remove(); this.blitzUhr = null; }
+    if (wetter === "gewitter") {
+      var szene = this;
+      this.blitzUhr = this.time.addEvent({ delay: 6000, loop: true, callback: function () {
+        if (Math.random() < 0.5) szene.cameras.main.flash(120, 230, 235, 255);
+      } });
+    }
+    this.uhrZeigen();
+  }
+
+  uhrZeigen() {
+    var stand = this.oberwelt.stand;
+    this.uhr.setText(WELT.uhr(stand.zeit) + " · " + WELT.PHASE_NAME[WELT.phase(stand.zeit)] + " · " + WELT.WETTER_NAME[stand.wetter.art]);
   }
 
   // ============================================================
@@ -187,7 +251,9 @@ class UiSzene extends Phaser.Scene {
         }
         szene.dialog.setVisible(false);
         return szene.oberwelt.kampfStarten(cfg);
-      }
+      },
+      heilen: function () { szene.oberwelt.heilen(); },
+      speichern: function () { szene.oberwelt.speichern(); }
     };
     EREIGNISSE.ausfuehren(ablauf, flags, anzeige).catch(function (fehler) {
       console.error(fehler);
@@ -272,6 +338,10 @@ class UiSzene extends Phaser.Scene {
     this.menue.add(this.meldung);
 
     this.menueKnoepfe = [
+      baueKnopf(this, "Gruppe & Stoffbuch", function () {
+        szene.menue.setVisible(false);
+        szene.scene.launch("buch", { stand: oberwelt.stand, beiEnde: function () { szene.menue.setVisible(true); } });
+      }),
       baueKnopf(this, "Speichern", function () {
         szene.melde(oberwelt.speichern() ? "Gespeichert." : "Speichern nicht möglich (privates Fenster?). Nimm den Spielstand-Code.");
       }),
@@ -342,10 +412,18 @@ class UiSzene extends Phaser.Scene {
       wy -= k.height / 2 + MASS.px(8);
     }
 
+    // Menü in zwei Spalten: Sechs Knöpfe untereinander passen auf
+    // einem Handy quer (390 CSS-Pixel hoch) nicht mehr hin.
     this.menueGrund.clear().fillStyle(0x000000, 0.7).fillRect(0, 0, b, h);
-    var my = h / 2 - (this.menueKnoepfe.length * MASS.px(56)) / 2 + MASS.px(24);
-    this.menueKnoepfe.forEach(function (k) { k.setPosition(b / 2, my); my += MASS.px(56); });
-    this.meldung.setPosition(b / 2, my + MASS.px(4));
+    var zeilen = Math.ceil(this.menueKnoepfe.length / 2), abstandY = MASS.px(58), abstandX = MASS.px(240);
+    var my0 = h / 2 - (zeilen - 1) * abstandY / 2 - MASS.px(14);
+    this.menueKnoepfe.forEach(function (k, i) {
+      k.setPosition(b / 2 + (i % 2 ? 0.5 : -0.5) * abstandX, my0 + Math.floor(i / 2) * abstandY);
+    });
+    this.meldung.setPosition(b / 2, my0 + zeilen * abstandY);
+
+    this.uhr.setPosition(b / 2, MASS.px(10));
+    this.himmelZeichnen();
   }
 
   update() {
@@ -359,6 +437,10 @@ class UiSzene extends Phaser.Scene {
       if (t.S.isDown || t.DOWN.isDown) e.y = 1;
     }
     this.eingabe = e;
+
+    // Die Uhr einmal je Spielminute auffrischen, nicht in jedem Bild.
+    var minute = Math.floor(this.oberwelt.stand.zeit);
+    if (minute !== this.letzteMinute) { this.letzteMinute = minute; this.uhrZeigen(); }
 
     if (this.probeText) {
       var kamera = this.oberwelt.cameras.main;

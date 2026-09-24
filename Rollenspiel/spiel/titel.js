@@ -33,6 +33,32 @@ class LadeSzene extends Phaser.Scene {
   }
 
   create() {
+    // Silhouetten fürs Stoffbuch als eigene Texturen: Einfärben per
+    // Tint gibt es nur unter WebGL, im 2D-Renderer bliebe das Bild bunt
+    // – und das Unbekannte wäre verraten.
+    var texturen = this.textures;
+    Object.keys(ARTEN).forEach(function (art) {
+      var quelle = texturen.get("el-" + art).getSourceImage();
+      var leinwand = document.createElement("canvas");
+      leinwand.width = quelle.width; leinwand.height = quelle.height;
+      var c = leinwand.getContext("2d");
+      c.drawImage(quelle, 0, 0);
+      // Fast deckend abgedunkelt: Die Gestalt ahnt man, die Farbe – und
+      // damit der Stoff – bleibt verborgen. Ganz deckend blieb nur ein
+      // Oval übrig, weil die Vignette den Bildhintergrund mitträgt.
+      c.globalCompositeOperation = "saturation";
+      c.fillStyle = "#808080";
+      c.fillRect(0, 0, leinwand.width, leinwand.height);
+      c.globalCompositeOperation = "source-atop";
+      c.fillStyle = "rgba(43, 29, 16, 0.82)";
+      c.fillRect(0, 0, leinwand.width, leinwand.height);
+      // Das Entfärben füllt auch durchsichtige Stellen – die weiche
+      // Vignette des Originals zurückholen.
+      c.globalCompositeOperation = "destination-in";
+      c.drawImage(quelle, 0, 0);
+      if (!texturen.exists("sil-" + art)) texturen.addCanvas("sil-" + art, leinwand);
+    });
+
     // Laufbilder je Figur: Zeile r, Spalten unten/links/rechts/oben × 2.
     var anims = this.anims;
     for (var r = 0; r < 5; r++) {
@@ -50,9 +76,14 @@ class LadeSzene extends Phaser.Scene {
     // Für kopflose Fotos, die sonst nie an der Titelseite vorbeikämen.
     var suche = new URLSearchParams(location.search);
     // (Den Dialog öffnet die UI-Szene selbst, sobald sie steht.)
+    // ?probegruppe=1 gibt die Probegruppe auch ohne Kampf (Schemen
+    // erscheinen erst, wenn jemand mitkommt); ?zeit=22:00 und
+    // ?wetter=regen stellen Uhr und Himmel.
     if (suche.get("direkt") === "1" || suche.get("dialog") || suche.get("kampf")) {
       var stand = SPIELSTAND.neu();
-      if (suche.get("kampf")) {
+      if (suche.get("zeit")) { var hm = suche.get("zeit").split(":"); stand.zeit = Number(hm[0]) * 60 + Number(hm[1] || 0); }
+      if (suche.get("wetter")) stand.wetter = { art: suche.get("wetter"), bis: (stand.zeit || 420) + 100000 };
+      if (suche.get("kampf") || suche.get("probegruppe")) {
         // Probegruppe, bis die Starterwahl (M3) steht.
         stand.gruppe = [KAMPF.neuesElemental("eisen", 5), KAMPF.neuesElemental("magnesium", 5)];
         stand.vorrat = { reagenzglas: 3, tiegelzange: 2, spatel: 2 };
