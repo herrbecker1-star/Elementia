@@ -50,6 +50,8 @@ class OberweltSzene extends Phaser.Scene {
       szene.ansprechbar.push(eintrag);
     });
 
+    this.startpunkt = start;
+
     // ---------- Spielfigur ----------
     var x = this.stand.x !== null ? this.stand.x : start.x;
     var y = this.stand.y !== null ? this.stand.y : start.y;
@@ -107,6 +109,34 @@ class OberweltSzene extends Phaser.Scene {
     this.stand.y = Math.round(this.held.y);
     this.stand.richtung = this.richtung;
     return SPIELSTAND.speichern(this.stand);
+  }
+
+  // ---------- Kampf ----------
+  // cfg: { art, stufe, wild, feld, ort }. Liefert ein Promise mit dem
+  // Ausgang ("sieg", "gefangen", "geflohen", "entkommen", "niederlage").
+  // Die Oberwelt ruht so lange, die Oberfläche schläft.
+  kampfStarten(cfg) {
+    var szene = this;
+    return new Promise(function (fertig) {
+      szene.held.setVelocity(0, 0);
+      szene.scene.pause();
+      szene.scene.sleep("ui");
+      szene.scene.launch("kampf", {
+        stand: szene.stand,
+        gegner: { art: cfg.art, stufe: cfg.stufe || 3 },
+        feld: cfg.feld,
+        ort: cfg.ort || "dorf",
+        wild: cfg.wild !== false,
+        beiEnde: function (ende) {
+          szene.scene.resume();
+          szene.scene.wake("ui");
+          // Nach einer Niederlage wacht man im Labor auf, nicht auf dem Schlachtfeld.
+          if (ende === "niederlage") szene.held.setPosition(szene.startpunkt.x, szene.startpunkt.y);
+          szene.speichern();
+          fertig(ende);
+        }
+      });
+    });
   }
 
   // ---------- Ansprechen ----------

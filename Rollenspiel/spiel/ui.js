@@ -37,9 +37,11 @@ class UiSzene extends Phaser.Scene {
     this.scale.on("resize", this.anordnen, this);
     this.events.once("shutdown", function () { szene.scale.off("resize", szene.anordnen, szene); });
 
-    // Prüfschalter ?dialog=<name> (siehe spiel\titel.js)
-    var probeDialog = new URLSearchParams(location.search).get("dialog");
+    // Prüfschalter ?dialog=<name> und ?kampf=<art>&stufe=<n> (siehe spiel\titel.js)
+    var suche = new URLSearchParams(location.search);
+    var probeDialog = suche.get("dialog"), probeKampf = suche.get("kampf");
     if (probeDialog && DIALOGE[probeDialog]) this.dialogFuehren(DIALOGE[probeDialog], this.oberwelt.stand.flags);
+    else if (probeKampf && ARTEN[probeKampf]) this.dialogFuehren([{ kampf: { art: probeKampf, stufe: Number(suche.get("stufe")) || 5, ort: suche.get("ort") || "dorf" } }], this.oberwelt.stand.flags);
   }
 
   // ============================================================
@@ -176,7 +178,16 @@ class UiSzene extends Phaser.Scene {
     this.zeigeAktion("Weiter");
     var anzeige = {
       sag: function (sprecher, text) { return szene.sprechblase(sprecher, text); },
-      wahl: function (frage, texte) { return szene.wahl(frage, texte); }
+      wahl: function (frage, texte) { return szene.wahl(frage, texte); },
+      kampf: function (cfg) {
+        var bereit = szene.oberwelt.stand.gruppe.some(function (el) { return el.zh > 0; });
+        if (!bereit) {
+          var text = szene.oberwelt.stand.gruppe.length ? "Deine Elementals sind erschöpft. Erst ins Labor!" : "Du hast noch kein Elemental dabei.";
+          return szene.sprechblase(null, text).then(function () { return "nicht_bereit"; });
+        }
+        szene.dialog.setVisible(false);
+        return szene.oberwelt.kampfStarten(cfg);
+      }
     };
     EREIGNISSE.ausfuehren(ablauf, flags, anzeige).catch(function (fehler) {
       console.error(fehler);

@@ -14,6 +14,9 @@
 //    { setze: "flag" }  { setze: "flag", wert: 3 }
 //    { wenn: "flag", dann: [ … ], sonst: [ … ] }  prüft Wahrheit
 //    { wennNicht: "flag", dann: [ … ] }
+//    { kampf: { art: "zink", stufe: 3, wild: true, feld: { … } } }
+//                                                 Kampf; die Anzeige
+//                                                 braucht dafür kampf()
 //
 //  Die Anzeige ist ein Objekt mit zwei Funktionen, die Promises
 //  liefern: sag(sprecher, text) und wahl(frage, texte) → Index.
@@ -43,6 +46,14 @@ var EREIGNISSE = (function () {
           var gewaehlt = s.optionen[nr];
           if (!gewaehlt) throw new Error("Ungültige Wahl " + nr + " bei „" + s.wahl + "“");
           return ausfuehren(gewaehlt.dann || [], flags, anzeige);
+        }).then(weiter);
+      }
+
+      if (s.kampf !== undefined) {
+        // Das Ergebnis ("sieg", "gefangen", …) landet im Flag
+        // "letzter_kampf", damit der Ablauf darauf verzweigen kann.
+        return anzeige.kampf(s.kampf).then(function (ende) {
+          flags.letzter_kampf = ende;
         }).then(weiter);
       }
 
@@ -81,6 +92,8 @@ var EREIGNISSE = (function () {
         } else if (s.wenn !== undefined || s.wennNicht !== undefined) {
           gehe(s.dann || [], hier + ".dann");
           if (s.sonst) gehe(s.sonst, hier + ".sonst");
+        } else if (s.kampf !== undefined) {
+          if (!s.kampf.art || typeof ARTEN !== "undefined" && !ARTEN[s.kampf.art]) fehler.push(hier + ": Kampf gegen unbekannte Art " + s.kampf.art);
         } else if (s.setze === undefined) {
           fehler.push(hier + ": unbekannter Schritt");
         }

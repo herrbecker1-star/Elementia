@@ -26,8 +26,23 @@ var SPIELSTAND = (function () {
       y: null,
       richtung: "unten",
       flags: {},
+      gruppe: [],         // Elementals, die mitkommen (höchstens GRUPPE_MAX)
+      lager: [],          // weitere gefangene Elementals
+      vorrat: { reagenzglas: 3 },                 // Fanggeräte
+      werkzeuge: ["lupe", "magnet", "stromkreis"], // zum Untersuchen
+      bekannt: [],        // erkannte Arten (Stoffbuch)
       gespeichert: null
     };
+  }
+
+  var GRUPPE_MAX = 4;
+
+  // Ein gefangenes Elemental kommt in die Gruppe, wenn Platz ist,
+  // sonst ins Lager. Liefert "gruppe" oder "lager".
+  function aufnehmen(stand, el) {
+    if (stand.gruppe.length < GRUPPE_MAX) { stand.gruppe.push(el); return "gruppe"; }
+    stand.lager.push(el);
+    return "lager";
   }
 
   // Alles, was von außen kommt – localStorage oder abgetippter Code –,
@@ -38,6 +53,12 @@ var SPIELSTAND = (function () {
     if (stand.fassung !== FASSUNG) throw new Error("Spielstand aus einer anderen Fassung (" + stand.fassung + ").");
     if (typeof stand.karte !== "string") throw new Error("Spielstand ohne Ort.");
     if (!stand.flags || typeof stand.flags !== "object") stand.flags = {};
+    // Felder, die mit M1 dazukamen: fehlen sie in einem älteren
+    // Stand, gelten die Anfangswerte.
+    var anfang = neu();
+    ["gruppe", "lager", "vorrat", "werkzeuge", "bekannt"].forEach(function (f) {
+      if (!stand[f] || typeof stand[f] !== "object") stand[f] = anfang[f];
+    });
     if (typeof stand.x !== "number" || typeof stand.y !== "number") { stand.x = null; stand.y = null; }
     if (["unten", "links", "rechts", "oben"].indexOf(stand.richtung) < 0) stand.richtung = "unten";
     return stand;
@@ -89,7 +110,9 @@ var SPIELSTAND = (function () {
 
   return {
     FASSUNG: FASSUNG,
+    GRUPPE_MAX: GRUPPE_MAX,
     neu: neu,
+    aufnehmen: aufnehmen,
     pruefen: pruefen,
     speichern: speichern,
     laden: laden,

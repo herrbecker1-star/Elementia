@@ -13,10 +13,18 @@
     kasten.style.cssText = "position:fixed;left:0;bottom:0;max-height:40%;overflow:auto;margin:0;padding:6px;" +
       "font:12px monospace;color:#ffb4b4;background:rgba(0,0,0,.8);z-index:20;white-space:pre-wrap;pointer-events:none";
     document.body.appendChild(kasten);
-    var melde = function (text) { kasten.textContent += text + "\n"; };
+    var melde = function (text) { kasten.textContent += text + "\n"; kasten.scrollTop = kasten.scrollHeight; };
     window.addEventListener("error", function (e) { melde("Fehler: " + e.message + " (" + (e.filename || "").split("/").pop() + ":" + e.lineno + ")"); });
     window.addEventListener("unhandledrejection", function (e) { melde("Fehler: " + (e.reason && e.reason.message || e.reason)); });
     window.PROBE_MELDEN = melde;
+    // Läuft die Spielschleife noch? Ein DOM-Zeitgeber, unabhängig von Phaser.
+    var puls = document.createElement("div");
+    puls.id = "probe-puls";
+    puls.style.cssText = "position:fixed;right:4px;bottom:4px;font:11px monospace;color:#9fe870;background:#000a;padding:2px 4px;z-index:21;pointer-events:none";
+    document.body.appendChild(puls);
+    setInterval(function () {
+      if (window.SPIEL) puls.textContent = "Bild " + window.SPIEL.loop.frame + " · " + Math.round(performance.now() / 100) / 10 + " s";
+    }, 250);
   }
 
   var masse = MASS.leinwand();
@@ -42,9 +50,13 @@
     // Worker) behandelt sie dann wie jedes andere Bild, und kopflose
     // Fotos warten auf sie.
     loader: { imageLoadType: "HTMLImageElement" },
+    // ?takt=1: Spielschleife über setTimeout statt requestAnimationFrame.
+    // Nur für kopflose Fotos: Dort liefert Chrome in 20 s kaum drei
+    // Bildtakte, und jeder Ablauf mit Zeitgebern bleibt stehen.
+    fps: { forceSetTimeOut: /[?&]takt=1\b/.test(location.search) },
     input: { activePointers: 3 },     // Stick und Aktionsknopf gleichzeitig
     physics: { default: "arcade", arcade: { debug: /[?&]koerper=1\b/.test(location.search) } },
-    scene: [LadeSzene, TitelSzene, OberweltSzene, UiSzene]
+    scene: [LadeSzene, TitelSzene, OberweltSzene, UiSzene, KampfSzene]
   });
 
   // Drehen, Adressleiste ein/aus, Fenster ziehen: Die Leinwand folgt.

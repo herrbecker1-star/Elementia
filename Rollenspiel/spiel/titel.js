@@ -25,6 +25,11 @@ class LadeSzene extends Phaser.Scene {
     this.load.image("kacheln", "grafik/platzhalter-kacheln.png");
     this.load.spritesheet("figuren", "grafik/platzhalter-figuren.png", { frameWidth: 32, frameHeight: 32 });
     this.load.tilemapTiledJSON("stoffingen", "karten/stoffingen.json");
+    // Die Kampfbilder gleich mit: Der erste Kampf soll sofort da sein,
+    // nicht erst nach einem Nachladen mitten im Spiel.
+    var lader = this.load;
+    Object.keys(ARTEN).forEach(function (art) { lader.image("el-" + art, "grafik/elementals/" + ARTEN[art].bild + ".png"); });
+    Object.keys(KAMPF_HINTERGRUND).forEach(function (ort) { lader.image("hg-" + ort, KAMPF_HINTERGRUND[ort]); });
   }
 
   create() {
@@ -45,8 +50,15 @@ class LadeSzene extends Phaser.Scene {
     // Für kopflose Fotos, die sonst nie an der Titelseite vorbeikämen.
     var suche = new URLSearchParams(location.search);
     // (Den Dialog öffnet die UI-Szene selbst, sobald sie steht.)
-    if (suche.get("direkt") === "1" || suche.get("dialog")) {
-      this.scene.start("oberwelt", { stand: SPIELSTAND.neu() });
+    if (suche.get("direkt") === "1" || suche.get("dialog") || suche.get("kampf")) {
+      var stand = SPIELSTAND.neu();
+      if (suche.get("kampf")) {
+        // Probegruppe, bis die Starterwahl (M3) steht.
+        stand.gruppe = [KAMPF.neuesElemental("eisen", 5), KAMPF.neuesElemental("magnesium", 5)];
+        stand.vorrat = { reagenzglas: 3, tiegelzange: 2, spatel: 2 };
+        stand.werkzeuge = ["lupe", "magnet", "stromkreis", "hammer"];
+      }
+      this.scene.start("oberwelt", { stand: stand });
       return;
     }
     this.scene.start("titel");
