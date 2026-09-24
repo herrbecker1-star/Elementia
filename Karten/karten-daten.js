@@ -37,10 +37,13 @@
 //   quest         Wo die Karte erspielt wird
 //   bild          Entweder ein Dateiname, z. B. "bilder/schwefel.jpg",
 //                 oder ein Emoji als Platzhalter. Der Generator erkennt
-//                 die Datei am enthaltenen Punkt. Feuerlande ist
-//                 vollständig bebildert, die übrigen Regionen tragen
-//                 noch Emojis. Dateinamen folgen App\kern\dateiname.js:
-//                 klein, ohne Umlaute, Bindestriche statt Leerzeichen.
+//                 die Datei am enthaltenen Punkt. Stand 23.09.2026:
+//                 Feuerlande und Periodika sind vollständig bebildert,
+//                 Aerosol (Ozon, Lachgas) und Erdhügel (Silber, Gold,
+//                 Platin, Aluminium, Zinn) teilweise; Aquaria,
+//                 Salzküste, Acidia und Organica tragen noch Emojis.
+//                 Dateinamen folgen App\kern\dateiname.js: klein, ohne
+//                 Umlaute, Bindestriche statt Leerzeichen.
 // ============================================================
 
 window.KARTEN_DATEN = {
@@ -302,7 +305,7 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Wasserstoff + Sauerstoff → Wasser (Knallgas-Reaktion!)",
-        "bilanz": "4 u + 32 u = 36 u (zwei Teilchen à 18 u)",
+        "bilanz": "4 u + 32 u = 36 u",
         "edukte": ["Wasserstoff", "Sauerstoff"],
         "aktivierung": true, "exotherm": 5
       },
@@ -410,7 +413,7 @@ window.KARTEN_DATEN = {
         "edukte": ["Eisen", "Schwefel"],
         "aktivierung": true, "exotherm": 5
       },
-      "besonderheit": "Narrengold: Die erste Attacke jedes gegnerischen Elementals gegen Pyrit macht nur halben Schaden – es glänzt wie Gold, doch es ist keins. Geröstet wird aus Pyrit übrigens Eisenoxid und Schwefeldioxid.",
+      "besonderheit": "Narrengold: Die erste Attacke jedes gegnerischen Elementals gegen Pyrit macht nur halben Schaden – es glänzt wie Gold, doch es ist keins.",
       "flavor": "Narren hielten es für Gold. Weise schlugen Funken daraus.",
       "quest": "Quest 8 – Sulfide (legendär)", "bild": "bilder/pyrit.jpg"
     },
@@ -606,7 +609,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "",
       "flavor": "Das reaktionswütigste Element Elementias. Sein Käfig in Halogeni ist aus Sonderstahl.",
-      "quest": "Periodika – Halogeni", "bild": "🦷"
+      "quest": "Periodika – Halogeni", "bild": "bilder/fluor.jpg"
     },
     {
       "name": "Chlor", "formel": "Cl₂", "region": "Periodika", "klasse": "Halogen", "oz": 17, "lp": 30, "masse": 71,
@@ -700,13 +703,13 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "schutz", "gegen": "Feuer", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Lithium + Sauerstoff → Lithiumoxid",
-        "bilanz": "28 u + 32 u = 60 u (vier Li auf ein O₂, zwei Teilchen à 30 u)",
+        "bilanz": "28 u + 32 u = 60 u",
         "edukte": ["Lithium", "Sauerstoff"],
         "aktivierung": true, "exotherm": 5
       },
-      "besonderheit": "Familienbeweis: Lithium verbrennt zu einem Oxid wie Calcium – nur braucht es vier Lithium auf ein Sauerstoff-Teilchen statt zwei Calcium. Wie jedes Metalloxid brennt es selbst nicht mehr; es ätzt.",
+      "besonderheit": "Familienbeweis: Lithium verbrennt zu einem Oxid wie Calcium – nur braucht es vier Lithium auf ein Sauerstoff-Teilchen statt zwei Calcium.",
       "flavor": "Das leichteste Metall gibt das leichteste Oxid – und bleibt selbst im Feuer flink.",
-      "quest": "Periodika – Alkali", "bild": "⬜"
+      "quest": "Periodika – Alkali", "bild": "bilder/lithiumoxid.jpg"
     },
     {
       "name": "Bariumoxid", "formel": "BaO", "region": "Periodika", "klasse": "Oxid", "lp": 50, "masse": 153,
@@ -726,7 +729,7 @@ window.KARTEN_DATEN = {
       },
       "besonderheit": "Gleiche Familie, gleiche Reaktion: Barium verbrennt zu BaO genau wie Calcium zu CaO – zwei Metalle auf ein Sauerstoff-Teilchen. Daran erkennst du eine Elementfamilie.",
       "flavor": "Der grüne Riese verglüht – und lässt ein schweres, weißes Pulver zurück.",
-      "quest": "Periodika – Erdalkali", "bild": "⬛"
+      "quest": "Periodika – Erdalkali", "bild": "bilder/bariumoxid.jpg"
     },
     {
       "name": "Kaliumiodid", "formel": "KI", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 166,
@@ -745,7 +748,7 @@ window.KARTEN_DATEN = {
       },
       "besonderheit": "Doebereiners Beweis: Kalium reagiert mit Iod genau wie mit Chlor – dieselbe Reaktion, nur eine Zeile tiefer im Periodensystem. Als Iodid steckt es in jedem Speisesalz.",
       "flavor": "Ein Salz, das in der Suppe niemandem auffällt – und ohne das der Kopf nicht arbeitet.",
-      "quest": "Periodika – Nebenquest Doebereiners Garten", "bild": "🧠"
+      "quest": "Periodika – Nebenquest Doebereiners Garten", "bild": "bilder/kaliumiodid.jpg"
     },
     {
       "name": "Natriumchlorid", "formel": "NaCl", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 58,
@@ -803,7 +806,7 @@ window.KARTEN_DATEN = {
       },
       "besonderheit": "",
       "flavor": "Aus den Brennöfen von Erdalkali – der Stoff, aus dem man Mauern macht.",
-      "quest": "Periodika – Erdalkali", "bild": "🧱"
+      "quest": "Periodika – Erdalkali", "bild": "bilder/calciumoxid.jpg"
     },
     {
       "name": "Calciumhydroxid", "formel": "Ca(OH)₂", "region": "Periodika", "klasse": "Hydroxid", "lp": 50, "masse": 74,
@@ -817,13 +820,13 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "schutz", "gegen": "Ätz", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Calciumoxid + Wasser → Calciumhydroxid (Löschkalk)",
-        "bilanz": "56 u + 18 u = 74 u – nichts geht verloren!",
+        "bilanz": "56 u + 18 u = 74 u",
         "edukte": ["Calciumoxid", "Wasser"],
         "aktivierung": false, "exotherm": 5
       },
-      "besonderheit": "Kettenglied: Beide Edukte sind selbst Verbindungen – deine erste Synthese-Kette (Meisterstufe II)! Diese Reaktion braucht keine Zündung und wird trotzdem heiß.",
+      "besonderheit": "Kettenglied: Beide Edukte sind selbst Verbindungen – deine erste Synthese-Kette (Meisterstufe II)!",
       "flavor": "Wer Kalk löscht, dem dampft der Eimer – Wärme ohne Feuer.",
-      "quest": "Periodika – Mendelmey Festung", "bild": "🥛"
+      "quest": "Periodika – Mendelmey Festung", "bild": "bilder/calciumhydroxid.jpg"
     },
     {
       "name": "Calciumcarbonat", "formel": "CaCO₃", "region": "Periodika", "klasse": "Salz", "lp": 50, "masse": 100,
@@ -841,9 +844,9 @@ window.KARTEN_DATEN = {
         "edukte": ["Calciumhydroxid", "Kohlenstoffdioxid"],
         "aktivierung": false, "exotherm": 0
       },
-      "besonderheit": "Drittes Kettenglied: Calcium → Calciumoxid → Calciumhydroxid → Calciumcarbonat. Die längste Kette Elementias – und zugleich der Nachweis für Kohlenstoffdioxid: Trübt sich das Kalkwasser, war CO₂ im Spiel.",
+      "besonderheit": "Nachweis für Kohlenstoffdioxid: Trübt sich das Kalkwasser, war CO₂ im Spiel.",
       "flavor": "Aus dem klaren Kalkwasser fällt ein weißer Schleier – und aus dem Schleier werden Berge.",
-      "quest": "Periodika – Mendelmey Festung", "bild": "🪨"
+      "quest": "Periodika – Mendelmey Festung", "bild": "bilder/calciumcarbonat.jpg"
     },
 
     // ---------- AUSRÜSTUNG (Periodika) ----------
@@ -896,14 +899,14 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Stickstoffdioxid + Sauerstoff → Ozon + Stickstoffmonoxid (Sommersmog)",
-        "bilanz": "46 u + 32 u = 48 u + 30 u (im Sonnenlicht – so entsteht Ozon in der Stadtluft)",
+        "bilanz": "46 u + 32 u = 48 u + 30 u",
         "edukte": ["Stickstoffdioxid", "Sauerstoff"],
         "aktivierung": true, "exotherm": 0
       },
       "wirkung": { "ausloeser": "zugende", "art": "selbstschaden", "wert": 5 },
-      "besonderheit": "Schutzschild der Höhen: Die erste Attacke jedes gegnerischen Elementals gegen Ozon macht nur halben Schaden – die Ozonschicht fängt den ersten Schlag ab. Zerfall: Am Ende jedes deiner Züge verliert Ozon 5 LP – O₃ ist instabil und wird von selbst wieder zu gewöhnlichem Sauerstoff.",
+      "besonderheit": "Schutzschild der Höhen: Die erste Attacke jedes gegnerischen Elementals gegen Ozon macht nur halben Schaden. Zerfall: Am Ende jedes deiner Züge verliert Ozon 5 LP.",
       "flavor": "Dreifacher Sauerstoff. Hoch oben schützt er alles Leben vor der Sonne – tief unten reizt er die Lunge.",
-      "quest": "Aerosol – Oxigen (legendär)", "bild": "🌐"
+      "quest": "Aerosol – Oxigen (legendär)", "bild": "bilder/ozon.jpg"
     },
     {
       "name": "Stickstoffmonoxid", "formel": "NO", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 30,
@@ -975,13 +978,13 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Stickstoff + Sauerstoff → Lachgas",
-        "bilanz": "56 u + 32 u = 88 u (2 N₂ + O₂; zwei Teilchen à 44 u)",
+        "bilanz": "56 u + 32 u = 88 u",
         "edukte": ["Stickstoff", "Sauerstoff"],
         "aktivierung": true, "exotherm": 0
       },
-      "besonderheit": "Starkes Treibhausgas: N₂O wirkt fast 300-mal so stark wie CO₂ – nicht alles, was harmlos klingt, ist es auch.",
+      "besonderheit": "Starkes Treibhausgas: N₂O wirkt fast 300-mal so stark wie CO₂.",
       "flavor": "Lachgas – klingt lustig, wärmt aber die Welt wie kaum ein anderes Gas.",
-      "quest": "Aerosol – Treibhus 2", "bild": "😄"
+      "quest": "Aerosol – Treibhus 2", "bild": "bilder/lachgas.jpg"
     },
     {
       "name": "Methan", "formel": "CH₄", "region": "Aerosol", "klasse": "Molekül", "lp": 50, "masse": 16,
@@ -994,11 +997,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Wasserstoff → Methan",
-        "bilanz": "12 u + 4 u = 16 u – nichts geht verloren!",
+        "bilanz": "12 u + 4 u = 16 u",
         "edukte": ["Kohlenstoff", "Wasserstoff"],
         "aktivierung": true, "exotherm": 5
       },
-      "besonderheit": "Vier Brücken: Methan trägt vier Einfachbindungen an einem einzigen Kohlenstoff – das Schaubild der Klasse Molekül.",
+      "besonderheit": "Vier Brücken: Methan trägt vier Einfachbindungen an einem einzigen Kohlenstoff.",
       "flavor": "Das Sumpfgas von Molekülia – und der Hauptbestandteil von Erdgas.",
       "quest": "Aerosol – Molekülia 2", "bild": "⛽"
     },
@@ -1096,11 +1099,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Wasserstoff + Sauerstoff → Wasser (Knallgas-Reaktion!)",
-        "bilanz": "4 u + 32 u = 36 u (zwei Teilchen à 18 u)",
+        "bilanz": "4 u + 32 u = 36 u",
         "edukte": ["Wasserstoff", "Sauerstoff"],
         "aktivierung": true, "exotherm": 5
       },
-      "besonderheit": "Löscht: Feuer-Attacken gegen Wasser richten keinen Schaden an. Analyse (Meisterstufe IV): Mit dem Elektrolyse-Apparat lässt sich Wasser wieder in H₂ + O₂ zerlegen.",
+      "besonderheit": "Löscht: Feuer-Attacken gegen Wasser richten keinen Schaden an.",
       "flavor": "Des Feuers ältester Feind – und die einzige Verbindung, die man im Duell zerlegen UND bauen kann.",
       "quest": "Aquaria – Synthesia", "bild": "💧"
     },
@@ -1350,7 +1353,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Passivierung: Eine dichte Oxidschicht schützt Aluminium – die erste Ätz-Attacke gegen es macht 0 Schaden. Nur mit Strom (Elektrolyse) aus dem Erz zu gewinnen.",
       "flavor": "Federleicht und rostfrei – doch nur der Blitz holt es aus dem Erz.",
-      "quest": "Erdhügel – Alu", "bild": "🥫"
+      "quest": "Erdhügel – Alu", "bild": "bilder/aluminium.jpg"
     },
     {
       "name": "Zinn", "formel": "Sn", "region": "Erdhügel", "klasse": "Metall", "oz": 50, "lp": 30, "masse": 119,
@@ -1361,7 +1364,7 @@ window.KARTEN_DATEN = {
       "synthese": null,
       "besonderheit": "Legierungs-Partner: Mit Kupfer zusammengeschmolzen ergibt Zinn die harte Bronze.",
       "flavor": "Weich für sich allein – doch mit Kupfer wird es zur Klinge der Alten.",
-      "quest": "Erdhügel – Metallum 2", "bild": "🥄"
+      "quest": "Erdhügel – Metallum 2", "bild": "bilder/zinn.jpg"
     },
     {
       "name": "Silber", "formel": "Ag", "region": "Erdhügel", "klasse": "Metall", "oz": 47, "lp": 30, "masse": 108,
@@ -1393,7 +1396,7 @@ window.KARTEN_DATEN = {
         { "name": "Katalyse", "typ": "Gas", "schaden": 0, "effekt": "In deinem nächsten Zug darfst du eine zweite Synthese durchführen – Platin beschleunigt die Reaktion, ohne sich zu verbrauchen." }
       ],
       "synthese": null,
-      "besonderheit": "Legendäres Edelmetall: Platin erleidet durch Ätz- und Feuer-Attacken keinen Schaden. Genau dieses Elemental brauchen die Entroperianer für ihr Massenspektrometer.",
+      "besonderheit": "Legendäres Edelmetall: Platin erleidet durch Ätz- und Feuer-Attacken keinen Schaden.",
       "flavor": "Edler als Gold, unzerstörbar – das Herzstück, um das ein ganzer Krieg entbrannte.",
       "quest": "Erdhügel – Finale (legendär)", "bild": "bilder/platin.jpg"
     },
@@ -1582,7 +1585,7 @@ window.KARTEN_DATEN = {
         "edukte": ["Kohlenstoffdioxid", "Wasser"],
         "aktivierung": false, "exotherm": 0
       },
-      "besonderheit": "Schwache Säure: Sie zerfällt nur zum kleinen Teil in Ionen – und sie hält nicht. Lässt du Kohlensäure eine ganze Runde in der Arena stehen, entweicht das Gas: Lege sie ab (sie wird schal).",
+      "besonderheit": "Schwache Säure: Sie zerfällt nur zum kleinen Teil in Ionen. Lässt du Kohlensäure eine ganze Runde in der Arena stehen, entweicht das Gas: Lege sie ab.",
       "flavor": "Das sprudelnde Wesen aus Malvas Keller. Offen stehen lassen darf man es nicht.",
       "quest": "Acidia – Ätzfurt", "bild": "🥤"
     },
@@ -1599,11 +1602,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Chlorwasserstoff + Wasser → Salzsäure",
-        "bilanz": "Das Gas (36 u) löst sich im Wasser und zerfällt: HCl → H⁺ + Cl⁻",
+        "bilanz": "36 u – das Gas löst sich in Wasser",
         "edukte": ["Chlorwasserstoff", "Wasser"],
         "aktivierung": false, "exotherm": 0
       },
-      "besonderheit": "Starke Säure: Sie zerfällt in Wasser vollständig in H⁺ und Cl⁻. Gegen metallische Elementals machen ihre Ätz-Attacken doppelten Schaden – Säure frisst Metall (Zinkgrube!).",
+      "besonderheit": "Starke Säure: Sie zerfällt in Wasser vollständig in H⁺ und Cl⁻. Gegen metallische Elementals machen ihre Ätz-Attacken doppelten Schaden.",
       "flavor": "Das Wappenwesen von Hydrochloria – und dieselbe Säure, die du im Magen trägst.",
       "quest": "Acidia – Hydrochloria", "bild": "🧪"
     },
@@ -1618,11 +1621,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Schwefeldioxid + Wasser → Schwefelsäure (Kontaktverfahren)",
-        "bilanz": "64 u + 16 u + 18 u = 98 u (SO₂ + ½ O₂ + H₂O – der halbe Sauerstoff kommt aus der Luft)",
+        "bilanz": "64 u + 16 u + 18 u = 98 u",
         "edukte": ["Schwefeldioxid", "Wasser"],
         "aktivierung": true, "exotherm": 5
       },
-      "besonderheit": "Das „Vitriol“: Schwefelsäure entzieht anderen Stoffen das Wasser. Solange sie in der Arena steht, können Wasser- und Lösungs-Ausrüstungen des Gegners nicht gespielt werden. Entsteht in zwei Schritten: Schwefel verbrennen, das Oxid in Wasser leiten.",
+      "besonderheit": "Das „Vitriol“: Schwefelsäure entzieht anderen Stoffen das Wasser. Solange sie in der Arena steht, können Wasser- und Lösungs-Ausrüstungen des Gegners nicht gespielt werden.",
       "flavor": "An den Wänden der Schlucht blüht es grünlich. Die Alten nannten es Vitriol.",
       "quest": "Acidia – Vitriolschlucht", "bild": "🌫️"
     },
@@ -1637,11 +1640,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Stickstoffdioxid + Wasser → Salpetersäure + Stickstoffmonoxid (Ostwald-Verfahren)",
-        "bilanz": "138 u + 18 u = 126 u + 30 u (3 NO₂ + H₂O → 2 HNO₃ + NO)",
+        "bilanz": "138 u + 18 u = 126 u + 30 u",
         "edukte": ["Stickstoffdioxid", "Wasser"],
         "aktivierung": false, "exotherm": 5
       },
-      "besonderheit": "Aus Galvanas versiegeltem Schrank: Salpetersäure löst sogar Silber und Kupfer. Nur Gold und Platin widerstehen ihr – deshalb hieß sie früher „Scheidewasser“.",
+      "besonderheit": "Salpetersäure löst sogar Silber und Kupfer. Nur Gold und Platin widerstehen ihr.",
       "flavor": "Womit man Gold von Silber scheidet – und wovor jeder Grubenmeister den Schlüssel doppelt dreht.",
       "quest": "Acidia – Zinkgrube", "bild": "⚗️"
     },
@@ -1659,11 +1662,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Natrium + Wasser → Natronlauge + Wasserstoff",
-        "bilanz": "23 u + 18 u = 40 u + 1 u (heftige Reaktion!)",
+        "bilanz": "23 u + 18 u = 40 u + 1 u",
         "edukte": ["Natrium", "Wasser"],
         "aktivierung": false, "exotherm": 5
       },
-      "besonderheit": "Starke Lauge: Sie zerfällt vollständig in Na⁺ und OH⁻. Tückisch wie am Bau – ihr Schaden wirkt verzögert: Das getroffene Elemental erleidet zu Beginn deines nächsten Zuges noch einmal 5 Schaden.",
+      "besonderheit": "Starke Lauge: Sie zerfällt vollständig in Na⁺ und OH⁻. Ihr Schaden wirkt verzögert: Das getroffene Elemental erleidet zu Beginn deines nächsten Zuges noch einmal 5 Schaden.",
       "flavor": "Alkalias schärfste Mitarbeiterin. Sie brennt nicht sofort – das ist das Gefährliche.",
       "quest": "Acidia – Seifensieden", "bild": "🧼"
     },
@@ -1750,11 +1753,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Wasserstoff → Methan",
-        "bilanz": "12 u + 4 u = 16 u – nichts geht verloren!",
+        "bilanz": "12 u + 4 u = 16 u",
         "edukte": ["Kohlenstoff", "Wasserstoff"],
         "aktivierung": true, "exotherm": 5
       },
-      "besonderheit": "Kohlenwasserstoff: darf direkt als Team-Elemental antreten. Das kleinste organische Molekül – 1 C, 4 H, ein perfekter Tetraeder.",
+      "besonderheit": "Kohlenwasserstoff: darf direkt als Team-Elemental antreten.",
       "flavor": "Wo einst Lebendiges versank, steigt es als Blase wieder auf.",
       "quest": "Organica – Methanmoor", "bild": "💨"
     },
@@ -1831,11 +1834,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Ethin + Wasserstoff → Ethen (Teilhydrierung)",
-        "bilanz": "26 u + 2 u = 28 u – nichts geht verloren!",
+        "bilanz": "26 u + 2 u = 28 u",
         "edukte": ["Ethin", "Wasserstoff"],
         "aktivierung": true, "exotherm": 5
       },
-      "besonderheit": "Ungesättigt und ungeduldig: An der Doppelbindung ist noch Platz – Ethen wartet nicht, es greift zu.",
+      "besonderheit": "Ungesättigt und ungeduldig: An der Doppelbindung ist noch Platz.",
       "flavor": "Ein Hauch davon, und die grünste Banane wird gelb.",
       "quest": "Organica – Ethenau", "bild": "🍌"
     },
@@ -1925,11 +1928,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Kohlenstoffdioxid + Wasser → Traubenzucker + Sauerstoff (Fotosynthese)",
-        "bilanz": "264 u + 108 u = 180 u + 192 u (6 CO₂ + 6 H₂O → C₆H₁₂O₆ + 6 O₂)",
+        "bilanz": "264 u + 108 u = 180 u + 192 u",
         "edukte": ["Kohlenstoffdioxid", "Wasser"],
         "aktivierung": true, "exotherm": 0
       },
-      "besonderheit": "Edukt der Gärung: Lege Traubenzucker zusammen mit der Ethanol-Karte ab, um die alkoholische Gärung zu spielen (Hefe arbeitet ohne Energie-Item – Enzyme sind Katalysatoren).",
+      "besonderheit": "Edukt der Gärung: Lege Traubenzucker zusammen mit der Ethanol-Karte ab, um die alkoholische Gärung zu spielen.",
       "flavor": "Aus ihm machen die Hefen von Gärhusen alles, was in den Bottichen blubbert.",
       "quest": "Organica – Gärhusen", "bild": "🍬"
     },
@@ -1964,7 +1967,7 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "gift", "wert": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoffmonoxid + Wasserstoff → Methanol",
-        "bilanz": "28 u + 4 u = 32 u (CO + 2 H₂; zwei Wasserstoff-Teilchen à 2 u)",
+        "bilanz": "28 u + 4 u = 32 u",
         "edukte": ["Kohlenstoffmonoxid", "Wasserstoff"],
         "aktivierung": true, "exotherm": 5
       },
@@ -1983,11 +1986,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Traubenzucker + Wasserstoff → Glycerin",
-        "bilanz": "180 u + 4 u = 184 u (C₆H₁₂O₆ + 2 H₂ → 2 C₃H₈O₃; zwei Glycerin-Teilchen à 92 u)",
+        "bilanz": "180 u + 4 u = 184 u",
         "edukte": ["Traubenzucker", "Wasserstoff"],
         "aktivierung": true, "exotherm": 0
       },
-      "besonderheit": "Dreiwertig: Drei OH-Gruppen ziehen Wasser an. Heile ein eigenes Elemental um 10 LP (Salvias Salbe) – einmal pro Duell.",
+      "besonderheit": "Dreiwertig: Drei OH-Gruppen ziehen Wasser an. Heile ein eigenes Elemental um 10 LP – einmal pro Duell.",
       "flavor": "Das Rückgrat jedes Fettes – und in jeder Salbe der Heilerin.",
       "quest": "Organica – Glyceria", "bild": "🧴"
     },
@@ -2064,11 +2067,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "vernebeln", "minus": 0.25 } },
       "synthese": {
         "wortgleichung": "Traubenzucker → Buttersäure + Kohlenstoffdioxid + Wasserstoff (Buttersäuregärung)",
-        "bilanz": "180 u = 88 u + 88 u + 4 u (C₆H₁₂O₆ → C₃H₇COOH + 2 CO₂ + 2 H₂)",
+        "bilanz": "180 u = 88 u + 88 u + 4 u",
         "edukte": ["Traubenzucker"],
         "aktivierung": false, "exotherm": 0
       },
-      "besonderheit": "Noch in millionenfacher Verdünnung wahrnehmbar. Zusammen mit einem Alkanol wird aus ihr ein Ananas-Duft – Chemie ist erstaunlich.",
+      "besonderheit": "Zusammen mit einem Alkanol wird aus ihr ein Ananas-Duft.",
       "flavor": "Ranzige Butter, alter Käse, Schweiß. Der Lagermeister isst dabei sein Brot.",
       "quest": "Organica – Säuregasse", "bild": "🧀"
     },
@@ -2089,7 +2092,7 @@ window.KARTEN_DATEN = {
         "edukte": ["Essigsäure", "Ethanol"],
         "aktivierung": true, "exotherm": 0
       },
-      "besonderheit": "Letzte Sprosse der Leiter: Wer diese Karte durch Synthese ins Spiel bringt, hat den C2-Stamm vollendet – Titel „Stammmeister“. Hydrolyse: Mit der Analyse-Aktion (Meisterstufe IV) zerfällt der Ester wieder in Säure und Alkohol.",
+      "besonderheit": "Letzte Sprosse der Leiter: Wer diese Karte durch Synthese ins Spiel bringt, hat den C2-Stamm vollendet – Titel „Stammmeister“.",
       "flavor": "Aus Säure und Alkohol wird ein Duft. Und ein Duft öffnet Tore, die keine Waffe öffnet.",
       "quest": "Organica – Die Duftgärten", "bild": "🌸"
     },
@@ -2133,11 +2136,11 @@ window.KARTEN_DATEN = {
         "wirkung": { "art": "schutz", "gegen": "Wucht", "faktor": 1, "minus": 5 } },
       "synthese": {
         "wortgleichung": "Kohlenstoff + Stickstoff + Wasserstoff → Porphyrin-Ring",
-        "bilanz": "240 u + 56 u + 14 u = 310 u (20 C + 2 N₂ + 7 H₂ – der Ring wird aus seinen Elementen aufgebaut)",
+        "bilanz": "240 u + 56 u + 14 u = 310 u",
         "edukte": ["Kohlenstoff", "Stickstoff", "Wasserstoff"],
         "aktivierung": true, "exotherm": 0
       },
-      "besonderheit": "Vier Stickstoff-Arme greifen nach jedem Metall-Ion, das ihnen zu nahe kommt. Allein ist der Ring farblos – erst das Metall in seiner Mitte gibt ihm seine Farbe.",
+      "besonderheit": "Vier Stickstoff-Arme greifen nach jedem Metall-Ion, das ihnen zu nahe kommt.",
       "flavor": "Ein Ring aus vier Armen, leer in der Mitte. Was hineinfindet, entscheidet, ob daraus Blut wird oder Blattgrün.",
       "quest": "Organica – Die Herzkammer", "bild": "⭕"
     },
@@ -2157,7 +2160,7 @@ window.KARTEN_DATEN = {
         "edukte": ["Eisen", "Porphyrin-Ring"],
         "aktivierung": true, "exotherm": 0
       },
-      "besonderheit": "LEGENDÄR – nur für Spieler mit dem Starter Eisen. Das schwerste Elemental Elementias: Es beginnt ein Duell nie (der Leichtere beginnt). Immun gegen Ätz-Attacken. Achtung: Gegen Kohlenstoffmonoxid ist es wehrlos – CO bindet fester als Sauerstoff.",
+      "besonderheit": "LEGENDÄR – nur für Spieler mit dem Starter Eisen. Es beginnt ein Duell nie (der Leichtere beginnt). Immun gegen Ätz-Attacken. Achtung: Gegen Kohlenstoffmonoxid ist es wehrlos – CO bindet fester als Sauerstoff.",
       "flavor": "Eisen im Blut. Vier Jahre lang hast du es getragen, ohne zu wissen, wohin es dich führt.",
       "quest": "Organica – Die Herzkammer (legendär)", "bild": "❤️"
     },
@@ -2177,7 +2180,7 @@ window.KARTEN_DATEN = {
         "edukte": ["Magnesium", "Porphyrin-Ring"],
         "aktivierung": true, "exotherm": 0
       },
-      "besonderheit": "LEGENDÄR – nur für Spieler mit dem Starter Magnesium. Immun gegen Feuer-Attacken (es lebt vom Licht). Solange Chlorophyll in der Arena steht, erhält jedes deiner Elementals zu Beginn deines Zuges 5 LP zurück.",
+      "besonderheit": "LEGENDÄR – nur für Spieler mit dem Starter Magnesium. Immun gegen Feuer-Attacken. Solange Chlorophyll in der Arena steht, erhält jedes deiner Elementals zu Beginn deines Zuges 5 LP zurück.",
       "flavor": "Magnesium im Blattgrün. Der grelle Funke aus Mutters Garten – jetzt weißt du, warum er grün war.",
       "quest": "Organica – Die Herzkammer (legendär)", "bild": "💚"
     }
