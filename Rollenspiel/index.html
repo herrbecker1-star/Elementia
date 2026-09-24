@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Elementia – Das Abenteuer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#101418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #101418; overflow: hidden;
+    /* Kein Ziehen, Zoomen, Markieren – der Daumen gehört dem Spiel. */
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none; overscroll-behavior: none;
+  }
+  #spiel { width: 100%; height: 100%; }
+  #spiel canvas { display: block; }
+
+  #drehen {
+    display: none; position: fixed; inset: 0; z-index: 10;
+    background: #101418; color: #f4ead5;
+    font: 18px/1.5 "Segoe UI", Roboto, Arial, sans-serif;
+    align-items: center; justify-content: center; text-align: center; padding: 24px;
+  }
+  #drehen b { display: block; font-size: 42px; margin-bottom: 12px; }
+  /* Nur auf Touchgeräten: Am Rechner darf das Fenster schmal sein. */
+  @media (orientation: portrait) and (pointer: coarse) {
+    #drehen { display: flex; }
+  }
+</style>
+</head>
+<body>
+<div id="spiel"></div>
+<div id="drehen"><div><b>⟲</b>Bitte das Handy quer halten.<br>Elementia braucht die Breite.</div></div>
+
+<script src="lib/phaser.min.js"></script>
+<script src="kern/spielstand.js"></script>
+<script src="kern/ereignisse.js"></script>
+<script src="daten/dialoge.js"></script>
+<script src="spiel/bausteine.js"></script>
+<script src="spiel/titel.js"></script>
+<script src="spiel/oberwelt.js"></script>
+<script src="spiel/ui.js"></script>
+<script src="spiel/start.js"></script>
+</body>
+</html>
