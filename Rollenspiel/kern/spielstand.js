@@ -28,8 +28,8 @@ var SPIELSTAND = (function () {
       flags: {},
       gruppe: [],         // Elementals, die mitkommen (höchstens GRUPPE_MAX)
       lager: [],          // weitere gefangene Elementals
-      vorrat: { reagenzglas: 3 },                 // Fanggeräte
-      werkzeuge: ["lupe", "magnet", "stromkreis"], // zum Untersuchen
+      vorrat: {},         // Fanggeräte – die ersten gibt es bei Mara und in der Nacht des Aufbruchs
+      werkzeuge: [],      // Lupe, Magnet, Stromkreis, Hammer leiht Mara aus (Quest 1)
       bekannt: [],        // erkannte Arten (Stoffbuch)
       gespeichert: null
     };

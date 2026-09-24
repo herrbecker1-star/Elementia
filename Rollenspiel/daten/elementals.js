@@ -147,7 +147,11 @@ var WERKZEUGE = {
   lupe:       { name: "Lupe",       prueft: ["farbe", "glanz"] },
   magnet:     { name: "Magnet",     prueft: ["magnetisch"] },
   stromkreis: { name: "Stromkreis", prueft: ["leitfaehig"] },
-  hammer:     { name: "Hammer",     prueft: ["verformbar"] }
+  hammer:     { name: "Hammer",     prueft: ["verformbar"] },
+  // Gegenstände ohne Prüfung – stehen im Gepäck, nicht im Menü „Untersuchen“
+  gasbrenner:        { name: "Gasbrenner", prueft: [], text: "Liefert im Kampf einmal Aktivierungsenergie (+4) und heizt das Feld auf." },
+  erlenmeyerkolben:  { name: "Erlenmeyerkolben", prueft: [], text: "Dein erstes eigenes Laborglas. Für Flüssigkeiten – später." },
+  geraetepass:       { name: "Gerätepass des Kolbenwaldes", prueft: [], text: "Unterschrieben von Meisterin Vitra." }
 };
 
 // ------------------------------------------------------------

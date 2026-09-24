@@ -24,7 +24,7 @@ class LadeSzene extends Phaser.Scene {
 
     this.load.image("kacheln", "grafik/platzhalter-kacheln.png");
     this.load.spritesheet("figuren", "grafik/platzhalter-figuren.png", { frameWidth: 32, frameHeight: 32 });
-    this.load.tilemapTiledJSON("stoffingen", "karten/stoffingen.json");
+    ["stoffingen", "kolbenwald", "brenner"].forEach(function (k) { this.load.tilemapTiledJSON(k, "karten/" + k + ".json"); }, this);
     // Die Kampfbilder gleich mit: Der erste Kampf soll sofort da sein,
     // nicht erst nach einem Nachladen mitten im Spiel.
     var lader = this.load;
@@ -61,7 +61,7 @@ class LadeSzene extends Phaser.Scene {
 
     // Laufbilder je Figur: Zeile r, Spalten unten/links/rechts/oben × 2.
     var anims = this.anims;
-    for (var r = 0; r < 5; r++) {
+    for (var r = 0; r < 11; r++) {
       ["unten", "links", "rechts", "oben"].forEach(function (richtung, i) {
         anims.create({
           key: "gehen-" + r + "-" + richtung,
@@ -87,8 +87,15 @@ class LadeSzene extends Phaser.Scene {
         // Probegruppe, bis die Starterwahl (M3) steht.
         stand.gruppe = [KAMPF.neuesElemental("eisen", 5), KAMPF.neuesElemental("magnesium", 5)];
         stand.vorrat = { reagenzglas: 3, tiegelzange: 2, spatel: 2 };
-        stand.werkzeuge = ["lupe", "magnet", "stromkreis", "hammer"];
+        stand.werkzeuge = ["lupe", "magnet", "stromkreis", "hammer", "gasbrenner"];
+        stand.bekannt = ["eisen", "magnesium"];
+        stand.flags.schemen_frei = true;
+        stand.flags.starter = "eisen";
+        stand.flags.ausgeloest_stoffingen_einstieg = true;
+        if (suche.get("karte")) { stand.karte = suche.get("karte"); stand.ankunft = suche.get("punkt") || null; }
       }
+      // ?flags=markt_fertig,geraetepass setzt Flags für Prüfungen mitten im Kapitel
+      (suche.get("flags") || "").split(",").filter(Boolean).forEach(function (fl) { stand.flags[fl] = true; });
       this.scene.start("oberwelt", { stand: stand });
       return;
     }
@@ -106,7 +113,7 @@ class TitelSzene extends Phaser.Scene {
       fontFamily: SCHRIFT.titel, fontSize: MASS.px(56) + "px", color: "#f4ead5",
       stroke: "#2b1d10", strokeThickness: MASS.px(4)
     }).setOrigin(0.5);
-    this.untertitel = this.add.text(0, 0, "Die Feuerlande · Technikprobe", {
+    this.untertitel = this.add.text(0, 0, "Die Feuerlande · Kapitel 1 (Probefassung)", {
       fontFamily: SCHRIFT.familie, fontSize: MASS.px(18) + "px", color: "#c9a66b"
     }).setOrigin(0.5);
 

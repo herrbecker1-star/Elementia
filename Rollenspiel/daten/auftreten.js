@@ -25,7 +25,21 @@ var AUFTRITTE = {
     { art: "kohlenstoff", stufe: [3, 4], gewicht: 1, biome: ["wiese", "hain"], nurAbseits: true },
     { art: "schwefel",    stufe: [4, 6], gewicht: 3, biome: ["quelle"], zeit: ["morgen", "abend"], wetter: ["nebel", "hitze"] },
     { art: "kupfer",      stufe: [4, 6], gewicht: 2, biome: ["wiese", "hain"], nurAbseits: true, wetter: ["klar"], zeit: ["tag"] }
-  ]
+  ],
+
+  // Der Kolbenwald: feucht und dunkel. Kupfer ist hier öfter – die
+  // Gerätemacher-Gilde verarbeitet es, Reste liegen im Unterholz.
+  // Am Bach warme Stellen: Schwefel, wie an der Quelle von Stoffingen.
+  kolbenwald: [
+    { art: "zink",        stufe: [3, 5], gewicht: 4, biome: ["wald"] },
+    { art: "kohlenstoff", stufe: [3, 5], gewicht: 3, biome: ["wald"], zeit: ["abend", "nacht"] },
+    { art: "kupfer",      stufe: [4, 6], gewicht: 2, biome: ["wald"], nurAbseits: true },
+    { art: "eisen",       stufe: [3, 5], gewicht: 1, biome: ["wald"], nurAbseits: true },
+    { art: "schwefel",    stufe: [4, 6], gewicht: 3, biome: ["quelle"], zeit: ["morgen", "abend"], wetter: ["nebel", "hitze"] }
+  ],
+
+  // In Brenner selbst erscheinen keine – eine Stadt voller Flammenwächter.
+  brenner: []
 };
 
 // Was das Stoffbuch verrät. „vage“ steht da, solange man die Art nicht

@@ -39,7 +39,13 @@ class KampfSzene extends Phaser.Scene {
     // und verbrauchte Geräte sollen im Spielstand ankommen.
     this.k = KAMPF.neu({
       gruppe: this.stand.gruppe,
-      gegner: [KAMPF.neuesElemental(daten.gegner.art, daten.gegner.stufe)],
+      // Ein wildes Elemental oder die Gruppe eines Stoffmeisters (Prüfungskampf)
+      gegner: daten.gegner.map(function (g) {
+        var el = KAMPF.neuesElemental(g.art, g.stufe);
+        // „Gildenmeisterin Ilka“ → „Ilkas Kupfer“ – passt in den Kasten
+        if (daten.gegnerName) el.spitzname = daten.gegnerName.split(" ").pop() + "s " + ARTEN[g.art].name;
+        return el;
+      }),
       feld: daten.feld,
       wild: daten.wild !== false,
       bekannt: this.stand.bekannt,
@@ -49,7 +55,7 @@ class KampfSzene extends Phaser.Scene {
 
     this.hintergrund = this.add.image(0, 0, "hg-" + (daten.ort || "dorf")).setOrigin(0.5);
     this.abdunkeln = this.add.graphics();
-    this.bildGegner = this.add.image(0, 0, "el-" + daten.gegner.art);
+    this.bildGegner = this.add.image(0, 0, "el-" + daten.gegner[0].art);
     this.bildSpieler = this.add.image(0, 0, "el-" + KAMPF.aktiv(this.k, "spieler").art).setFlipX(true);
 
     this.infoGegner = this.baueInfo();
@@ -80,9 +86,11 @@ class KampfSzene extends Phaser.Scene {
     this.bildGegner.x = this.scale.width + this.bildGegner.displayWidth;
     this.tweens.add({ targets: this.bildGegner, x: zielX, duration: 600, ease: "Cubic.easeOut" });
     this.aktualisieren();
-    var erster = this.k.erkannt
-      ? "Ein wildes " + ARTEN[daten.gegner.art].name + " stellt sich dir in den Weg!"
-      : "Ein unbekanntes Elemental stellt sich dir in den Weg! Was mag es sein?";
+    var erster = !this.k.wild
+      ? (daten.gegnerName || "Dein Gegenüber") + " schickt " + ARTEN[daten.gegner[0].art].name + " vor!"
+      : this.k.erkannt
+        ? "Ein wildes " + ARTEN[daten.gegner[0].art].name + " stellt sich dir in den Weg!"
+        : "Ein unbekanntes Elemental stellt sich dir in den Weg! Was mag es sein?";
     this.zeigeText(erster);
     this.zeigeHauptmenue();
 
@@ -101,6 +109,7 @@ class KampfSzene extends Phaser.Scene {
       else if (teil[0] === "bestimmen") a = { typ: "bestimmen", art: teil[1] };
       else if (teil[0] === "fangen") a = { typ: "fangen", geraet: teil[1] };
       else if (teil[0] === "fliehen") a = { typ: "fliehen" };
+      else if (teil[0] === "brenner") a = { typ: "brenner" };
       else a = { typ: "reaktion", id: teil[0] };
       var weiter = this.time.addEvent({ delay: 60, loop: true, callback: this.weiter, callbackScope: this });
       await this.ausfuehren(a);
@@ -190,6 +199,7 @@ class KampfSzene extends Phaser.Scene {
     this.zeichneInfo(this.infoSpieler, "spieler");
     this.zeichneFeld();
     this.bildSpieler.setTexture("el-" + KAMPF.aktiv(this.k, "spieler").art);
+    this.bildGegner.setTexture("el-" + KAMPF.aktiv(this.k, "gegner").art);
   }
 
   zeigeText(t) { this.text.setText(t); }
@@ -225,7 +235,7 @@ class KampfSzene extends Phaser.Scene {
     this.zeigeKnoepfe([
       { text: "Reaktion", beiKlick: function () { szene.menueReaktion(); } },
       { text: "Untersuchen", beiKlick: function () { szene.menueUntersuchen(); } },
-      { text: "Bestimmen", aktiv: !k.erkannt, grund: "Du weißt schon, was es ist.", beiKlick: function () { szene.menueBestimmen(); } },
+      { text: "Bestimmen", aktiv: k.wild && !k.erkannt, grund: k.wild ? "Du weißt schon, was es ist." : "Den Stoff eines Stoffmeisters kennst du – er hat ihn dir genannt.", beiKlick: function () { szene.menueBestimmen(); } },
       { text: "Fangen", aktiv: k.wild, beiKlick: function () { szene.menueFangen(); } },
       { text: "Wechseln", aktiv: this.stand.gruppe.filter(function (el) { return el.zh > 0; }).length > 1, grund: "Niemand sonst ist bereit.", beiKlick: function () { szene.menueWechseln(); } },
       { text: "Fliehen", aktiv: k.wild, beiKlick: function () { szene.ausfuehren({ typ: "fliehen" }); } }
@@ -240,6 +250,9 @@ class KampfSzene extends Phaser.Scene {
       return { text: r.name + "\n" + r.ae + " AE", aktiv: !grund, grund: grund, beiKlick: function () { szene.ausfuehren({ typ: "reaktion", id: id }); } };
     });
     eintraege.push({ text: "Kraft sammeln", beiKlick: function () { szene.ausfuehren({ typ: "sammeln" }); } });
+    if (this.stand.werkzeuge.indexOf("gasbrenner") >= 0) {
+      eintraege.push({ text: "Gasbrenner\n+4 AE", aktiv: !k.brennerBenutzt, grund: "Das Gas ist für diesen Kampf verbraucht.", beiKlick: function () { szene.ausfuehren({ typ: "brenner" }); } });
+    }
     eintraege.push(this.zurueck());
     this.zeigeText("Welche Reaktion? Verbrennungen brauchen Sauerstoff und heizen das Feld auf.");
     this.zeigeKnoepfe(eintraege);
@@ -247,7 +260,7 @@ class KampfSzene extends Phaser.Scene {
 
   menueUntersuchen() {
     var szene = this;
-    var eintraege = this.stand.werkzeuge.map(function (w) {
+    var eintraege = this.stand.werkzeuge.filter(function (w) { return WERKZEUGE[w].prueft.length; }).map(function (w) {
       return { text: WERKZEUGE[w].name, beiKlick: function () { szene.ausfuehren({ typ: "untersuchen", werkzeug: w }); } };
     });
     eintraege.push(this.zurueck());
@@ -299,7 +312,8 @@ class KampfSzene extends Phaser.Scene {
       await this.spieleEintrag(log[i]);
     }
     this.aktualisieren();
-    if (this.k.erkannt && this.stand.bekannt.indexOf(this.daten.gegner.art) < 0) this.stand.bekannt.push(this.daten.gegner.art);
+    var gegnerArt = KAMPF.aktiv(this.k, "gegner").art;
+    if (this.k.erkannt && this.k.wild && this.stand.bekannt.indexOf(gegnerArt) < 0) this.stand.bekannt.push(gegnerArt);
     if (this.k.ende) { await this.beenden(); return; }
     this.beschaeftigt = false;
     if (window.PROBE_MELDEN) window.PROBE_MELDEN("Runde " + this.k.runde + " bereit");
@@ -367,8 +381,10 @@ class KampfSzene extends Phaser.Scene {
     } else if (ende === "niederlage") {
       // Kein „Game Over“: zurück ins Labor, alle erholt.
       stand.gruppe.forEach(function (el) { el.zh = KAMPF.grundwerte(el.art, el.stufe).zhMax; });
-      stand.x = null; stand.y = null;
-      await this.wartenAufTipp("Mutter nimmt dich in der Werkstatt in Empfang. „Salbe, Ruhe, und morgen versuchst du es klüger.“ Deine Elementals sind wieder bei Kräften.");
+      var imDorf = !stand.labor || stand.labor.karte === "stoffingen";
+      await this.wartenAufTipp(imDorf
+        ? "Du wachst in Mutters Werkstatt auf. Es riecht nach Salbe. Deine Elementals haben sich erholt – und du bist klüger als vorhin."
+        : "Du wachst im Labor der Gilde auf. Jemand hat deine Elementals versorgt. „Beim nächsten Mal erst denken, dann zünden“, brummt eine Stimme.");
     }
     var beiEnde = this.daten.beiEnde;
     this.scene.stop();

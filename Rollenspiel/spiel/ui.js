@@ -47,7 +47,10 @@ class UiSzene extends Phaser.Scene {
       this.menueOffen = true;
       this.scene.launch("buch", { stand: this.oberwelt.stand, reiter: suche.get("buch") });
     }
-    else if (probeKampf && ARTEN[probeKampf]) this.dialogFuehren([{ kampf: { art: probeKampf, stufe: Number(suche.get("stufe")) || 5, ort: suche.get("ort") || "dorf" } }], this.oberwelt.stand.flags);
+    else if (probeKampf && ARTEN[probeKampf]) this.dialogFuehren([{ kampf: { art: probeKampf, stufe: Number(suche.get("stufe")) || 5, ort: suche.get("ort") || "dorf",
+      // &gegen=Name: Prüfungskampf gegen einen Stoffmeister statt eines wilden Elementals
+      wild: !suche.get("gegen"), name: suche.get("gegen") || undefined,
+      gegner: suche.get("gegen") ? [{ art: probeKampf, stufe: Number(suche.get("stufe")) || 5 }] : undefined } }], this.oberwelt.stand.flags);
   }
 
   // ============================================================
@@ -253,15 +256,108 @@ class UiSzene extends Phaser.Scene {
         return szene.oberwelt.kampfStarten(cfg);
       },
       heilen: function () { szene.oberwelt.heilen(); },
-      speichern: function () { szene.oberwelt.speichern(); }
+      speichern: function () { szene.oberwelt.speichern(); },
+      geben: function (g) { return szene.geben(g); },
+      benennen: function () { szene.benennen(); },
+      welt: function (w) { szene.weltStellen(w); },
+      einblenden: function (name, text) { return szene.einblenden(name, text); },
+      karte: function (k) { szene.oberwelt.wechsleKarte(k.ziel, k.punkt); },
+      ablauf: function (name) { return DIALOGE[name] || []; },
+      hatElemental: function (art) { return szene.oberwelt.stand.gruppe.some(function (el) { return el.art === art; }); }
     };
     EREIGNISSE.ausfuehren(ablauf, flags, anzeige).catch(function (fehler) {
       console.error(fehler);
     }).then(function () {
       szene.dialog.setVisible(false);
+      // Flags können Figuren erscheinen oder verschwinden lassen.
+      if (szene.oberwelt.sichtbarkeitAnpassen) szene.oberwelt.sichtbarkeitAnpassen();
       // Einen Takt warten: Derselbe Tipper, der den Dialog schließt,
       // soll nicht sofort den nächsten öffnen.
       szene.time.delayedCall(150, function () { szene.dialogAktiv = false; });
+    });
+  }
+
+  // ============================================================
+  //  Schritte, die den Spielstand ändern
+  // ============================================================
+  geben(g) {
+    var stand = this.oberwelt.stand, teile = [];
+    if (g.elemental) {
+      var el = KAMPF.neuesElemental(g.elemental.art, g.elemental.stufe || 3);
+      SPIELSTAND.aufnehmen(stand, el);
+      if (stand.bekannt.indexOf(el.art) < 0) stand.bekannt.push(el.art);
+      teile.push(ARTEN[el.art].name + " (Stufe " + el.stufe + ") schließt sich dir an");
+    }
+    Object.keys(g.vorrat || {}).forEach(function (geraet) {
+      stand.vorrat[geraet] = (stand.vorrat[geraet] || 0) + g.vorrat[geraet];
+      teile.push(g.vorrat[geraet] + "× " + FANGGERAETE[geraet].name);
+    });
+    [].concat(g.werkzeug || []).forEach(function (w) {
+      if (stand.werkzeuge.indexOf(w) < 0) stand.werkzeuge.push(w);
+      teile.push(WERKZEUGE[w].name);
+    });
+    if (!teile.length) return Promise.resolve();
+    return this.sprechblase(null, (g.elemental ? "" : "Du erhältst: ") + teile.join(", ") + ".");
+  }
+
+  benennen() {
+    var stand = this.oberwelt.stand;
+    var el = stand.gruppe[stand.gruppe.length - 1];
+    if (!el) return;
+    var name = window.prompt("Wie soll dein " + ARTEN[el.art].name + " heißen? (Leer lassen: " + ARTEN[el.art].name + ")", "");
+    if (name && name.trim()) el.spitzname = name.trim().slice(0, 14);
+  }
+
+  // Uhrzeit vorstellen (nie zurück: ein früherer Zeitpunkt heißt „am nächsten Tag“).
+  weltStellen(w) {
+    var stand = this.oberwelt.stand;
+    if (w.zeit) {
+      var hm = w.zeit.split(":"), ziel = Number(hm[0]) * 60 + Number(hm[1] || 0);
+      var neu = Math.floor(stand.zeit / 1440) * 1440 + ziel;
+      if (neu < stand.zeit) neu += 1440;
+      stand.zeit = neu;
+    }
+    if (w.wetter) stand.wetter = { art: w.wetter, bis: stand.zeit + 240 };
+    this.himmelZeichnen();
+  }
+
+  // Gemalte Einblendung. Solange das Bild fehlt, ein Platzhalter mit
+  // Bildname – so sieht man beim Spielen, wo später ein Bild hinkommt.
+  einblenden(name, text) {
+    var szene = this, b = this.scale.width, h = this.scale.height;
+    this.dialog.setVisible(false);
+    var ebene = this.add.container(0, 0).setDepth(30).setAlpha(0);
+    var grund = this.add.graphics().fillStyle(0x08090b, 0.92).fillRect(0, 0, b, h);
+    ebene.add(grund);
+    var schluessel = "szene-" + name, bild;
+    if (this.textures.exists(schluessel)) {
+      bild = this.add.image(b / 2, h * 0.45, schluessel);
+      bild.setScale(Math.min(b * 0.9 / bild.width, h * 0.72 / bild.height));
+      this.tweens.add({ targets: bild, scale: bild.scale * 1.06, duration: 6000 });
+      ebene.add(bild);
+    } else {
+      var rahmen = this.add.graphics().lineStyle(MASS.px(2), 0xc9a66b, 0.8).strokeRect(b * 0.2, h * 0.1, b * 0.6, h * 0.62);
+      var platz = this.add.text(b / 2, h * 0.41, "[ Einblendung: " + name + " ]", {
+        fontFamily: SCHRIFT.familie, fontSize: MASS.px(14) + "px", color: "#c9a66b", fontStyle: "italic"
+      }).setOrigin(0.5);
+      ebene.add([rahmen, platz]);
+    }
+    if (text) {
+      var unter = this.add.text(b / 2, h * 0.86, text, {
+        fontFamily: SCHRIFT.titel, fontSize: MASS.px(17) + "px", color: "#f4ead5", fontStyle: "italic", align: "center",
+        wordWrap: { width: b * 0.8, useAdvancedWrap: true }
+      }).setOrigin(0.5);
+      ebene.add(unter);
+    }
+    this.tweens.add({ targets: ebene, alpha: 1, duration: 500 });
+    return new Promise(function (fertig) {
+      // Erst nach einer Weile antippbar – die Einblendung soll wirken.
+      szene.time.delayedCall(900, function () {
+        szene.einblendungWartet = function () {
+          szene.einblendungWartet = null;
+          szene.tweens.add({ targets: ebene, alpha: 0, duration: 400, onComplete: function () { ebene.destroy(); fertig(); } });
+        };
+      });
     });
   }
 
@@ -295,6 +391,7 @@ class UiSzene extends Phaser.Scene {
   // Wer schnell liest, soll nicht warten müssen – wer langsam liest,
   // soll nichts verpassen.
   weiterTippen() {
+    if (this.einblendungWartet) { this.einblendungWartet(); return; }
     if (this.tippUhr) { this.tippenFertig(); return; }
     if (this.wahlKnoepfe.length) return;
     var fertig = this.weiterWartet;

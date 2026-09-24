@@ -12,7 +12,7 @@
 // ============================================================
 
 // Bei JEDER Veröffentlichung erhöhen – sonst holt kein Handy die neue Fassung.
-var FASSUNG = 3;
+var FASSUNG = 4;
 var SPEICHER = "elementia-abenteuer-" + FASSUNG;
 
 var DATEIEN = [
@@ -49,6 +49,8 @@ var DATEIEN = [
   "grafik/platzhalter-kacheln.png",
   "grafik/platzhalter-figuren.png",
   "karten/stoffingen.json",
+  "karten/kolbenwald.json",
+  "karten/brenner.json",
   "icons/icon-192.png",
   "icons/icon-512.jpg"
 ];

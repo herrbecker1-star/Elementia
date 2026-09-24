@@ -40,27 +40,37 @@ class OberweltSzene extends Phaser.Scene {
     this.karte = karte;
     this.physics.world.setBounds(0, 0, karte.widthInPixels, karte.heightInPixels);
 
-    // ---------- Figuren und Dinge zum Ansprechen ----------
+    // ---------- Objekte der Karte ----------
+    // Eigenschaften siehe werkzeug\platzhalter-bauen.ps1. Vier Sorten:
+    //   Ankunftspunkte, Ausgänge (beim Betreten), Auslöser (einmal beim
+    //   Betreten) und alles zum Ansprechen (mit oder ohne Figur).
     this.ansprechbar = [];
+    this.ausgaenge = [];
+    this.ausloeser = [];
+    this.punkte = {};
     this.personen = this.physics.add.staticGroup();
     var start = { x: karte.widthInPixels / 2, y: karte.heightInPixels / 2 };
 
     karte.getObjectLayer("objekte").objects.forEach(function (o) {
       var eig = {};
       (o.properties || []).forEach(function (p) { eig[p.name] = p.value; });
-      if (o.name === "start") { start = { x: o.x, y: o.y }; return; }
+      var eintrag = { name: o.name, x: o.x, y: o.y, dialog: eig.dialog, eig: eig, figur: null };
+      if (eig.ankunft) { szene.punkte[o.name] = { x: o.x, y: o.y }; if (o.name === "start") start = { x: o.x, y: o.y }; return; }
+      if (eig.ziel || o.name.indexOf("ausgang") === 0) { szene.ausgaenge.push(eintrag); return; }
+      if (eig.ausloeser) { szene.ausloeser.push(eintrag); return; }
 
-      var eintrag = { name: o.name, x: o.x, y: o.y, dialog: eig.dialog, figur: null };
       if (eig.figur !== undefined) {
         var spr = szene.personen.create(o.x, o.y, "figuren", eig.figur * 8 + richtungsSpalte(eig.richtung));
         spr.body.setSize(20, 12, false).setOffset(6, 19);
         spr.setDepth(o.y);
         eintrag.figur = spr;
         eintrag.figurNr = eig.figur;
-      } else if (o.name === "schild") {
-        var schild = szene.personen.create(o.x, o.y, szene.schildTextur());
-        schild.body.setSize(20, 12, false).setOffset(6, 19);
-        schild.setDepth(o.y);
+      } else if (eig.bild) {
+        var ding = szene.personen.create(o.x, o.y, szene.dingTextur(eig.bild));
+        ding.body.setSize(20, 12, false).setOffset(6, 19);
+        ding.setDepth(o.y);
+        eintrag.figur = null;
+        eintrag.ding = ding;
       }
       szene.ansprechbar.push(eintrag);
     });
@@ -68,6 +78,12 @@ class OberweltSzene extends Phaser.Scene {
     this.startpunkt = start;
 
     // ---------- Spielfigur ----------
+    // Nach einem Kartenwechsel steht im Spielstand, an welchem Punkt man ankommt.
+    if (this.stand.ankunft && this.punkte[this.stand.ankunft]) {
+      var p = this.punkte[this.stand.ankunft];
+      this.stand.x = p.x; this.stand.y = p.y;
+    }
+    delete this.stand.ankunft;
     var x = this.stand.x !== null ? this.stand.x : start.x;
     var y = this.stand.y !== null ? this.stand.y : start.y;
     this.held = this.physics.add.sprite(x, y, "figuren", richtungsSpalte(this.stand.richtung));
@@ -107,6 +123,9 @@ class OberweltSzene extends Phaser.Scene {
       });
     }
 
+    this.sichtbarkeitAnpassen();
+    this.cameras.main.fadeIn(250, 16, 20, 24);
+
     // ---------- Oberfläche darüber ----------
     this.scene.launch("ui", { oberwelt: this });
     this.ui = this.scene.get("ui");
@@ -128,16 +147,88 @@ class OberweltSzene extends Phaser.Scene {
     this.cameras.main.setZoom(MASS.weltZoom(this.scale.width, this.scale.height));
   }
 
-  schildTextur() {
-    if (!this.textures.exists("schild")) {
-      var g = this.make.graphics({ add: false });
+  // Kleine Dinge auf der Karte, als Platzhalter gezeichnet.
+  dingTextur(name) {
+    var schluessel = "ding-" + name;
+    if (this.textures.exists(schluessel)) return schluessel;
+    var g = this.make.graphics({ add: false });
+    if (name === "schild") {
       g.fillStyle(0x6e4626).fillRect(14, 16, 4, 14);
       g.fillStyle(0xa07848).fillRect(4, 6, 24, 12);
       g.fillStyle(0x6e4626).fillRect(6, 9, 20, 1).fillRect(6, 13, 16, 1);
-      g.generateTexture("schild", 32, 32);
-      g.destroy();
+    } else if (name === "kiste") {
+      g.fillStyle(0x6e4626).fillRect(5, 12, 22, 16);
+      g.fillStyle(0x8a5a32).fillRect(5, 10, 22, 5);
+      g.fillStyle(0xc9a66b).fillRect(14, 16, 4, 4);
+      g.fillStyle(0xf4ead5).fillRect(8, 18, 5, 4);   // der Zettel
+    } else {
+      // Ein Laborgerät, das an einem Ast hängt: Pfahl mit Glaskörper
+      g.fillStyle(0x6b4424).fillRect(15, 4, 2, 26);
+      g.fillStyle(0x6b4424).fillRect(9, 4, 14, 2);
+      g.fillStyle(0xcfeeff, 0.95).fillRect(8, 8, 5, 12);
+      g.fillStyle(0xffffff).fillRect(9, 9, 1, 8);
+      g.fillStyle(0xffe08a).fillCircle(24, 10, 2);   // ein Funkeln: „Hier gibt es etwas.“
     }
-    return "schild";
+    g.generateTexture(schluessel, 32, 32);
+    g.destroy();
+    return schluessel;
+  }
+
+  // Figuren mit nurWenn/nichtWenn erscheinen oder verschwinden je nach Flags.
+  sichtbarkeitAnpassen() {
+    var flags = this.stand.flags;
+    this.ansprechbar.forEach(function (e) {
+      var sichtbar = bedingungErfuellt(e.eig, flags);
+      e.aktiv = sichtbar;
+      [e.figur, e.ding].forEach(function (spr) {
+        if (!spr) return;
+        spr.setVisible(sichtbar);
+        spr.body.enable = sichtbar;
+      });
+    });
+  }
+
+  // Wechsel auf eine andere Karte: Die Szene startet mit dem neuen Ort neu.
+  wechsleKarte(ziel, punkt) {
+    this.stand.karte = ziel;
+    this.stand.ankunft = punkt;
+    this.stand.x = null; this.stand.y = null;
+    SPIELSTAND.speichern(this.stand);
+    this.cameras.main.fadeOut(250, 16, 20, 24);
+    var szene = this;
+    this.cameras.main.once("camerafadeoutcomplete", function () { szene.scene.restart({ stand: szene.stand }); });
+  }
+
+  // Ausgänge und Auslöser prüfen, sobald man sie betritt.
+  betreten() {
+    var held = this.held, szene = this, flags = this.stand.flags;
+    for (var i = 0; i < this.ausgaenge.length; i++) {
+      var a = this.ausgaenge[i];
+      if (Phaser.Math.Distance.Between(held.x, held.y + 6, a.x, a.y) > 22) continue;
+      // Zurückschieben, damit man nicht auf dem Ausgang stehen bleibt
+      var zurueck = function () {
+        var dx = szene.karte.widthInPixels / 2 - a.x, dy = szene.karte.heightInPixels / 2 - a.y;
+        var d = Math.hypot(dx, dy) || 1;
+        held.x += dx / d * 28; held.y += dy / d * 28;
+      };
+      if (a.eig.offenWenn && !flags[a.eig.offenWenn]) {
+        zurueck();
+        this.ui.dialogFuehren(DIALOGE[a.eig.gesperrt] || [{ erzaehl: "Hier geht es noch nicht weiter." }], flags);
+        return true;
+      }
+      if (a.eig.ziel) { this.wechsleKarte(a.eig.ziel, a.eig.punkt); return true; }
+      if (a.dialog) { zurueck(); this.ui.dialogFuehren(DIALOGE[a.dialog], flags); return true; }
+    }
+    for (var j = 0; j < this.ausloeser.length; j++) {
+      var t = this.ausloeser[j];
+      var merker = "ausgeloest_" + this.stand.karte + "_" + t.name;
+      if (flags[merker] || !bedingungErfuellt(t.eig, flags)) continue;
+      if (Phaser.Math.Distance.Between(held.x, held.y, t.x, t.y) > 28) continue;
+      flags[merker] = true;
+      this.ui.dialogFuehren(DIALOGE[t.dialog], flags);
+      return true;
+    }
+    return false;
   }
 
   // ---------- Spielstand ----------
@@ -150,6 +241,8 @@ class OberweltSzene extends Phaser.Scene {
 
   // ---------- Labor ----------
   heilen() {
+    // Hierher kehrt man nach einer Niederlage zurück.
+    this.stand.labor = { karte: this.stand.karte, x: Math.round(this.held.x), y: Math.round(this.held.y) };
     this.stand.gruppe.concat(this.stand.lager).forEach(function (el) {
       el.zh = KAMPF.grundwerte(el.art, el.stufe).zhMax;
     });
@@ -175,8 +268,8 @@ class OberweltSzene extends Phaser.Scene {
   }
 
   schemenErzeugen() {
-    // Solange niemand mitkommt (vor der Starterwahl), zeigen sich keine.
-    if (!this.stand.gruppe.length || this.schemen.length >= SCHEMEN.HOECHSTENS) return;
+    // Solange niemand mitkommt und Mara nicht gewarnt hat (Flag schemen_frei), zeigen sich keine.
+    if (!this.stand.gruppe.length || !this.stand.flags.schemen_frei || this.schemen.length >= SCHEMEN.HOECHSTENS) return;
     if (this.ui && (this.ui.dialogAktiv || this.ui.menueOffen)) return;
     this.schemenTextur();
     var kx0 = Math.floor(this.held.x / 32), ky0 = Math.floor(this.held.y / 32);
@@ -290,7 +383,8 @@ class OberweltSzene extends Phaser.Scene {
       szene.scene.sleep("ui");
       szene.scene.launch("kampf", {
         stand: szene.stand,
-        gegner: { art: cfg.art, stufe: cfg.stufe || 3 },
+        gegner: cfg.gegner || [{ art: cfg.art, stufe: cfg.stufe || 3 }],
+        gegnerName: cfg.name,
         feld: cfg.feld,
         ort: cfg.ort || "dorf",
         wild: cfg.wild !== false,
@@ -298,8 +392,16 @@ class OberweltSzene extends Phaser.Scene {
           szene.scene.resume();
           szene.scene.wake("ui");
           // Nach einer Niederlage wacht man im Labor auf, nicht auf dem Schlachtfeld.
-          if (ende === "niederlage") szene.held.setPosition(szene.startpunkt.x, szene.startpunkt.y);
           szene.speichern();
+          if (ende === "niederlage") {
+            var l = szene.stand.labor || { karte: "stoffingen", x: szene.startpunkt.x, y: szene.startpunkt.y };
+            szene.stand.karte = l.karte; szene.stand.x = l.x; szene.stand.y = l.y;
+            SPIELSTAND.speichern(szene.stand);
+            // Der laufende Ablauf (etwa eine Prüfung) wird nicht fortgesetzt:
+            // Man wacht im Labor auf und kann es noch einmal versuchen.
+            szene.scene.restart({ stand: szene.stand });
+            return;
+          }
           fertig(ende);
         }
       });
@@ -313,6 +415,7 @@ class OberweltSzene extends Phaser.Scene {
     var py = this.held.y + 4 + v.y * 20;
     var bestes = null, abstand = REICHWEITE;
     this.ansprechbar.forEach(function (e) {
+      if (e.aktiv === false) return;
       var d = Phaser.Math.Distance.Between(px, py, e.x, e.y);
       if (d < abstand) { abstand = d; bestes = e; }
     });
@@ -365,17 +468,19 @@ class OberweltSzene extends Phaser.Scene {
       held.setFrame(richtungsSpalte(this.richtung));
     }
 
-    // Ostausgang: Der Kolbenwald folgt in M3.
-    if (held.x > this.karte.widthInPixels - 20) {
-      held.x -= 24;
-      this.ui.dialogFuehren([{ erzaehl: "Hier beginnt der Weg in den Kolbenwald. In dieser Probefassung endet die Welt noch an diesem Zaunpfahl." }], this.stand.flags);
-      return;
-    }
+    if (this.betreten()) return;
 
     var ziel = this.gegenueber();
     this.ui.zeigeAktion(ziel ? (ziel.figur ? "Sprechen" : "Ansehen") : "");
     if (this.ui.aktionAbholen() && ziel) this.ansprechen(ziel);
   }
+}
+
+// nurWenn / nichtWenn eines Objekts gegen die Flags prüfen
+function bedingungErfuellt(eig, flags) {
+  if (eig.nurWenn && !flags[eig.nurWenn]) return false;
+  if (eig.nichtWenn && flags[eig.nichtWenn]) return false;
+  return true;
 }
 
 function richtungsSpalte(richtung) {

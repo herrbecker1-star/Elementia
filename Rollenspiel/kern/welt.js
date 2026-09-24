@@ -74,9 +74,10 @@ var WELT = (function () {
     schmiede: { sauerstoff: 95,  waerme: 45, feuchte: 20 },   // die Esse glüht
     meiler:   { sauerstoff: 80,  waerme: 45, feuchte: 20 },   // Holz verkohlt unter Luftabschluss
     quelle:   { sauerstoff: 100, waerme: 35, feuchte: 75 },   // warme Schwefelquelle
-    hain:     { sauerstoff: 100, waerme: 18, feuchte: 55 }
+    hain:     { sauerstoff: 100, waerme: 18, feuchte: 55 },
+    wald:     { sauerstoff: 100, waerme: 16, feuchte: 60 }
   };
-  var BIOM_ORT = { wiese: "steppe", dorf: "dorf", garten: "dorf", schmiede: "dorf", meiler: "steppe", quelle: "wald", hain: "wald" };
+  var BIOM_ORT = { wiese: "steppe", dorf: "dorf", garten: "dorf", schmiede: "dorf", meiler: "steppe", quelle: "wald", hain: "wald", wald: "wald" };
 
   function feld(biom, wetter, ph) {
     var f = Object.assign({ offen: true }, BIOM_FELD[biom] || BIOM_FELD.wiese);

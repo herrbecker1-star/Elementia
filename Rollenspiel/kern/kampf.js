@@ -299,6 +299,16 @@ var KAMPF = (function () {
         break;
       case "fliehen": fliehen(k); break;
       case "sammeln": sp.ae = Math.min(AE_MAX, sp.ae + 2); k.log.push({ text: name(k, "spieler") + " sammelt Kraft." }); break;
+      case "brenner":
+        // Der Gasbrenner aus Brenner: einmal je Kampf Aktivierungsenergie
+        // von außen – und seine Flamme heizt das Feld auf.
+        if (k.werkzeuge.indexOf("gasbrenner") < 0) throw new Error("Kein Gasbrenner im Gepäck.");
+        if (k.brennerBenutzt) { k.log.push({ text: "Das Gas im Brenner ist für diesen Kampf verbraucht." }); break; }
+        k.brennerBenutzt = true;
+        sp.ae = Math.min(AE_MAX, sp.ae + 4);
+        k.feld.waerme = Math.min(100, k.feld.waerme + 10);
+        k.log.push({ text: "Du entzündest den Gasbrenner – rauschende Flamme, Luftzufuhr offen. Die Hitze liefert Aktivierungsenergie." });
+        break;
       case "reaktion": break;
       default: throw new Error("Unbekannte Aktion: " + aktion.typ);
     }
