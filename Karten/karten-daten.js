@@ -1594,7 +1594,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["flüssig", "ätzend", "sauer", "stark"],
       "attacken": [
         { "name": "Ätzstrahl", "typ": "Ätz", "schaden": 10, "effekt": "" },
-        { "name": "Magensäure", "typ": "Ätz", "schaden": 18, "effekt": "Rückstoß: Salzsäure erleidet selbst 5 Schaden – wer ätzt, wird auch angegriffen.",
+        { "name": "Magensäure", "typ": "Ätz", "schaden": 18, "effekt": "Rückstoß: Salzsäure erleidet selbst 5 Schaden.",
           "wirkung": { "art": "selbstschaden", "wert": 5 } }
       ],
       "appAttacke": { "name": "Verdauung", "typ": "Ätz", "schaden": 0,
@@ -1606,7 +1606,7 @@ window.KARTEN_DATEN = {
         "edukte": ["Chlorwasserstoff", "Wasser"],
         "aktivierung": false, "exotherm": 0
       },
-      "besonderheit": "Starke Säure: Sie zerfällt in Wasser vollständig in H⁺ und Cl⁻. Gegen metallische Elementals machen ihre Ätz-Attacken doppelten Schaden.",
+      "besonderheit": "Starke Säure: zerfällt vollständig in H⁺ und Cl⁻. Ihre Ätz-Attacken machen gegen metallische Elementals doppelten Schaden.",
       "flavor": "Das Wappenwesen von Hydrochloria – und dieselbe Säure, die du im Magen trägst.",
       "quest": "Acidia – Hydrochloria", "bild": "🧪"
     },
@@ -1655,7 +1655,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["flüssig", "ätzend", "alkalisch", "stark"],
       "attacken": [
         { "name": "Laugenbiss", "typ": "Ätz", "schaden": 13, "effekt": "" },
-        { "name": "Seifensieder", "typ": "Ätz", "schaden": 5, "effekt": "Verseifung: Eine Ausrüstungskarte des Gegners wird abgelegt – Natronlauge löst Fett und Farbe." }
+        { "name": "Seifensieder", "typ": "Ätz", "schaden": 5, "effekt": "Verseifung: Eine Ausrüstungskarte des Gegners wird abgelegt." }
       ],
       "appAttacke": { "name": "Natronkalk", "typ": "Gas", "schaden": 0,
         "effekt": "Natronlauge schluckt Kohlenstoffdioxid aus der Luft – genau dafür steht sie im Natronkalk-Rohr. Gas-Attacken machen zwei Runden lang 5 Schaden weniger.",
@@ -1666,7 +1666,7 @@ window.KARTEN_DATEN = {
         "edukte": ["Natrium", "Wasser"],
         "aktivierung": false, "exotherm": 5
       },
-      "besonderheit": "Starke Lauge: Sie zerfällt vollständig in Na⁺ und OH⁻. Ihr Schaden wirkt verzögert: Das getroffene Elemental erleidet zu Beginn deines nächsten Zuges noch einmal 5 Schaden.",
+      "besonderheit": "Starke Lauge: zerfällt vollständig in Na⁺ und OH⁻. Verzögerter Schaden: Das getroffene Elemental erleidet zu Beginn deines nächsten Zuges noch einmal 5 Schaden.",
       "flavor": "Alkalias schärfste Mitarbeiterin. Sie brennt nicht sofort – das ist das Gefährliche.",
       "quest": "Acidia – Seifensieden", "bild": "🧼"
     },
@@ -1941,7 +1941,7 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["flüssig", "brennbar", "löst Fett und Wasser", "C2-Stamm"],
       "attacken": [
         { "name": "Spiritusflamme", "typ": "Feuer", "schaden": 13, "effekt": "" },
-        { "name": "Lösungsmittel", "typ": "Ätz", "schaden": 5, "effekt": "Eine Ausrüstungskarte des Gegners wird abgelegt – Ethanol löst fast alles." }
+        { "name": "Lösungsmittel", "typ": "Ätz", "schaden": 5, "effekt": "Eine Ausrüstungskarte des Gegners wird abgelegt." }
       ],
       "appAttacke": { "name": "Spiritusdunst", "typ": "Gas", "schaden": 0,
         "effekt": "Ethanol verdunstet rasch und steht als unsichtbarer Dunst über der Flüssigkeit: Die Angriffe des Gegners gehen bis zu seinem nächsten Zug um 20 % häufiger daneben.",
@@ -1952,7 +1952,7 @@ window.KARTEN_DATEN = {
         "edukte": ["Traubenzucker"],
         "aktivierung": false, "exotherm": 0
       },
-      "besonderheit": "Wasserstoffbrücken: Ethanol siedet erst bei 78 °C – Siedeglas und andere Hitze-Effekte wirken gegen Ethanol nicht.",
+      "besonderheit": "Wasserstoffbrücken: Siedet erst bei 78 °C – Siedeglas und andere Hitze-Effekte wirken nicht.",
       "flavor": "Die erste Sprosse der Leiter. Aus Zucker geboren, von Hefen gemacht.",
       "quest": "Organica – Gärhusen", "bild": "🍷"
     },
@@ -2149,18 +2149,18 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["legendär", "rot", "Sauerstoff-Träger", "lebendig"],
       "attacken": [
         { "name": "Sauerstoffstrom", "typ": "Wucht", "schaden": 17, "effekt": "" },
-        { "name": "Atemzug", "typ": "Gas", "schaden": 0, "effekt": "Heile alle deine Elementals um 10 LP – Hämoglobin bringt jedem, was er zum Leben braucht." }
+        { "name": "Atemzug", "typ": "Gas", "schaden": 0, "effekt": "Heile alle deine Elementals um 10 LP." }
       ],
       "appAttacke": { "name": "Sauerstoffvorrat", "typ": "Gas", "schaden": 0,
         "effekt": "Wer den Sauerstoff selbst mit sich trägt, dem nimmt kein Gas die Luft. Gas-Attacken machen zwei Runden lang 5 Schaden weniger.",
         "wirkung": { "art": "schutz", "gegen": "Gas", "faktor": 1, "minus": 5 } },
       "synthese": {
-        "wortgleichung": "Eisen(II)-Ion + Porphyrin-Ring → Häm; Häm + Globin → Hämoglobin",
-        "bilanz": "Fe (56 u) im Zentrum eines Riesenmoleküls von rund 64 500 u",
+        "wortgleichung": "Eisen(II)-Ion + Porphyrin-Ring → Häm (+ Globin → Hämoglobin)",
+        "bilanz": "Fe 56 u in rund 64 500 u",
         "edukte": ["Eisen", "Porphyrin-Ring"],
         "aktivierung": true, "exotherm": 0
       },
-      "besonderheit": "LEGENDÄR – nur für Spieler mit dem Starter Eisen. Es beginnt ein Duell nie (der Leichtere beginnt). Immun gegen Ätz-Attacken. Achtung: Gegen Kohlenstoffmonoxid ist es wehrlos – CO bindet fester als Sauerstoff.",
+      "besonderheit": "LEGENDÄR – nur mit Starter Eisen. Beginnt nie ein Duell. Immun gegen Ätz-Attacken. Wehrlos gegen CO – es bindet fester als Sauerstoff.",
       "flavor": "Eisen im Blut. Vier Jahre lang hast du es getragen, ohne zu wissen, wohin es dich führt.",
       "quest": "Organica – Die Herzkammer (legendär)", "bild": "❤️"
     },
@@ -2169,18 +2169,18 @@ window.KARTEN_DATEN = {
       "eigenschaften": ["legendär", "grün", "Lichtfänger", "lebendig"],
       "attacken": [
         { "name": "Lichternte", "typ": "Feuer", "schaden": 18, "effekt": "" },
-        { "name": "Fotosynthese", "typ": "Gas", "schaden": 0, "effekt": "Nimm eine abgelegte Karte zurück auf die Hand – aus Licht und Luft entsteht Neues." }
+        { "name": "Fotosynthese", "typ": "Gas", "schaden": 0, "effekt": "Nimm eine abgelegte Karte zurück auf die Hand." }
       ],
       "appAttacke": { "name": "Lichtnahrung", "typ": "Feuer", "schaden": 0,
         "effekt": "Aus Licht und Kohlenstoffdioxid baut Chlorophyll Zucker – und mit ihm Kraft: Dein aktives Elemental erhält 10 LP zurück.",
         "wirkung": { "art": "heilung", "wert": 10, "ziel": "eigeneArena" } },
       "synthese": {
         "wortgleichung": "Magnesium-Ion + Porphyrin-Ring → Chlorophyll",
-        "bilanz": "Mg (24 u) im Zentrum eines Moleküls von rund 893 u",
+        "bilanz": "Mg (24 u) im Zentrum, gesamt rund 893 u",
         "edukte": ["Magnesium", "Porphyrin-Ring"],
         "aktivierung": true, "exotherm": 0
       },
-      "besonderheit": "LEGENDÄR – nur für Spieler mit dem Starter Magnesium. Immun gegen Feuer-Attacken. Solange Chlorophyll in der Arena steht, erhält jedes deiner Elementals zu Beginn deines Zuges 5 LP zurück.",
+      "besonderheit": "LEGENDÄR – nur mit Starter Magnesium. Immun gegen Feuer-Attacken. Solange es in der Arena steht, erhält jedes deiner Elementals zu Beginn deines Zuges 5 LP zurück.",
       "flavor": "Magnesium im Blattgrün. Der grelle Funke aus Mutters Garten – jetzt weißt du, warum er grün war.",
       "quest": "Organica – Die Herzkammer (legendär)", "bild": "💚"
     }
