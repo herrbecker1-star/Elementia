@@ -286,10 +286,11 @@ class BuchSzene extends Phaser.Scene {
     y += Math.max(h1, h2) + MASS.px(6);
 
     var ARTNAME = { wucht: "Schlag", hitze: "Feuer", reaktion: "Stoffreaktion", leitung: "Wärme", schutz: "Schutz" };
-    var zeilen = [["Angriff", "Art", "Kraft", "E", "Wirkung"]];
+    // Stärke relativ: ein Schlag auf Stufe 1 = 100 %; sie wächst mit der Stufe.
+    var zeilen = [["Angriff", "Art", "Stärke", "E", "Wirkung"]];
     (el ? KAMPF.angriffe(el) : a.reaktionen).forEach(function (id) {
       var r = REAKTIONEN[id];
-      zeilen.push([r.name, ARTNAME[r.art], r.art === "leitung" ? "Wärme ÷ 4" : r.art === "schutz" ? "–" : r.kraft, r.ae, r.text]);
+      zeilen.push([r.name, ARTNAME[r.art], r.art === "leitung" ? "je nach Wärme" : r.art === "schutz" ? "–" : KAMPF.staerke(probe, id) + " %", r.ae, r.text]);
     });
     this.tabelle(x, y, [b * 0.2, b * 0.15, b * 0.1, b * 0.05, b * 0.5], zeilen);
   }

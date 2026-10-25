@@ -4,11 +4,14 @@
 //  Grundlage: drehbuch\kapitel-1.md. Schlüssel = "dialog"-Eigenschaft
 //  der Objekte in den Karten. Format der Schritte: kern\ereignisse.js.
 //
-//  Leitlinie (25.10.2026): wenig Text, leicht verständlich. Schüler
-//  wollen spielen; was das Spiel erklärt (Untersuchen, passendes
-//  Fanggerät, die Flammen), bleibt, alles andere ist kurz. Höchstens
-//  zwei, drei Sprechblasen je Besuch, kein Satz über 150 Zeichen
-//  (prüft der Prüfstand).
+//  Leitlinie (25.10.2026): leicht verständlich, kein Satz über 150
+//  Zeichen (prüft der Prüfstand). Zwei Längen:
+//   · Gespräche in der Welt: höchstens zwei, drei Sprechblasen je Besuch.
+//   · Erzählszenen (Einstieg, H1–H4): 60–120 Wörter je Szene, der ganze
+//     Anfang etwa 330 Wörter (≈ 3 Minuten Lesen). Die erste, stärker
+//     gekürzte Fassung erklärte das Grundproblem nicht mehr – wer die
+//     Reiter sind, dass sie Lumi gezielt suchen, warum Großmutters Buch
+//     zählt. Höchstens 3–4 Blasen am Stück, dann passiert etwas.
 //
 //  Die harten Szenen H1–H4 (Reiter, Lumi, Abendtisch, Aufbruch) stehen
 //  in "reiter_szenen", freigegeben am 25.10.2026. Leitlinie: zeigen statt
@@ -101,8 +104,10 @@ var DIALOGE = {
   //  Stoffingen – Akt A: der Geburtstagsmorgen
   // ============================================================
   einstieg: [
-    { erzaehl: "Vor langer Zeit erwachten die Stoffe zum Leben. Aus Stoff wurde Wesen: die Elementals." },
-    { erzaehl: "Heute ist dein 12. Geburtstag in Stoffingen. Ab heute lernst du ein Handwerk: Schmiede oder Garten." }
+    { erzaehl: "Vor langer Zeit traf eine Hadronenwolke die Erde. Wo ihre Funken niedergingen, erwachten die Stoffe zum Leben: die Elementals." },
+    { erzaehl: "Erst hatten die Menschen Angst. Dann lernten sie, mit ihnen zu leben. Wer die Elementals wirklich versteht, heißt Stoffmeister." },
+    { erzaehl: "Du lebst in Stoffingen, einem armen Dorf in den Feuerlanden. „Wer nichts hat, den lässt man in Ruhe“, sagt deine Mutter." },
+    { erzaehl: "Heute ist dein 12. Geburtstag. Ab heute lernst du ein Handwerk: in Vaters Schmiede oder in Mutters Garten. Lumi wartet auf dem Dorfplatz." }
   ],
 
   vater: [
@@ -138,13 +143,21 @@ var DIALOGE = {
       { sag: "Lumi", text: "Alles Gute! Schmiede oder Garten? Ich würde den Garten nehmen. Wegen der Erdbeeren." }
     ], sonst: [
       { wennNicht: "tutorial_fertig", dann: [
-        { sag: "Lumi", text: "Du hast eins! Guck, ich auch: ein winziges Licht. Es heißt Funzel. Es ist mir einfach gefolgt." },
-        { sag: "Lumi", text: "Da hinten im Gras flackert was. Scheuch es auf!" },
-        { kampf: { art: "zink", stufe: 2, ort: "steppe", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } },
-        { wennGleich: ["letzter_kampf", "sieg"], dann: [
-          { sag: "Lumi", text: "Weggelaufen! Funzel ist neidisch." }
+        { erzaehl: "Lumi hat keine Eltern mehr. Du passt auf sie auf, seit du denken kannst. Ihr seid nicht verwandt, aber beste Freunde." },
+        { sag: "Lumi", text: "Du hast eins! Ich hab das andere bekommen. Und Funzel, das kleine Licht hier, ist mir einfach gefolgt." },
+        { sag: "Lumi", text: "Übungskampf? Meins gegen deins!" },
+        // Lumi hat den Starter, den man nicht gewählt hat – gleiche Stufe, aber
+        // ohne Starterbonus. Gemessen 25.10.2026: Eisen-Starter gewinnt 69 %,
+        // Magnesium-Starter 90 % (auf Stufe 2 wären es 98/100 %).
+        { wennGleich: ["starter", "eisen"], dann: [
+          { kampf: { gegner: [{ art: "magnesium", stufe: 3 }], wild: false, name: "Lumi", ort: "dorf", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } }
         ], sonst: [
-          { sag: "Lumi", text: "Zäher Brocken. Morgen gewinnst du." }
+          { kampf: { gegner: [{ art: "eisen", stufe: 3 }], wild: false, name: "Lumi", ort: "dorf", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } }
+        ] },
+        { wennGleich: ["letzter_kampf", "sieg"], dann: [
+          { sag: "Lumi", text: "Gut! Funzel flackert vor Freude." }
+        ], sonst: [
+          { sag: "Lumi", text: "Ha! Morgen gewinnst du." }
         ] },
         { sag: "Lumi", text: "Tipp: Mit „Untersuchen“ findest du heraus, WAS es ist – Farbe, Glanz, Magnet, Strom." },
         { setze: "tutorial_fertig" },
@@ -181,18 +194,22 @@ var DIALOGE = {
       { gehen: { wer: "anfuehrer", nach: [[22, 13], [21, 14]], tempo: 120 } },
       { zeichen: { wer: "held", art: "!" } },
       { zeichen: { wer: "lumi", art: "!" } },
-      { einblenden: "reiter_ankunft", text: "Graue Reiter. Niemand kennt sie." },
-      { sag: "Anführer", text: "Alle Kinder. Aufsitzen." },
+      { einblenden: "reiter_ankunft", text: "Graue Reiter. Auf den Schilden ein grauer Reiher. Niemand kennt sie." },
+      { erzaehl: "Der Anführer mustert die Kinder. Ruhig und langsam, als suche er etwas ganz Bestimmtes." },
+      { sag: "Anführer", text: "Alle Kinder des Dorfes. Aufsitzen." },
+      { erzaehl: "Sie sind nicht grob. Sie haken ab wie auf einer Liste. Der Sohn des Köhlers. Die Mädchen vom Kerzenzieher." },
       { gehen: { wer: "reiter1", nach: [[18, 13], [16, 13]], parallel: true } },
       { gehen: { wer: "mutter", nach: [[13, 8], [13, 12], [15, 13]], tempo: 150 } },
       { zeichen: { wer: "mutter", art: "!" } },
-      { sag: "Mutter", text: "Nicht mein Kind. Seit heute ist es ein Lehrling." },
+      { sag: "Mutter", text: "Nicht mein Kind. Zwölf Jahre, seit heute früh. Das ist kein Kind mehr, das ist ein Lehrling." },
       { zeichen: { wer: "anfuehrer", art: "…" } },
+      { erzaehl: "Der Anführer nickt knapp, als striche er eine Zeile durch." },
       { gehen: { wer: "reiter1", nach: [[18, 13], [20, 12]] } },
-      { sag: "Anführer", text: "Die da." },
+      { sag: "Anführer", text: "Die da. Die vor allen anderen." },
       { zeichen: { wer: "lumi", art: "!" } },
       { gehen: { wer: "reiter2", nach: [18, 13] } },
-      { einblenden: "lumis_kolben", text: "Funzel wird in einen Kolben gesperrt. Versiegelt." },
+      { einblenden: "lumis_kolben", text: "Funzel kommt in einen Kolben. Versiegelt." },
+      { sag: "Anführer", text: "Sie kommt mit uns. Zu ihrem eigenen Besten." },
       { gehen: { wer: "lumi", nach: [[17, 13], [24, 13]], parallel: true } },
       { gehen: { wer: "reiter2", nach: [23, 13] } },
       { verschwinden: "lumi" },
@@ -203,21 +220,25 @@ var DIALOGE = {
       { gehen: { wer: "reiter2", nach: [[23, 14], [44, 14]], tempo: 140, parallel: true } },
       { gehen: { wer: "reiter3", nach: [44, 12], tempo: 140, parallel: true } },
       { verfolgen: { wer: "wagen", nach: [41, 13] } },
-      { einblenden: "leerer_dorfplatz", text: "Zu spät." }
-    ], kurz: "Graue Reiter haben Lumi entführt. Hol sie zurück!" },
+      { einblenden: "leerer_dorfplatz", text: "Du greifst nach Lumis Hand. Du bekommst nur Luft zu fassen." }
+    ], kurz: "Graue Reiter haben die Kinder mitgenommen, und Lumi haben sie gezielt gesucht. Niemand weiß, warum. Hol sie zurück!" },
 
     // H3: der Abendtisch
     { welt: { zeit: "19:00" } },
     { film: [
-      { sag: "Vater", text: "Du bleibst hier. Es ist zu gefährlich." },
-      { einblenden: "grossmutters_buch" },
-      { sag: "Vater", text: "Das war Großmutters Buch. Eines Tages gehört es dir." }
-    ], kurz: "Die Eltern verbieten dir die Reise. Vater zeigt dir Großmutters Buch." },
+      { erzaehl: "In halb Stoffingen fehlt heute ein Kind. Niemand versteht, was die Reiter wollen. Und warum gerade Lumi?" },
+      { erzaehl: "„Ich hole sie zurück“, sagst du." },
+      { sag: "Mutter", text: "Nein. Zwölf Reiter mit Waffen, und du bist heute zwölf geworden. Du bleibst hier." },
+      { sag: "Vater", text: "Es ist zu gefährlich. Kein Wort mehr davon." },
+      { einblenden: "grossmutters_buch", text: "Dann legt Vater ein altes Buch auf den Tisch." },
+      { sag: "Vater", text: "Großmutters Buch. Sie war Stoffmeisterin. Sie sagte: Wer die Stoffe versteht, den kann niemand täuschen." },
+      { sag: "Vater", text: "Eines Tages, wenn du älter bist, gehört es dir." }
+    ], kurz: "Deine Eltern verbieten dir die Reise. Vater zeigt dir Großmutters Buch. Sie war Stoffmeisterin." },
 
     // H4: die Nacht. Die beiden Wahlen gelten auch beim Überspringen.
     { welt: { zeit: "23:00" } },
     { film: [
-      { erzaehl: "Lumi hat niemanden außer dir." },
+      { erzaehl: "Du liegst wach. Lumi hat niemanden außer dir. Und „eines Tages“ ist zu spät." },
       { wahl: "In Mutters Werkstatt stehen saubere Reagenzgläser.", optionen: [
         { text: "Nimm sie mit.", dann: [{ geben: { vorrat: { reagenzglas: 3 } } }, { setze: "glaeser_genommen" }] },
         { text: "Lass sie stehen. Es sind ihre.", dann: [{ geben: { vorrat: { reagenzglas: 1 } } }, { setze: "glaeser_gelassen" }] }
@@ -227,7 +248,8 @@ var DIALOGE = {
         { text: "„Ich bin nicht mehr nur ein Kind.“", dann: [{ setze: "zettel", wert: 2 }] },
         { text: "„Ich komme wieder. Mit Lumi.“", dann: [{ setze: "zettel", wert: 3 }] }
       ] },
-      { erzaehl: "Großmutters Buch, erste Seite: „Erste Prüfung: der Markt von Stoffingen.“" },
+      { erzaehl: "Großmutters Buch, erste Seite: „Willst du einen Stoff besiegen, dann lerne ihn erst kennen.“" },
+      { erzaehl: "Darunter in alter Tinte: „Erste Prüfung: der Markt von Stoffingen.“" },
       { welt: { zeit: "05:30", wetter: "nebel" } },
       { setze: "aufgebrochen" }
     ], kurz: "Du brichst heimlich auf. Erstes Ziel: der Markt." }

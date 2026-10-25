@@ -304,15 +304,17 @@ class KampfSzene extends Phaser.Scene {
   menueReaktion() {
     var szene = this, k = this.k;
     var el = KAMPF.aktiv(k, "spieler");
-    // Jeder Knopf zeigt die Stärke und die Energie. Ist der Gegner erkannt,
-    // steht statt der Grundkraft der geschätzte Schaden gegen genau ihn –
-    // bei einem unerkannten Gegner verriete die Schätzung den Stoff.
+    // Jeder Knopf zeigt die Stärke und die Energie, beides relativ. Ist der
+    // Gegner erkannt, steht dort, welchen Anteil seiner vollen LP ein Treffer
+    // etwa nimmt (25 % ≈ vier Treffer). Bei einem unerkannten Gegner verriete
+    // das den Stoff – dann die eigene Stärke (Schlag auf Stufe 1 = 100 %).
     var kennt = !k.wild || k.erkannt;
+    var gegnerLP = KAMPF.werte(KAMPF.aktiv(k, "gegner")).zhMax;
     var eintraege = KAMPF.angriffe(el).map(function (id) {
       var r = REAKTIONEN[id], grund = KAMPF.hindernis(k, "spieler", id), staerke;
       if (r.art === "schutz") staerke = "Schutz";
-      else if (kennt) staerke = "≈ " + KAMPF.schaetzeSchaden(k, "spieler", id, true) + " Schaden";
-      else staerke = r.art === "leitung" ? "Kraft: Wärme" : "Kraft " + r.kraft;
+      else if (kennt) staerke = "≈ " + Math.round(KAMPF.schaetzeSchaden(k, "spieler", id, true) / gegnerLP * 100) + " % LP";
+      else staerke = r.art === "leitung" ? "Stärke: je nach Wärme" : "Stärke " + KAMPF.staerke(el, id) + " %";
       return { text: r.name + "\n" + staerke + " · " + r.ae + " E", aktiv: !grund, grund: grund, beiKlick: function () { szene.ausfuehren({ typ: "reaktion", id: id }); } };
     });
     eintraege.push({ text: "Kraft sammeln", beiKlick: function () { szene.ausfuehren({ typ: "sammeln" }); } });
@@ -455,9 +457,10 @@ class KampfSzene extends Phaser.Scene {
     });
   }
 
-  angriffKurz(id) {
+  angriffKurz(id, el) {
     var r = REAKTIONEN[id], art = { wucht: "Schlag", hitze: "Feuer", reaktion: "Stoffreaktion", leitung: "Wärme", schutz: "Schutz" }[r.art];
-    return r.name + "\n" + art + (r.kraft ? " " + r.kraft : "") + " · " + r.ae + " E";
+    var st = KAMPF.staerke(el, id);
+    return r.name + "\n" + art + (st ? " " + st + " %" : "") + " · " + r.ae + " E";
   }
 
   // Bei Stufe 6, 8 und 10: zwei Vorschläge (KAMPF.lernVorschlaege). Bei vier
@@ -468,7 +471,7 @@ class KampfSzene extends Phaser.Scene {
     if (!vorschlaege.length) return;
     var szene = this;
     var w = await this.waehle(name + " ist jetzt Stufe " + el.stufe + " und kann einen neuen Angriff lernen. Welchen?",
-      vorschlaege.map(function (id) { return szene.angriffKurz(id); }).concat(["keinen"]));
+      vorschlaege.map(function (id) { return szene.angriffKurz(id, el); }).concat(["keinen"]));
     if (w >= vorschlaege.length) return;
     var neu = vorschlaege[w], liste = KAMPF.angriffe(el);
     if (liste.length < KAMPF.ANGRIFFE_MAX) {
@@ -477,7 +480,7 @@ class KampfSzene extends Phaser.Scene {
       return;
     }
     var w2 = await this.waehle(name + " kann höchstens " + KAMPF.ANGRIFFE_MAX + " Angriffe. Welchen soll " + REAKTIONEN[neu].name + " ersetzen?",
-      liste.map(function (id) { return szene.angriffKurz(id); }).concat(["doch nicht"]));
+      liste.map(function (id) { return szene.angriffKurz(id, el); }).concat(["doch nicht"]));
     if (w2 >= liste.length) return;
     var alt = liste[w2];
     KAMPF.lernen(el, neu, alt);

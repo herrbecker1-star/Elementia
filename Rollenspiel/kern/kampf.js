@@ -113,6 +113,17 @@ var KAMPF = (function () {
     return w;
   }
 
+  // Stärke eines Angriffs in Prozent, für die Anzeige (seit Fassung 10):
+  // ein Schlag (Kraft 10) auf Stufe 1 ist 100 %. Sie wächst mit der Stufe
+  // wie der Schaden selbst (Schlag auf Stufe 5: 140 %, Stufe 10: 190 %).
+  // Schutz und Wärmeleitung (hängt am Feld) haben keine feste Stärke: null.
+  var STAERKE_BEZUG = 10;
+  function staerke(el, id) {
+    var r = REAKTIONEN[id];
+    if (r.art === "schutz" || r.art === "leitung") return null;
+    return Math.round(r.kraft * werte(el).kraft / (STAERKE_BEZUG * grundwerte(el.art, 1).kraft) * 100);
+  }
+
   function neuesElemental(artId, stufe, starter) {
     var el = { art: artId, stufe: stufe, ep: 0, angriffe: ARTEN[artId].reaktionen.slice() };
     if (starter) el.starter = true;
@@ -594,6 +605,7 @@ var KAMPF = (function () {
   return {
     grundwerte: grundwerte,
     werte: werte,
+    staerke: staerke,
     rundeBeginnen: rundeBeginnen,
     angriffe: angriffe,
     lernVorschlaege: lernVorschlaege,
