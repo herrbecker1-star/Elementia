@@ -156,6 +156,14 @@ class OberweltSzene extends Phaser.Scene {
       g.fillStyle(0x6e4626).fillRect(14, 16, 4, 14);
       g.fillStyle(0xa07848).fillRect(4, 6, 24, 12);
       g.fillStyle(0x6e4626).fillRect(6, 9, 20, 1).fillRect(6, 13, 16, 1);
+    } else if (name === "wagen") {
+      // Der Wagen der grauen Reiter, von der Seite: Plane, Kasten, zwei Räder
+      g.fillStyle(0x7d8288).fillRect(4, 6, 24, 10);
+      g.fillStyle(0x5f6469).fillRect(4, 6, 24, 2);
+      g.fillStyle(0x5a3a22).fillRect(2, 16, 28, 8);
+      g.fillStyle(0x3a2616).fillCircle(9, 26, 4).fillCircle(23, 26, 4);
+      g.fillStyle(0x8a6a4a).fillCircle(9, 26, 1).fillCircle(23, 26, 1);
+      g.fillStyle(0xffe08a).fillRect(14, 11, 4, 4);   // ein leuchtender Kolben unter der Plane
     } else if (name === "kiste") {
       g.fillStyle(0x6e4626).fillRect(5, 12, 22, 16);
       g.fillStyle(0x8a5a32).fillRect(5, 10, 22, 5);
@@ -186,6 +194,128 @@ class OberweltSzene extends Phaser.Scene {
         spr.body.enable = sichtbar;
       });
     });
+  }
+
+  // ============================================================
+  //  Gespielte Szenen (Schritte gehen, erscheinen, zeichen …)
+  //
+  //  Figuren werden nur verschoben, ihre Ansprech-Punkte bleiben.
+  //  Darum stellt szeneAufraeumen() am Ende jedes Films alles zurück
+  //  und entfernt, was nur für die Szene erschienen ist.
+  // ============================================================
+  figurFinden(wer) {
+    if (wer === "held") return { spr: this.held, nr: 0, held: true };
+    this.filmFiguren = this.filmFiguren || {};
+    if (this.filmFiguren[wer]) return this.filmFiguren[wer];
+    var e = this.ansprechbar.filter(function (a) { return a.name === wer; })[0];
+    if (!e || !(e.figur || e.ding)) return null;
+    var spr = e.figur || e.ding;
+    this.filmVerschoben = this.filmVerschoben || [];
+    if (!this.filmVerschoben.some(function (v) { return v.spr === spr; })) {
+      this.filmVerschoben.push({ spr: spr, x: spr.x, y: spr.y, frame: spr.frame.name, eintrag: e });
+    }
+    return { spr: spr, nr: e.figurNr };
+  }
+
+  figurErscheinen(f) {
+    this.filmFiguren = this.filmFiguren || {};
+    var spr = f.bild
+      ? this.add.image(f.bei[0] * 32 + 16, f.bei[1] * 32 + 16, this.dingTextur(f.bild))
+      : this.add.sprite(f.bei[0] * 32 + 16, f.bei[1] * 32 + 16, "figuren", f.figur * 8 + richtungsSpalte(f.richtung || "links"));
+    spr.setDepth(spr.y);
+    this.filmFiguren[f.name] = { spr: spr, nr: f.bild ? undefined : f.figur, temp: true };
+  }
+
+  figurVerschwinden(wer) {
+    var f = this.figurFinden(wer);
+    if (!f || f.held) return;
+    if (f.temp) { f.spr.destroy(); delete this.filmFiguren[wer]; return; }
+    f.spr.setVisible(false);
+  }
+
+  // Läuft die Wegpunkte ab. tempo in Weltpixeln je Sekunde.
+  // Liefert { fertig: Promise, sofort: Funktion } – sofort() setzt die
+  // Figur ans Ziel (Überspringen).
+  figurBewegen(wer, nach, tempo) {
+    var szene = this, f = this.figurFinden(wer);
+    var ziele = typeof nach[0] === "number" ? [nach] : nach;
+    if (!f) return { fertig: Promise.resolve(), sofort: function () {} };
+    var spr = f.spr, laeuft = null, abgebrochen = false;
+    if (f.held) spr.filmLaeuft = true;
+    function anhalten(richtung) {
+      if (f.nr !== undefined && spr.anims) { spr.anims.stop(); spr.setFrame(f.nr * 8 + richtungsSpalte(richtung)); }
+      if (f.held) { spr.filmLaeuft = false; szene.richtung = richtung; }
+      spr.setDepth(spr.y);
+    }
+    var letzteRichtung = "unten";
+    var fertig = ziele.reduce(function (kette, k) {
+      return kette.then(function () {
+        if (abgebrochen) return;
+        var zx = k[0] * 32 + 16, zy = k[1] * 32 + 16;
+        var dx = zx - spr.x, dy = zy - spr.y, d = Math.hypot(dx, dy);
+        if (d < 1) return;
+        letzteRichtung = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "rechts" : "links") : (dy > 0 ? "unten" : "oben");
+        if (f.nr !== undefined && spr.anims) spr.anims.play("gehen-" + f.nr + "-" + letzteRichtung, true);
+        return new Promise(function (weiter) {
+          laeuft = szene.tweens.add({
+            targets: spr, x: zx, y: zy, duration: d / tempo * 1000,
+            onUpdate: function () { spr.setDepth(spr.y); },
+            onComplete: function () { laeuft = null; weiter(); },
+            onStop: function () { laeuft = null; weiter(); }
+          });
+        });
+      });
+    }, Promise.resolve()).then(function () { anhalten(letzteRichtung); });
+    return {
+      fertig: fertig,
+      sofort: function () {
+        abgebrochen = true;
+        var k = ziele[ziele.length - 1];
+        if (laeuft) laeuft.stop();
+        spr.setPosition(k[0] * 32 + 16, k[1] * 32 + 16);
+      }
+    };
+  }
+
+  // Eine kleine Pixelblase mit !, ?, … oder ♥ über dem Kopf
+  zeichenZeigen(wer, art) {
+    var f = this.figurFinden(wer);
+    if (!f) return;
+    var muster = {
+      "!": ["..#..", "..#..", "..#..", "..#..", ".....", "..#.."],
+      "?": [".###.", "#...#", "...#.", "..#..", ".....", "..#.."],
+      "…": [".....", ".....", ".....", ".....", ".....", "#.#.#"],
+      "♥": [".....", "##.##", "#####", ".###.", "..#..", "....."]
+    }[art];
+    var schluessel = "zeichen-" + art;
+    if (!this.textures.exists(schluessel)) {
+      var g = this.make.graphics({ add: false });
+      g.fillStyle(0x101418).fillRect(0, 0, 11, 10).fillRect(4, 10, 3, 2);
+      g.fillStyle(0xf4ead5).fillRect(1, 1, 9, 8).fillRect(5, 9, 1, 2);
+      g.fillStyle(art === "♥" ? 0xc8323a : 0x101418);
+      muster.forEach(function (zeile, y) {
+        for (var x = 0; x < 5; x++) if (zeile[x] === "#") g.fillRect(3 + x, 2 + y, 1, 1);
+      });
+      g.generateTexture(schluessel, 11, 12);
+      g.destroy();
+    }
+    var blase = this.add.image(f.spr.x, f.spr.y - 24, schluessel).setDepth(100000).setOrigin(0.5, 1);
+    this.tweens.add({ targets: blase, y: blase.y - 3, duration: 180, yoyo: true });
+    this.time.delayedCall(1300, function () { blase.destroy(); });
+  }
+
+  szeneAufraeumen() {
+    var szene = this;
+    Object.keys(this.filmFiguren || {}).forEach(function (n) { szene.filmFiguren[n].spr.destroy(); });
+    this.filmFiguren = {};
+    (this.filmVerschoben || []).forEach(function (v) {
+      szene.tweens.killTweensOf(v.spr);
+      if (v.spr.anims) v.spr.anims.stop();
+      v.spr.setPosition(v.x, v.y).setFrame(v.frame).setDepth(v.y);
+    });
+    this.filmVerschoben = [];
+    this.held.filmLaeuft = false;
+    this.sichtbarkeitAnpassen();
   }
 
   // Wechsel auf eine andere Karte: Die Szene startet mit dem neuen Ort neu.
@@ -442,18 +572,25 @@ class OberweltSzene extends Phaser.Scene {
 
     if (this.ui.dialogAktiv || this.ui.menueOffen) {
       held.setVelocity(0, 0);
-      held.anims.stop();
-      held.setFrame(richtungsSpalte(this.richtung));
+      if (!held.filmLaeuft) {
+        held.anims.stop();
+        held.setFrame(richtungsSpalte(this.richtung));
+      }
       this.schemen.forEach(function (s) { s.setVelocity(0, 0); });
       return;
     }
 
-    // Die Zeit läuft nur, solange gespielt wird – nicht im Dialog, nicht im Menü.
-    var aenderung = WELT.vorruecken(this.stand, delta / 1000, this.zufall);
-    if (aenderung.phase || aenderung.wetter) this.ui.himmelZeichnen();
-    this.schemenBewegen();
-    this.schemenBeruehrt();
-    if (this.ui.dialogAktiv) return;
+    // Bei einer Verfolgung (Schritt "verfolgen") läuft nur die Spielfigur:
+    // keine Uhr, keine Schemen, keine Ausgänge, kein Ansprechen.
+    var verfolgung = this.ui.verfolgung;
+    if (!verfolgung) {
+      // Die Zeit läuft nur, solange gespielt wird – nicht im Dialog, nicht im Menü.
+      var aenderung = WELT.vorruecken(this.stand, delta / 1000, this.zufall);
+      if (aenderung.phase || aenderung.wetter) this.ui.himmelZeichnen();
+      this.schemenBewegen();
+      this.schemenBeruehrt();
+      if (this.ui.dialogAktiv) return;
+    }
 
     var e = this.ui.eingabe;
     var betrag = Math.min(1, Math.hypot(e.x, e.y));
@@ -468,6 +605,7 @@ class OberweltSzene extends Phaser.Scene {
       held.setFrame(richtungsSpalte(this.richtung));
     }
 
+    if (verfolgung) return;
     if (this.betreten()) return;
 
     var ziel = this.gegenueber();

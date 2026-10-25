@@ -41,6 +41,15 @@ class UiSzene extends Phaser.Scene {
     // Prüfschalter ?dialog=<name> und ?kampf=<art>&stufe=<n> (siehe spiel\titel.js)
     var suche = new URLSearchParams(location.search);
     var probeDialog = suche.get("dialog"), probeKampf = suche.get("kampf");
+    // Prüfschalter &weiter=<ms>: blättert Sprechblasen und Einblendungen
+    // von selbst weiter und nimmt bei Wahlen die erste Antwort.
+    // &springen=1 überspringt jede gespielte Szene sofort.
+    this.autoWeiter = Number(suche.get("weiter")) || 0;
+    this.autoSpringen = suche.get("springen") === "1";
+    if (this.autoWeiter) this.time.addEvent({ delay: this.autoWeiter, loop: true, callback: function () {
+      if (szene.dialogAktiv && !szene.verfolgung) { szene.weiterTippen(); szene.weiterTippen(); }
+      if (szene.wahlKnoepfe.length) szene.wahlTreffen(0);
+    } });
     if (probeDialog && DIALOGE[probeDialog]) this.dialogFuehren(DIALOGE[probeDialog], this.oberwelt.stand.flags);
     else if (suche.get("buch")) {
       // Prüfschalter ?buch=gruppe|stoffbuch|gepaeck
@@ -179,7 +188,15 @@ class UiSzene extends Phaser.Scene {
       else szene.aktionGedrueckt = true;
     });
 
-    this.menueKnopf = baueKnopf(this, "Menü", function () { if (!szene.dialogAktiv) szene.menueUmschalten(); }, { mindestbreite: 72, hoehe: 40, schrift: 15 });
+    this.menueKnopf = baueKnopf(this, "Menü", function () { if (!szene.dialogAktiv && !szene.verfolgung) szene.menueUmschalten(); }, { mindestbreite: 72, hoehe: 40, schrift: 15 });
+
+    // Nur während einer gespielten Szene sichtbar, an der Stelle des Menüknopfs
+    this.ueberspringenKnopf = baueKnopf(this, "Überspringen »", function () { szene.ueberspringen(); }, { mindestbreite: 120, hoehe: 40, schrift: 15 })
+      .setDepth(12).setVisible(false);
+    this.hinweis = this.add.text(0, 0, "", {
+      fontFamily: SCHRIFT.titel, fontSize: MASS.px(26) + "px", color: "#f4ead5", fontStyle: "bold",
+      stroke: "#101418", strokeThickness: MASS.px(4)
+    }).setOrigin(0.5).setDepth(12).setVisible(false);
   }
 
   zeigeAktion(text) {
@@ -206,8 +223,10 @@ class UiSzene extends Phaser.Scene {
       if (taste === " " || taste === "Enter" || taste === "e" || taste === "E") {
         if (szene.dialogAktiv) szene.weiterTippen();
         else if (!szene.menueOffen) szene.aktionGedrueckt = true;
+      } else if (taste === "Escape" && szene.imFilm) {
+        szene.ueberspringen();
       } else if (taste === "Escape" || taste === "m" || taste === "M") {
-        if (!szene.dialogAktiv) szene.menueUmschalten();
+        if (!szene.dialogAktiv && !szene.verfolgung) szene.menueUmschalten();
       } else if (szene.dialogAktiv && szene.wahlKnoepfe.length && /^[1-9]$/.test(taste)) {
         var nr = Number(taste) - 1;
         if (nr < szene.wahlKnoepfe.length) szene.wahlTreffen(nr);
@@ -243,8 +262,9 @@ class UiSzene extends Phaser.Scene {
     this.dialogAktiv = true;
     this.aktionGedrueckt = false;
     this.zeigeAktion("Weiter");
+    var oberwelt = this.oberwelt;
     var anzeige = {
-      sag: function (sprecher, text) { return szene.sprechblase(sprecher, text); },
+      sag: function (sprecher, text) { return szene.schnell() ? null : szene.sprechblase(sprecher, text); },
       wahl: function (frage, texte) { return szene.wahl(frage, texte); },
       kampf: function (cfg) {
         var bereit = szene.oberwelt.stand.gruppe.some(function (el) { return el.zh > 0; });
@@ -260,7 +280,25 @@ class UiSzene extends Phaser.Scene {
       geben: function (g) { return szene.geben(g); },
       benennen: function () { szene.benennen(); },
       welt: function (w) { szene.weltStellen(w); },
-      einblenden: function (name, text) { return szene.einblenden(name, text); },
+      einblenden: function (name, text) { return szene.schnell() ? null : szene.einblenden(name, text); },
+      // Gespielte Szenen – siehe kern\ereignisse.js
+      filmStart: function () { szene.filmStart(); },
+      filmEnde: function (kurz) { return szene.filmEnde(kurz); },
+      erscheinen: function (f) { oberwelt.figurErscheinen(f); },
+      verschwinden: function (wer) { oberwelt.figurVerschwinden(wer); },
+      zeichen: function (z) {
+        if (szene.schnell()) return null;
+        oberwelt.zeichenZeigen(z.wer, z.art);
+        return szene.warte(500);
+      },
+      warte: function (ms) { return szene.warte(ms); },
+      gehen: function (g) {
+        var b = oberwelt.figurBewegen(g.wer, g.nach, g.tempo || 80);
+        if (szene.schnell()) { b.sofort(); return null; }
+        if (szene.imFilm) szene.filmOffen.push(b.sofort);
+        return g.parallel ? null : b.fertig;
+      },
+      verfolgen: function (v) { return szene.verfolgen(v); },
       karte: function (k) { szene.oberwelt.wechsleKarte(k.ziel, k.punkt); },
       ablauf: function (name) { return DIALOGE[name] || []; },
       hatElemental: function (art) { return szene.oberwelt.stand.gruppe.some(function (el) { return el.art === art; }); }
@@ -321,6 +359,82 @@ class UiSzene extends Phaser.Scene {
     this.himmelZeichnen();
   }
 
+  // ============================================================
+  //  Gespielte Szenen: Überspringen, Warten, Verfolgen
+  //
+  //  Wer überspringt, verliert nichts: Bewegungen, Sprechblasen und
+  //  Einblendungen sind sofort fertig, Wahlen, Flags und Gegenstände
+  //  gelten trotzdem. Am Ende steht eine einzige Zeile (kurz).
+  // ============================================================
+  filmStart() {
+    this.imFilm = true;
+    this.uebersprungen = false;
+    this.filmOffen = [];
+    this.menueKnopf.setVisible(false);
+    this.ueberspringenKnopf.setVisible(true);
+    if (this.autoSpringen) this.ueberspringen();
+  }
+
+  filmEnde(kurz) {
+    var war = this.uebersprungen;
+    this.imFilm = false;
+    this.uebersprungen = false;
+    this.filmOffen = [];
+    this.ueberspringenKnopf.setVisible(false);
+    this.menueKnopf.setVisible(true);
+    this.oberwelt.szeneAufraeumen();
+    if (war && kurz) return this.sprechblase(null, kurz);
+  }
+
+  schnell() {
+    return !!(this.imFilm && this.uebersprungen);
+  }
+
+  ueberspringen() {
+    if (!this.imFilm || this.uebersprungen || this.wahlKnoepfe.length) return;
+    this.uebersprungen = true;
+    this.ueberspringenKnopf.setVisible(false);
+    var offen = this.filmOffen;
+    this.filmOffen = [];
+    offen.forEach(function (sofort) { sofort(); });
+    // Eine gerade laufende Sprechblase schließen
+    if (this.tippUhr) this.tippenFertig();
+    var fertig = this.weiterWartet;
+    this.weiterWartet = null;
+    if (fertig) { this.dialog.setVisible(false); fertig(); }
+  }
+
+  warte(ms) {
+    var szene = this;
+    if (this.schnell()) return null;
+    return new Promise(function (fertig) {
+      var uhr = szene.time.delayedCall(ms, fertig);
+      if (szene.imFilm) szene.filmOffen.push(function () { uhr.remove(); fertig(); });
+    });
+  }
+
+  // Die Steuerung kehrt zurück, und v.wer fährt davon – immer etwas
+  // schneller als die Spielfigur. Man kann hinterherlaufen und
+  // kommt doch nie an. Fertig ist der Schritt, wenn das Ziel erreicht ist.
+  verfolgen(v) {
+    var szene = this;
+    var b = this.oberwelt.figurBewegen(v.wer, v.nach, TEMPO * 1.15);
+    if (this.schnell()) { b.sofort(); return null; }
+    if (this.imFilm) this.filmOffen.push(b.sofort);
+    this.dialog.setVisible(false);
+    this.zeigeAktion("");
+    this.hinweis.setText(v.text || "Lauf!").setVisible(true);
+    this.verfolgung = true;
+    this.dialogAktiv = false;
+    return b.fertig.then(function () {
+      szene.verfolgung = false;
+      szene.dialogAktiv = true;
+      szene.aktionGedrueckt = false;
+      szene.hinweis.setVisible(false);
+      szene.zeigeAktion("Weiter");
+    });
+  }
+
   // Gemalte Einblendung. Solange das Bild fehlt, ein Platzhalter mit
   // Bildname – so sieht man beim Spielen, wo später ein Bild hinkommt.
   einblenden(name, text) {
@@ -351,12 +465,18 @@ class UiSzene extends Phaser.Scene {
     }
     this.tweens.add({ targets: ebene, alpha: 1, duration: 500 });
     return new Promise(function (fertig) {
+      var vorbei = false;
+      function schliessen(sanft) {
+        if (vorbei) return;
+        vorbei = true;
+        szene.einblendungWartet = null;
+        if (!sanft) { ebene.destroy(); fertig(); return; }
+        szene.tweens.add({ targets: ebene, alpha: 0, duration: 400, onComplete: function () { ebene.destroy(); fertig(); } });
+      }
+      if (szene.imFilm) szene.filmOffen.push(function () { schliessen(false); });
       // Erst nach einer Weile antippbar – die Einblendung soll wirken.
       szene.time.delayedCall(900, function () {
-        szene.einblendungWartet = function () {
-          szene.einblendungWartet = null;
-          szene.tweens.add({ targets: ebene, alpha: 0, duration: 400, onComplete: function () { ebene.destroy(); fertig(); } });
-        };
+        if (!vorbei) szene.einblendungWartet = function () { schliessen(true); };
       });
     });
   }
@@ -486,6 +606,8 @@ class UiSzene extends Phaser.Scene {
 
     this.aktionKnopf.setPosition(b - rand - MASS.px(44), h - rand - MASS.px(44));
     this.menueKnopf.setPosition(b - rand - this.menueKnopf.width / 2, rand + this.menueKnopf.height / 2);
+    this.ueberspringenKnopf.setPosition(b - rand - this.ueberspringenKnopf.width / 2, rand + this.ueberspringenKnopf.height / 2);
+    this.hinweis.setPosition(b / 2, h * 0.78);
 
     // Dialogbox: unten, höchstens 760 CSS-Pixel breit, und rechts
     // so viel Platz lassen, dass der Aktionsknopf frei bleibt.

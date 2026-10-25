@@ -70,8 +70,10 @@ var KAMPF = (function () {
   }
 
   // Reaktionen mit dem Ziel selbst (Sulfidbildung) hängen daran,
-  // ob das Ziel ein Metall ist.
+  // ob das Ziel ein Metall ist – oder an einem bestimmten Partner:
+  // Zink reagiert heftig mit Schwefel, mit Eisen gar nicht (gegen).
   function stoffFaktor(r, artId) {
+    if (r.gegen && r.gegen[artId]) return r.gegen[artId];
     return ARTEN[artId].klasse === "Metall" ? (r.gegenMetall || 1) : (r.gegenNichtmetall || 1);
   }
 
@@ -242,6 +244,16 @@ var KAMPF = (function () {
   // ----------------------------------------------------------
   //  Die KI des Gegners (und im Prüfstand beider Seiten)
   // ----------------------------------------------------------
+  // Rechnet etwas, als stünde auf dieser Seite kein Schild.
+  function ohneSchild(k, seite, rechne) {
+    var st = k.seiten[seite].status, schutz = st.schutz, tarnung = st.tarnung;
+    delete st.schutz; delete st.tarnung;
+    var wert = rechne();
+    if (schutz !== undefined) st.schutz = schutz;
+    if (tarnung !== undefined) st.tarnung = tarnung;
+    return wert;
+  }
+
   function kiWahl(k, seite) {
     var el = aktiv(k, seite);
     var s = k.seiten[seite];
@@ -249,6 +261,7 @@ var KAMPF = (function () {
     // Was der Gegner als Nächstes anrichten könnte – daran misst sich
     // der Wert eines Schutzzugs.
     var ander = gegenueber(seite);
+    var zs = k.seiten[ander].status;
     var drohung = 0;
     ARTEN[aktiv(k, ander).art].reaktionen.forEach(function (id) {
       if (REAKTIONEN[id].art !== "schutz" && !hindernis(k, ander, id)) drohung = Math.max(drohung, schaetzeSchaden(k, ander, id));
@@ -266,6 +279,11 @@ var KAMPF = (function () {
         if (el.zh < drohung) w *= 0.3;
       } else {
         w = schaetzeSchaden(k, seite, id);
+        // Ein Schild hält nur einen Treffer. Wer ihn nur nach dem
+        // gedämpften Schaden bewertet, schlägt nie hinein und wartet
+        // ewig hinter „Standfest“ – so verlor Magnesium 98 % gegen Zink
+        // (gefunden 25.10.2026). Das Brechen des Schilds zählt mit.
+        if (zs.schutz || zs.tarnung) w = (w + ohneSchild(k, ander, function () { return schaetzeSchaden(k, seite, id); })) / 2;
       }
       if (w > wert) { wert = w; bestes = { typ: "reaktion", id: id }; }
     });

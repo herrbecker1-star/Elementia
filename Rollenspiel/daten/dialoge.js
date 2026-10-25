@@ -4,9 +4,16 @@
 //  Grundlage: drehbuch\kapitel-1.md. Schlüssel = "dialog"-Eigenschaft
 //  der Objekte in den Karten. Format der Schritte: kern\ereignisse.js.
 //
+//  Leitlinie (25.10.2026): wenig Text, leicht verständlich. Schüler
+//  wollen spielen; was das Spiel erklärt (Untersuchen, passendes
+//  Fanggerät, die Flammen), bleibt, alles andere ist kurz. Höchstens
+//  zwei, drei Sprechblasen je Besuch, kein Satz über 150 Zeichen
+//  (prüft der Prüfstand).
+//
 //  Die harten Szenen H1–H4 (Reiter, Lumi, Abendtisch, Aufbruch) stehen
-//  in "reiter_szenen" nur als Platzhalter – sie werden erst nach der
-//  Freigabe durch den Autor eingesetzt.
+//  in "reiter_szenen", freigegeben am 25.10.2026. Leitlinie: zeigen statt
+//  erzählen – die Figuren spielen die Szene auf der Karte, gesprochen
+//  wird wenig, und jede Szene lässt sich überspringen (film/kurz).
 //
 //  Flags, die den Lauf der Geschichte tragen:
 //    starter          "eisen" | "magnesium"
@@ -34,7 +41,7 @@ function kistenRaetsel(sprecher, befund, richtig, flag, lob) {
       var falsch = ARTEN[a], wahr = ARTEN[richtig];
       var unterschied = ["magnetisch", "leitfaehig", "glanz", "verformbar"].filter(function (e) { return falsch.steckbrief[e] !== wahr.steckbrief[e]; })[0];
       var grund = unterschied
-        ? name(a) + " würde sich anders verhalten – " + ({
+        ? name(a) + " wäre anders – " + ({
             magnetisch: falsch.steckbrief.magnetisch ? "der Magnet würde es festhalten." : "kein Magnet hält es fest.",
             leitfaehig: falsch.steckbrief.leitfaehig ? "es leitet den Strom." : "es leitet keinen Strom.",
             glanz: falsch.steckbrief.glanz ? "es glänzt metallisch." : "es ist matt.",
@@ -42,22 +49,21 @@ function kistenRaetsel(sprecher, befund, richtig, flag, lob) {
           })[unterschied]
         : name(a) + " hat eine andere Farbe: " + falsch.steckbrief.farbe + ".";
       return { text: name(a), dann: zweiter
-        ? [{ sag: sprecher, text: "Wieder nicht. " + grund + " Es ist " + name(richtig) + ". Merk's dir – das nächste Mal fragt dich keiner." }, { setze: flag }]
-        : [{ sag: sprecher, text: "Nein. " + grund + " Schau noch mal hin." }, { wahl: "Welcher Stoff ist es?", optionen: optionen(true) }] };
+        ? [{ sag: sprecher, text: "Wieder nicht. " + grund + " Es ist " + name(richtig) + "." }, { setze: flag }]
+        : [{ sag: sprecher, text: "Nein. " + grund }, { wahl: "Welcher Stoff ist es?", optionen: optionen(true) }] };
     });
   }
   return [{ erzaehl: befund }, { wahl: "Welcher Stoff ist es?", optionen: optionen(false) }];
 }
 
 // Eine Gerätefrage im Kolbenwald: drei Antworten, eine stimmt.
-function geraetFrage(flag, geraet, frage, richtig, falsch1, falsch2, erklaerung) {
+function geraetFrage(flag, geraet, richtig, falsch1, falsch2, erklaerung) {
   return [
-    { wenn: flag, dann: [{ erzaehl: "Der " + geraet + " klingt leise im Wind. Den kennst du jetzt." }], sonst: [
-      { erzaehl: "An einem Ast hängt ein " + geraet + ". Ein Schild von Meisterin Vitra: „" + frage + "“" },
-      { wahl: frage, optionen: [
-        { text: falsch1, dann: [{ erzaehl: "Das Glas klirrt missbilligend. Falsch. " + erklaerung }] },
+    { wenn: flag, dann: [{ erzaehl: geraet + ": kennst du schon." }], sonst: [
+      { wahl: geraet + " – wofür braucht man das?", optionen: [
+        { text: falsch1, dann: [{ erzaehl: "Falsch. " + erklaerung }] },
         { text: richtig, dann: [{ erzaehl: "Richtig. " + erklaerung }, { setze: flag }] },
-        { text: falsch2, dann: [{ erzaehl: "Das Glas klirrt missbilligend. Falsch. " + erklaerung }] }
+        { text: falsch2, dann: [{ erzaehl: "Falsch. " + erklaerung }] }
       ] }
     ] }
   ];
@@ -75,17 +81,18 @@ function starterWahl(art) {
   var schmiede = art === "eisen";
   return [
     { einblenden: "starterwahl", text: schmiede
-      ? "Ein Funke springt vom glühenden Eisen über. Er wächst, bekommt Augen – und sieht dich an."
-      : "Das alte Blatt-Amulett deiner Mutter blitzt hell auf. Etwas Silbrig-Grünes schwebt vor dir." },
-    { erzaehl: schmiede
-      ? "Ein eisenrotes Elemental ist aus dem Schmiedefeuer geboren. Es hat dich ausgewählt."
-      : "Ein silbrig-grünes Elemental ist aus dem Garten erwacht. Es hat dich ausgewählt." },
+      ? "Ein Funke springt vom glühenden Eisen. Er wächst, bekommt Augen – und sieht dich an."
+      : "Das Blatt-Amulett deiner Mutter blitzt auf. Etwas Silbriges schwebt vor dir." },
     { geben: { elemental: { art: art, stufe: 3 } } },
     { benennen: true },
     { setze: "starter", wert: art },
-    { sag: schmiede ? "Vater" : "Mutter", text: "Man sagt, das erste Elemental eines Stoffmeisters begleitet ihn ein Leben lang – und am Ende der Reise wächst es über sich hinaus." },
-    { erzaehl: "Lumi wartet sicher schon auf dem Dorfplatz." }
+    { sag: schmiede ? "Vater" : "Mutter", text: "Dein erstes Elemental begleitet dich ein Leben lang. Lumi wartet auf dem Dorfplatz." }
   ];
+}
+
+// Labor: heilen, speichern, eine Zeile
+function labor(zeile) {
+  return [{ heilen: true }, { speichern: true }, { erzaehl: zeile + " Deine Elementals sind wieder bei Kräften. (Gespeichert.)" }];
 }
 
 var DIALOGE = {
@@ -94,90 +101,136 @@ var DIALOGE = {
   //  Stoffingen – Akt A: der Geburtstagsmorgen
   // ============================================================
   einstieg: [
-    { erzaehl: "In früher Zeit traf eine Hadronenwolke die Erde. Wo ihre Funken niedergingen, erwachten die Elemente zum Leben – aus Stoff wurde Wesen." },
-    { erzaehl: "Zuerst fürchteten sich die Menschen vor diesen Elementals. Doch dann lernten sie, mit ihnen zu leben. Unsere Geschichte beginnt im fernen Westen, in den kargen Feuerlanden … in einem kleinen Dorf namens Stoffingen." },
-    { erzaehl: "Heute ist dein zwölfter Geburtstag. In den Feuerlanden heißt das: Ab jetzt lernst du ein Handwerk – das deines Vaters in der Schmiede oder das deiner Mutter im Garten." }
+    { erzaehl: "Vor langer Zeit erwachten die Stoffe zum Leben. Aus Stoff wurde Wesen: die Elementals." },
+    { erzaehl: "Heute ist dein 12. Geburtstag in Stoffingen. Ab heute lernst du ein Handwerk: Schmiede oder Garten." }
   ],
 
   vater: [
     { wennNicht: "starter", dann: [
-      { sag: "Vater", text: "Hörst du das? Das Eisen singt, wenn es die richtige Hitze hat. Hellrot ist zu früh, gelb ist gut, weiß ist zu spät." },
-      { sag: "Vater", text: "Eisen ist der treueste Stoff der Feuerlande: hart, stark und ehrlich." },
+      { sag: "Vater", text: "Eisen ist hart, stark und treu – der beste Stoff der Feuerlande." },
       { wahl: "Lernst du bei deinem Vater in der Schmiede?", optionen: [
         { text: "Ja – die Schmiede.", dann: starterWahl("eisen") },
-        { text: "Ich schau mich noch um.", dann: [{ sag: "Vater", text: "Lass dir Zeit. Das Eisen läuft nicht weg. Es ist viel zu schwer dafür." }] }
+        { text: "Ich schau mich noch um.", dann: [{ sag: "Vater", text: "Lass dir Zeit. Das Eisen läuft nicht weg. Dafür ist es zu schwer." }] }
       ] }
     ], sonst: [
       { wennGleich: ["starter", "eisen"], dann: [
-        { sag: "Vater", text: "Pass auf dein Elemental auf. Und auf deine Finger. In genau dieser Reihenfolge – das Elemental wächst nicht nach." }
+        { sag: "Vater", text: "Pass auf dein Elemental auf. Und auf deine Finger." }
       ], sonst: [
-        { sag: "Vater", text: "Der Garten also. Deine Mutter hat mir gerade eine halbe Stunde lang erklärt, dass Magnesium ein Metall ist. Ich hab nicht widersprochen. Man lernt dazu." }
+        { sag: "Vater", text: "Der Garten also. Magnesium ist übrigens ein Metall, sagt deine Mutter. Ich hab nicht widersprochen." }
       ] }
     ] }
   ],
 
   mutter: [
     { wennNicht: "starter", dann: [
-      { sag: "Mutter", text: "Da ist ja unser Geburtstagskind! Zwölf Jahre. Du hast bei deiner Geburt geschrien wie ein Blasebalg." },
-      { sag: "Mutter", text: "In jeder grünen Pflanze steckt ein silbriges Metall: Magnesium. Wenn es brennt, leuchtet es heller als hundert Kerzen." },
+      { sag: "Mutter", text: "Alles Gute zum Zwölften! In jeder grünen Pflanze steckt ein Metall: Magnesium. Es brennt heller als hundert Kerzen." },
       { wahl: "Lernst du bei deiner Mutter im Garten?", optionen: [
         { text: "Ja – der Garten.", dann: starterWahl("magnesium") },
         { text: "Ich schau mich noch um.", dann: [{ sag: "Mutter", text: "Lass dir Zeit. Die Kräuter laufen nicht weg." }] }
       ] }
     ], sonst: [
-      { sag: "Mutter", text: "Pass auf dich auf, hörst du? Und komm zum Essen, wenn die Sonne sinkt." }
+      { sag: "Mutter", text: "Pass auf dich auf. Und komm zum Essen, wenn die Sonne sinkt." }
     ] }
   ],
 
   lumi: [
     { wennNicht: "starter", dann: [
-      { sag: "Lumi", text: "Alles Gute! Ich hab dir was mitgebracht: einen Stein. Er sieht aus wie ein Brot. Du musst ihn nicht essen." },
-      { sag: "Lumi", text: "Hast du schon gewählt? Schmiede oder Garten? Ich würde den Garten nehmen. Da gibt es Erdbeeren. Aber du bist ja nicht ich." }
+      { sag: "Lumi", text: "Alles Gute! Schmiede oder Garten? Ich würde den Garten nehmen. Wegen der Erdbeeren." }
     ], sonst: [
       { wennNicht: "tutorial_fertig", dann: [
-        { sag: "Lumi", text: "Du hast eins! Guck, ich auch! Na ja – es ist mir gefolgt. Ein winziges, warmes Licht. Es lässt sich nicht abschütteln." },
-        { sag: "Lumi", text: "Es heißt Funzel. Es hat sich selbst so genannt. Also … ich hab's so genannt. Es hat nicht widersprochen." },
-        { sag: "Lumi", text: "Da hinten im Gras flackert was. Scheuch es auf! Ich will sehen, was deins kann." },
+        { sag: "Lumi", text: "Du hast eins! Guck, ich auch: ein winziges Licht. Es heißt Funzel. Es ist mir einfach gefolgt." },
+        { sag: "Lumi", text: "Da hinten im Gras flackert was. Scheuch es auf!" },
         { kampf: { art: "zink", stufe: 2, ort: "steppe", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } },
         { wennGleich: ["letzter_kampf", "sieg"], dann: [
-          { sag: "Lumi", text: "Es ist weggelaufen! Deins ist stark. Funzel ist neidisch. Sieht man daran, dass es ein bisschen weniger leuchtet." }
+          { sag: "Lumi", text: "Weggelaufen! Funzel ist neidisch." }
         ], sonst: [
-          { sag: "Lumi", text: "Na ja. Es war auch ein ziemlich zäher Brocken. Morgen gewinnst du." }
+          { sag: "Lumi", text: "Zäher Brocken. Morgen gewinnst du." }
         ] },
-        { sag: "Lumi", text: "Übrigens: Mit Untersuchen findest du heraus, WAS es ist – Farbe, Glanz, Magnet, Strom. Das hat mir deine Oma mal erklärt. Also, sie hat es jemandem erklärt, und ich stand daneben." },
+        { sag: "Lumi", text: "Tipp: Mit „Untersuchen“ findest du heraus, WAS es ist – Farbe, Glanz, Magnet, Strom." },
         { setze: "tutorial_fertig" },
-        { erzaehl: "Den ganzen Mittag rennt ihr mit euren Wesen über die Felder. Ihr lasst sie Funken sprühen und um die Wette leuchten." },
         { ablauf: "reiter_szenen" }
       ], sonst: [
-        { sag: "Lumi", text: "Funzel mag dich. Glaub ich. Es flackert immer so, wenn du kommst." }
+        { sag: "Lumi", text: "Funzel mag dich. Glaub ich. Es flackert immer, wenn du kommst." }
       ] }
     ] }
   ],
 
   // ============================================================
-  //  Akt B – DIE HARTEN SZENEN H1–H4: PLATZHALTER
-  //  Der Wortlaut steht in drehbuch\kapitel-1.md und wird erst nach
-  //  der Freigabe eingesetzt. Bis dahin überbrückt dieser Ablauf die
-  //  Handlung, damit der Rest des Kapitels spielbar ist.
+  //  Akt B – Die grauen Reiter (H1–H4)
+  //  Gespielt statt erzählt: Die Figuren bewegen sich auf der Karte,
+  //  gesprochen werden sieben kurze Sätze. Die Positionen sind Kacheln
+  //  der Karte Stoffingen: Lumi steht auf (17, 12), der Weg nach Osten
+  //  ist Zeile 13, die Mutter kommt aus dem Garten (12, 7) durch die
+  //  Lücke im Zaun bei (13, 9).
   // ============================================================
   reiter_szenen: [
     { welt: { zeit: "15:00" } },
-    { erzaehl: "[Platzhalter – Szenen H1 bis H4 warten auf Freigabe: Die grauen Reiter kommen nach Stoffingen und nehmen die Kinder mit, auch Lumi. Am Abend verbieten die Eltern die Reise. In der Nacht brichst du heimlich auf.]" },
-    { setze: "reiter_da" },
+
+    // H1 und H2: Die Reiter kommen und nehmen Lumi mit.
+    { film: [
+      { gehen: { wer: "held", nach: [14, 13] } },
+      { erscheinen: { name: "anfuehrer", figur: 10, bei: [29, 13] } },
+      { erscheinen: { name: "reiter1", figur: 9, bei: [30, 12] } },
+      { erscheinen: { name: "reiter2", figur: 9, bei: [30, 14] } },
+      { erscheinen: { name: "reiter3", figur: 9, bei: [31, 12] } },
+      { erscheinen: { name: "wagen", bild: "wagen", bei: [33, 13] } },
+      { gehen: { wer: "reiter1", nach: [20, 12], tempo: 120, parallel: true } },
+      { gehen: { wer: "reiter2", nach: [19, 14], tempo: 120, parallel: true } },
+      { gehen: { wer: "reiter3", nach: [22, 12], tempo: 120, parallel: true } },
+      { gehen: { wer: "wagen", nach: [25, 13], tempo: 120, parallel: true } },
+      { gehen: { wer: "anfuehrer", nach: [[22, 13], [21, 14]], tempo: 120 } },
+      { zeichen: { wer: "held", art: "!" } },
+      { zeichen: { wer: "lumi", art: "!" } },
+      { einblenden: "reiter_ankunft", text: "Graue Reiter. Niemand kennt sie." },
+      { sag: "Anführer", text: "Alle Kinder. Aufsitzen." },
+      { gehen: { wer: "reiter1", nach: [[18, 13], [16, 13]], parallel: true } },
+      { gehen: { wer: "mutter", nach: [[13, 8], [13, 12], [15, 13]], tempo: 150 } },
+      { zeichen: { wer: "mutter", art: "!" } },
+      { sag: "Mutter", text: "Nicht mein Kind. Seit heute ist es ein Lehrling." },
+      { zeichen: { wer: "anfuehrer", art: "…" } },
+      { gehen: { wer: "reiter1", nach: [[18, 13], [20, 12]] } },
+      { sag: "Anführer", text: "Die da." },
+      { zeichen: { wer: "lumi", art: "!" } },
+      { gehen: { wer: "reiter2", nach: [18, 13] } },
+      { einblenden: "lumis_kolben", text: "Funzel wird in einen Kolben gesperrt. Versiegelt." },
+      { gehen: { wer: "lumi", nach: [[17, 13], [24, 13]], parallel: true } },
+      { gehen: { wer: "reiter2", nach: [23, 13] } },
+      { verschwinden: "lumi" },
+      { setze: "reiter_da" },
+      // Der Fehlschlag zum Selberspielen: Man rennt hinterher und kommt nie an.
+      { gehen: { wer: "anfuehrer", nach: [[22, 13], [44, 13]], tempo: 140, parallel: true } },
+      { gehen: { wer: "reiter1", nach: [[23, 12], [44, 12]], tempo: 140, parallel: true } },
+      { gehen: { wer: "reiter2", nach: [[23, 14], [44, 14]], tempo: 140, parallel: true } },
+      { gehen: { wer: "reiter3", nach: [44, 12], tempo: 140, parallel: true } },
+      { verfolgen: { wer: "wagen", nach: [41, 13] } },
+      { einblenden: "leerer_dorfplatz", text: "Zu spät." }
+    ], kurz: "Graue Reiter haben Lumi entführt. Hol sie zurück!" },
+
+    // H3: der Abendtisch
+    { welt: { zeit: "19:00" } },
+    { film: [
+      { sag: "Vater", text: "Du bleibst hier. Es ist zu gefährlich." },
+      { einblenden: "grossmutters_buch" },
+      { sag: "Vater", text: "Das war Großmutters Buch. Eines Tages gehört es dir." }
+    ], kurz: "Die Eltern verbieten dir die Reise. Vater zeigt dir Großmutters Buch." },
+
+    // H4: die Nacht. Die beiden Wahlen gelten auch beim Überspringen.
     { welt: { zeit: "23:00" } },
-    { wahl: "In Mutters Werkstatt stehen saubere Reagenzgläser.", optionen: [
-      { text: "Nimm sie mit.", dann: [{ geben: { vorrat: { reagenzglas: 3 } } }, { setze: "glaeser_genommen" }] },
-      { text: "Lass sie stehen. Es sind ihre.", dann: [{ erzaehl: "Eines hast du ohnehin in der Tasche." }, { geben: { vorrat: { reagenzglas: 1 } } }, { setze: "glaeser_gelassen" }] }
-    ] },
-    { wahl: "Was schreibst du auf den Zettel für den Küchentisch?", optionen: [
-      { text: "„Es tut mir leid. Ich muss Lumi holen …“", dann: [{ setze: "zettel", wert: 1 }] },
-      { text: "„Ich bin nicht mehr nur ein Kind.“", dann: [{ setze: "zettel", wert: 2 }] },
-      { text: "„Ich komme wieder. Mit Lumi.“", dann: [{ setze: "zettel", wert: 3 }] }
-    ] },
-    { erzaehl: "Auf der ersten Seite von Großmutters Buch ist eine Karte der Feuerlande. Darunter, in verblasster Tinte: „Willst du einen Stoff besiegen, dann lerne ihn erst kennen. Fang dort an, wo alles anfängt: bei den Stoffen selbst. – Erste Prüfung: der Markt von Stoffingen –“" },
-    { welt: { zeit: "05:30", wetter: "nebel" } },
-    { setze: "aufgebrochen" },
-    { erzaehl: "Morgengrauen. Das Dorf schläft. Dein Elemental sitzt warm auf deiner Schulter." }
+    { film: [
+      { erzaehl: "Lumi hat niemanden außer dir." },
+      { wahl: "In Mutters Werkstatt stehen saubere Reagenzgläser.", optionen: [
+        { text: "Nimm sie mit.", dann: [{ geben: { vorrat: { reagenzglas: 3 } } }, { setze: "glaeser_genommen" }] },
+        { text: "Lass sie stehen. Es sind ihre.", dann: [{ geben: { vorrat: { reagenzglas: 1 } } }, { setze: "glaeser_gelassen" }] }
+      ] },
+      { wahl: "Was schreibst du auf den Zettel für den Küchentisch?", optionen: [
+        { text: "„Es tut mir leid. Ich muss Lumi holen …“", dann: [{ setze: "zettel", wert: 1 }] },
+        { text: "„Ich bin nicht mehr nur ein Kind.“", dann: [{ setze: "zettel", wert: 2 }] },
+        { text: "„Ich komme wieder. Mit Lumi.“", dann: [{ setze: "zettel", wert: 3 }] }
+      ] },
+      { erzaehl: "Großmutters Buch, erste Seite: „Erste Prüfung: der Markt von Stoffingen.“" },
+      { welt: { zeit: "05:30", wetter: "nebel" } },
+      { setze: "aufgebrochen" }
+    ], kurz: "Du brichst heimlich auf. Erstes Ziel: der Markt." }
   ],
 
   // ============================================================
@@ -185,87 +238,77 @@ var DIALOGE = {
   // ============================================================
   mara: [
     { wennNicht: "reiter_da", dann: [
-      { sag: "Mara", text: "Kupferbleche, Zinkplatten, Holzkohle, Schwefel – und Nägel für den, der was reparieren will. Alles beschriftet, alles ordentlich." },
-      { sag: "Mara", text: "Finger weg vom gelben Pulver, Geburtstagskind. Es stinkt beim Anzünden – stechend, wie verbrannte Streichhölzer." }
+      { sag: "Mara", text: "Kupfer, Zink, Holzkohle, Schwefel – alles beschriftet. Finger weg vom gelben Pulver: Es stinkt beim Anzünden." }
     ], sonst: [
       { wennNicht: "markt_fertig", dann: [
-        { sag: "Mara", text: "Du bist früh auf. Und du hast ein Buch unterm Arm, das ich kenne. Die Stoffmeisterin hätte gelacht." },
-        { sag: "Mara", text: "Die Reiter haben meine Kisten durchwühlt und alle Schilder abgerissen. Hilf mir – und ich helfe dir." },
-        { sag: "Mara", text: "Ein echter Stoffmeister erkennt jeden Stoff an seinen Eigenschaften – so wie du einen Freund an seiner Stimme erkennst. Hier: Lupe, Magnet, ein Lämpchen mit Draht, ein Hammer. Leih ich dir." },
+        { sag: "Mara", text: "Die Reiter haben meine Kisten durchwühlt. Jetzt fehlen alle Schilder. Hilf mir sortieren!" },
+        { sag: "Mara", text: "Hier: Lupe, Magnet, Lämpchen, Hammer. Damit erkennst du jeden Stoff an seinen Eigenschaften." },
         { geben: { werkzeug: ["lupe", "magnet", "stromkreis", "hammer"] } },
         { ablauf: "mara_kisten" },
-        { sag: "Mara", text: "Alle fünf. Du kannst mehr, als du glaubst." },
+        { sag: "Mara", text: "Alle fünf! Behalt das Werkzeug." },
         { geben: { vorrat: { reagenzglas: 2, spatel: 1 } } },
-        { sag: "Mara", text: "Behalt das Werkzeug. Und pass auf draußen: Seit heute Nacht flackern überall Lichter. Die Stoffe sind unruhig – als wüssten sie, dass etwas nicht stimmt." },
-        { sag: "Mara", text: "Ein Lichtfleck ist ein Elemental, das du noch nicht kennst. Erst prüfen, dann bestimmen. Und willst du es mitnehmen: das Gerät muss zum Stoff passen. Ein Pulver packt man nicht mit der Zange." },
+        { sag: "Mara", text: "Draußen flackern jetzt Lichter: wilde Elementals. Erst prüfen, dann bestimmen. Zum Mitnehmen brauchst du das passende Gerät." },
         { setze: "markt_fertig" },
         { setze: "schemen_frei" },
-        { erzaehl: "Lumis Spur: Die Reiter haben Lumi nach Osten mitgenommen. Ihr Weg führt durch den Kolbenwald." }
+        { erzaehl: "Lumis Spur führt nach Osten, durch den Kolbenwald." }
       ], sonst: [
-        { sag: "Mara", text: "Nach Osten, durch den Kolbenwald. Und iss was unterwegs. Stoffmeister mit leerem Magen verwechseln Zink mit Zinn." }
+        { sag: "Mara", text: "Nach Osten, durch den Kolbenwald. Und iss was unterwegs." }
       ] }
     ] }
   ],
 
   mara_kisten: [].concat(
-    kistenRaetsel("Mara", "Kiste 1: rötlich glänzende Bleche. Sie lassen sich biegen, ohne zu brechen, und das Lämpchen leuchtet hell.", "kupfer", "kiste1",
+    kistenRaetsel("Mara", "Kiste 1: rötlich glänzende Bleche. Sie lassen sich biegen, und das Lämpchen leuchtet hell.", "kupfer", "kiste1",
       "Kupfer. Leitet den Strom wie kein Zweiter – darum sind Drähte aus Kupfer."),
-    kistenRaetsel("Mara", "Kiste 2: schwarze, leichte Brocken, matt. Unter dem Hammer zerbröseln sie. Das Lämpchen leuchtet – schwach, aber es leuchtet.", "kohlenstoff", "kiste2",
-      "Holzkohle, also Kohlenstoff. Leitet – und ist trotzdem kein Metall. Die meisten fallen darauf herein."),
+    kistenRaetsel("Mara", "Kiste 2: schwarze, leichte Brocken, matt. Unter dem Hammer zerbröseln sie. Das Lämpchen leuchtet schwach.", "kohlenstoff", "kiste2",
+      "Holzkohle, also Kohlenstoff. Leitet – und ist trotzdem kein Metall."),
     kistenRaetsel("Mara", "Kiste 3: zitronengelbes Pulver, ohne Glanz. Das Lämpchen bleibt dunkel.", "schwefel", "kiste3",
       "Schwefel. Ganz sicher kein Metall."),
     kistenRaetsel("Mara", "Kiste 4: graue, glänzende Nägel. Der Magnet hält sie fest.", "eisen", "kiste4",
       "Eisen. Der Einzige hier, den der Magnet festhält."),
-    kistenRaetsel("Mara", "Kiste 5: bläulich-graue, glänzende Platten. Sie leiten, der Magnet zeigt keine Wirkung – und unter dem Hammer splittern sie.", "zink", "kiste5",
-      "Zink. Kalt ist es spröde – warm lässt es sich formen. Merk dir das.")
+    kistenRaetsel("Mara", "Kiste 5: bläulich-graue, glänzende Platten. Sie leiten, der Magnet wirkt nicht, und unter dem Hammer splittern sie.", "zink", "kiste5",
+      "Zink. Kalt ist es spröde, warm lässt es sich formen.")
   ),
 
   koehler: [
     { wennNicht: "reiter_da", dann: [
-      { sag: "Köhler Brand", text: "Holz rein, Luft raus, Geduld dazu. Wer den Meiler zu früh öffnet, hat Asche statt Kohle." }
+      { sag: "Köhler Brand", text: "Holz rein, Luft raus. Wer den Meiler zu früh öffnet, hat Asche statt Kohle." }
     ], sonst: [
       { wenn: "koehler_fertig", dann: [
-        { sag: "Köhler Brand", text: "Die Glut hält. Danke. Wenn du ihn siehst, meinen Jungen … sag ihm, der Meiler brennt noch." }
+        { sag: "Köhler Brand", text: "Die Glut hält. Danke." }
       ], sonst: [
-        { sag: "Köhler Brand", text: "Sie haben meinen Jungen mitgenommen. Er hat nachts immer die Glut bewacht. Jetzt schläft sie mir ein." },
+        { sag: "Köhler Brand", text: "Sie haben meinen Jungen mitgenommen. Er hat nachts die Glut bewacht. Jetzt schläft sie mir ein." },
         { wennElemental: "kohlenstoff", dann: [
-          { erzaehl: "Dein Kohlenstoff-Elemental schwebt zum Meiler. Die Glut wacht auf und leuchtet ruhig." },
-          { sag: "Köhler Brand", text: "Sieh an. Es erkennt seinen Ort. Holzkohle entsteht, wenn Holz ohne Luft erhitzt wird – das hier ist seine Wiege." },
-          { erzaehl: "Er reißt eine Seite aus einem rußigen Heft: „Verkohlung – Holz, unter Luftabschluss erhitzt, wird zu Holzkohle. Mit Luft verbrennt es zu Asche.“" },
+          { erzaehl: "Dein Kohlenstoff-Elemental schwebt zum Meiler. Die Glut wacht auf." },
+          { sag: "Köhler Brand", text: "Es kennt seinen Ort. Holzkohle entsteht, wenn Holz ohne Luft erhitzt wird. Hier, für dein Buch." },
+          { erzaehl: "Buchseite „Verkohlung“: Holz ohne Luft erhitzt wird zu Holzkohle. Mit Luft verbrennt es zu Asche." },
           { geben: { vorrat: { tiegelzange: 1 } } },
           { setze: "koehler_fertig" }
         ], sonst: [
-          { sag: "Köhler Brand", text: "Nachts, wenn die Glut im Dunkeln leuchtet, kommen manchmal schwarze Lichter aus dem Meiler. Bring mir eins. Dann weiß ich, dass er noch lebt – der Meiler, meine ich." }
+          { sag: "Köhler Brand", text: "Nachts kommen manchmal schwarze Lichter aus dem Meiler. Bring mir eins." }
         ] }
       ] }
     ] }
   ],
 
   labor_stoffingen: [
-    { wennNicht: "aufgebrochen", dann: [
-      { erzaehl: "Mutters Werkstatt. Es riecht nach Ringelblumen, Asche und Salbe. Auf dem Regal stehen Tiegel, Mörser und saubere Reagenzgläser." }
-    ], sonst: [
-      { erzaehl: "Die Werkstatt ist still. Niemand ist wach. Du nimmst dir leise etwas Salbe – für deine Elementals." }
-    ] },
-    { heilen: true },
-    { erzaehl: "Deine Elementals ruhen sich aus. Sie sind wieder bei Kräften." },
-    { speichern: true },
-    { erzaehl: "(Gespeichert.)" }
+    { wennNicht: "aufgebrochen", dann: labor("Mutters Werkstatt. Es riecht nach Salbe."),
+      sonst: labor("Leise nimmst du etwas von Mutters Salbe.") }
   ],
 
   schild_ost: [
-    { erzaehl: "Ein verwittertes Schild: „Nach Osten – Kolbenwald. Gläserne Früchte bitte nicht pflücken.“" }
+    { erzaehl: "Ein Schild: „Nach Osten – Kolbenwald.“" }
   ],
 
   meiler: [
-    { erzaehl: "Der Meiler des Köhlers qualmt still vor sich hin. Darin wird Holz ohne Luft erhitzt, bis nur schwarze, leichte Holzkohle übrig bleibt." }
+    { erzaehl: "Der Meiler qualmt. Darin wird Holz ohne Luft erhitzt, bis Holzkohle übrig bleibt." }
   ],
 
   ausgang_gesperrt_stoffingen: [
     { wennNicht: "reiter_da", dann: [
-      { erzaehl: "Heute ist dein Geburtstag. Du gehst nirgendwohin – zumindest nicht, bevor du dein Handwerk gewählt hast und Lumi dich gefunden hat." }
+      { erzaehl: "Heute ist dein Geburtstag. Erst ein Handwerk wählen, dann Lumi finden." }
     ], sonst: [
-      { erzaehl: "Großmutters Buch ist unmissverständlich: „Erste Prüfung: der Markt von Stoffingen.“ Mara hat ihren Stand gleich am Dorfplatz." }
+      { erzaehl: "Großmutters Buch sagt: Erste Prüfung ist der Markt. Mara steht am Dorfplatz." }
     ] }
   ],
 
@@ -273,102 +316,93 @@ var DIALOGE = {
   //  Kolbenwald – Akt D (Quest 2) und die Rätselkiste
   // ============================================================
   kolbenwald_ankunft: [
-    { erzaehl: "Hinter Stoffingen führt der Weg in den Kolbenwald. Zwischen den Ästen hängen gläserne Kolben, Rohre und Schalen wie Früchte und klingen im Wind." },
-    { erzaehl: "Irgendwo weiter östlich steht Meisterin Vitra von der Gerätemacher-Gilde. Ohne ihren Segen kommt niemand hindurch." }
+    { erzaehl: "Der Kolbenwald: Gläserne Kolben hängen wie Früchte in den Bäumen. Weiter östlich wacht Meisterin Vitra." }
   ],
 
   vitra: [
     { wenn: "geraetepass", dann: [
-      { sag: "Meisterin Vitra", text: "Der Wagen mit dem leuchtenden Kolben nahm die Straße nach Brenner. Geh. Und zerbrich nichts, was dir nicht gehört." }
+      { sag: "Meisterin Vitra", text: "Der Wagen nahm die Straße nach Brenner. Geh. Und zerbrich nichts." }
     ], sonst: alleFlags(["g_messzylinder", "g_tiegelzange", "g_reagenzglashalter", "g_reibeschale"], [
-      { sag: "Meisterin Vitra", text: "Alle vier. Du kennst deine Werkzeuge. Wer sein Gerät kennt, zerbricht es nicht – und sich auch nicht." },
+      { sag: "Meisterin Vitra", text: "Alle vier! Du kennst deine Werkzeuge." },
       { geben: { werkzeug: ["geraetepass", "erlenmeyerkolben"], vorrat: { tiegelzange: 2 } } },
-      { sag: "Meisterin Vitra", text: "Die Tiegelzange ist für Metalle. Heißes greift man mit der Zange, nie mit der Hand – auch wenn es ein Elemental ist." },
+      { sag: "Meisterin Vitra", text: "Die Tiegelzange ist für Metalle. Heißes greift man nie mit der Hand – auch kein Elemental." },
       { setze: "geraetepass" },
-      { sag: "Meisterin Vitra", text: "Ich hab den Wagen der grauen Reiter gesehen. Mit einem seltsam leuchtenden Glaskolben an Bord. Er nahm die Straße nach Brenner." }
+      { sag: "Meisterin Vitra", text: "Der Wagen der Reiter fuhr nach Brenner. Mit einem leuchtenden Kolben an Bord." }
     ], [
-      { sag: "Meisterin Vitra", text: "Wer meinen Wald durchqueren will, muss die Werkzeuge der Stoffmeister kennen. Wer sein Gerät nicht kennt, zerbricht es – und sich." },
-      { sag: "Meisterin Vitra", text: "Vier Geräte hängen im Wald, jedes mit einer Frage. Beantworte alle vier, dann bekommst du den Gerätepass." }
+      { sag: "Meisterin Vitra", text: "Vier Geräte hängen in meinem Wald, jedes mit einer Frage. Beantworte alle vier, dann darfst du durch." }
     ]) }
   ],
 
-  geraet_messzylinder: geraetFrage("g_messzylinder", "Messzylinder", "Wofür brauchst du mich?",
+  geraet_messzylinder: geraetFrage("g_messzylinder", "Messzylinder",
     "Eine Flüssigkeit genau abmessen", "Einen Stoff zu Pulver zerreiben", "Ein heißes Gefäß greifen",
-    "Der Messzylinder misst Flüssigkeiten genau – abgelesen in Augenhöhe, am unteren Rand der Wölbung."),
-  geraet_tiegelzange: geraetFrage("g_tiegelzange", "Tiegelzange", "Wofür brauchst du mich?",
+    "Der Messzylinder misst Flüssigkeiten. Abgelesen wird in Augenhöhe, am unteren Rand der Wölbung."),
+  geraet_tiegelzange: geraetFrage("g_tiegelzange", "Tiegelzange",
     "Ein heißes Gefäß oder einen Tiegel greifen", "Ein Reagenzglas beim Erhitzen halten", "Eine Flüssigkeit umfüllen",
-    "Mit der Tiegelzange greift man heiße Tiegel und Schalen. Für das Reagenzglas gibt es den Reagenzglashalter."),
-  geraet_reagenzglashalter: geraetFrage("g_reagenzglashalter", "Reagenzglashalter", "Wofür brauchst du mich?",
+    "Die Tiegelzange greift heiße Tiegel und Schalen. Für Reagenzgläser gibt es den Halter."),
+  geraet_reagenzglashalter: geraetFrage("g_reagenzglashalter", "Reagenzglashalter",
     "Ein heißes Reagenzglas festhalten", "Einen heißen Tiegel greifen", "Pulver portionieren",
-    "Ein Reagenzglas hält man beim Erhitzen nie mit den Fingern – dafür gibt es den Halter."),
-  geraet_reibeschale: geraetFrage("g_reibeschale", "Reibeschale mit Pistill", "Wofür brauchst du mich?",
+    "Ein Reagenzglas hält man beim Erhitzen nie mit den Fingern."),
+  geraet_reibeschale: geraetFrage("g_reibeschale", "Reibeschale mit Pistill",
     "Einen festen Stoff zu Pulver zerreiben", "Eine Lösung eindampfen", "Eine Flüssigkeit genau abmessen",
-    "In der Reibeschale zerreibt man mit dem Pistill feste Stoffe zu Pulver."),
+    "Mit dem Pistill zerreibt man feste Stoffe zu Pulver."),
 
   raetselkiste: [
     { wenn: "kiste_offen", dann: [
-      { erzaehl: "Die leere Kiste der Reiter. Den Befehlszettel hast du eingesteckt." }
+      { erzaehl: "Die leere Kiste der Reiter." }
     ], sonst: [
-      { erzaehl: "Am Wegrand liegt eine verschlossene Kiste – mit dem grauen Reiher im Schilf eingebrannt. Die Reiter müssen sie in der Eile verloren haben. Ein Zettel: „Nur wer die Stoffe erkennt, darf sie öffnen.“" },
-      { erzaehl: "Vier Säcke hängen am Schloss, jeder ohne Schild. Diesmal hilft dir niemand." },
+      { erzaehl: "Eine verlorene Kiste der Reiter. Ein Zettel: „Nur wer die Stoffe erkennt, darf sie öffnen.“ Vier Säcke, keine Schilder." },
       { ablauf: "kiste_saecke" },
-      { wahl: "Das Schloss hat eine letzte Frage: Welcher der vier Stoffe darf auf keinen Fall achtlos ins Lagerfeuer?", optionen: [
-        { text: "Kupfer", dann: [{ erzaehl: "Das Schloss bleibt zu. Kupfer glüht im Feuer und läuft höchstens schwarz an." }] },
+      { wahl: "Letzte Frage: Welcher Stoff darf nicht achtlos ins Lagerfeuer?", optionen: [
+        { text: "Kupfer", dann: [{ erzaehl: "Das Schloss bleibt zu. Kupfer glüht nur und läuft schwarz an." }] },
         { text: "Schwefel", dann: [
-          { erzaehl: "Klick. Richtig: Brennender Schwefel bildet Schwefeldioxid – ein stechendes, reizendes Gas." },
-          { erzaehl: "In der Kiste liegt eine Kinderzeichnung. Ein Haus, ein Baum, zwei Kinder, ein kleines Licht. Unten steht ein kleines „L“." },
-          { erzaehl: "Daneben ein grauer Befehlszettel: „Kommandant Bonardt verlangt: alle Kinder weiter nach Osten.“" },
-          { erzaehl: "Jetzt kennst du den Namen des Mannes, der Lumi mitgenommen hat." },
+          { erzaehl: "Klick! Brennender Schwefel bildet stechendes Schwefeldioxid." },
+          { erzaehl: "In der Kiste: eine Kinderzeichnung mit einem kleinen „L“. Und ein Befehl: „Kommandant Bonardt verlangt: alle Kinder nach Osten.“" },
           { geben: { vorrat: { spatel: 2 } } },
           { setze: "kiste_offen" }, { setze: "bonardt_bekannt" }
         ] },
-        { text: "Eisen", dann: [{ erzaehl: "Das Schloss bleibt zu. Ein Eisenstück glüht im Feuer – gefährlich wird es dadurch nicht." }] }
+        { text: "Eisen", dann: [{ erzaehl: "Das Schloss bleibt zu. Eisen glüht nur." }] }
       ] }
     ] }
   ],
 
   kiste_saecke: [].concat(
-    kistenRaetsel("Die Kiste", "Sack A: rötlich glänzend, sehr gut verformbar, leitet den Strom hervorragend.", "kupfer", "sack_a", "Das Schloss klickt einmal."),
-    kistenRaetsel("Die Kiste", "Sack B: schwarz, leicht, brüchig. Es riecht nach Lagerfeuer.", "kohlenstoff", "sack_b", "Das Schloss klickt zweimal."),
-    kistenRaetsel("Die Kiste", "Sack C: zitronengelb, ein Pulver, leitet keinen Strom.", "schwefel", "sack_c", "Das Schloss klickt dreimal."),
+    kistenRaetsel("Die Kiste", "Sack A: rötlich glänzend, gut verformbar, leitet den Strom hervorragend.", "kupfer", "sack_a", "Das Schloss klickt einmal."),
+    kistenRaetsel("Die Kiste", "Sack B: schwarz, leicht, brüchig. Riecht nach Lagerfeuer.", "kohlenstoff", "sack_b", "Das Schloss klickt zweimal."),
+    kistenRaetsel("Die Kiste", "Sack C: zitronengelbes Pulver, leitet keinen Strom.", "schwefel", "sack_c", "Das Schloss klickt dreimal."),
     kistenRaetsel("Die Kiste", "Sack D: grau glänzend – ein Magnet zieht es an.", "eisen", "sack_d", "Das Schloss klickt ein viertes Mal.")
   ),
 
   ausgang_gesperrt_kolbenwald: [
-    { sag: "Meisterin Vitra", text: "Halt! Ohne Gerätepass kommt hier niemand durch. Vier Geräte, vier Fragen. Such sie." }
+    { sag: "Meisterin Vitra", text: "Halt! Ohne Gerätepass kommt hier niemand durch. Vier Geräte, vier Fragen." }
   ],
 
   // ============================================================
   //  Brenner – Akt E (Quest 2b) und das verirrte Elemental
   // ============================================================
   brenner_ankunft: [
-    { erzaehl: "Hinter dem Kolbenwald tauchen die Dächer der Stadt Brenner auf. An der großen Halle der Feuer-Gilde kommst du nicht vorbei." }
+    { erzaehl: "Die Stadt Brenner. Hier sitzt die Gilde der Flammenwächter." }
   ],
 
   ilka: [
     { wenn: "flammenschein", dann: [
-      { sag: "Gildenmeisterin Ilka", text: "Der Wagen fuhr durchs Osttor. Richtung Teilchin, wo es nach frischem Brot duftet. Und jetzt raus, bevor du hier etwas anzündest." }
+      { sag: "Gildenmeisterin Ilka", text: "Der Wagen fuhr durchs Osttor, Richtung Teilchin. Und jetzt raus, bevor du hier etwas anzündest." }
     ], sonst: [
-      { sag: "Gildenmeisterin Ilka", text: "Du willst mit einem Feuerwesen durch die Feuerlande ziehen? Dann bestehe zuerst die Prüfung, die hier jedes Kind ablegt: den Flammenschein." },
-      { sag: "Gildenmeisterin Ilka", text: "Wer die Flamme nicht beherrscht, den beherrscht die Flamme. Drei Teile. Erstens: die Reihenfolge." },
+      { sag: "Gildenmeisterin Ilka", text: "Mit einem Feuerwesen durch die Feuerlande? Erst den Flammenschein! Teil eins: die Reihenfolge." },
       { ablauf: "ilka_reihenfolge" },
       { wenn: "brenner_teil1", dann: [
-        { sag: "Gildenmeisterin Ilka", text: "Zweitens." },
-        { wahl: "Welche Flamme nimmt man zum Arbeiten?", optionen: [
-          { text: "Die leuchtende – sie ist heller.", dann: [{ sag: "Gildenmeisterin Ilka", text: "Hell heißt nicht heiß. Die leuchtende Flamme ist die Sparflamme: Luftzufuhr zu, gelb, rußig. Komm wieder, wenn du das verinnerlicht hast." }] },
+        { wahl: "Teil zwei: Welche Flamme nimmt man zum Arbeiten?", optionen: [
+          { text: "Die leuchtende – sie ist heller.", dann: [{ sag: "Gildenmeisterin Ilka", text: "Hell heißt nicht heiß. Die leuchtende ist die Sparflamme: Luft zu, gelb, rußig. Komm wieder." }] },
           { text: "Die rauschende – Luftzufuhr offen.", dann: [
-            { sag: "Gildenmeisterin Ilka", text: "Richtig. Mehr Luft, mehr Sauerstoff, heißere Flamme. Die leuchtende ist nur die Sparflamme." },
-            { sag: "Gildenmeisterin Ilka", text: "Drittens: Zeig mir, dass du ein heißes Feld beherrschst. Meine Halle ist warm. Mein Kupfer liebt das." },
+            { sag: "Gildenmeisterin Ilka", text: "Richtig. Mehr Luft, mehr Sauerstoff, heißere Flamme. Teil drei: ein Kampf gegen mein Kupfer." },
             { kampf: { gegner: [{ art: "kupfer", stufe: 5 }], wild: false, name: "Gildenmeisterin Ilka", ort: "dorf",
                        feld: { sauerstoff: 100, waerme: 45, feuchte: 20 } } },
             { wennGleich: ["letzter_kampf", "sieg"], dann: [
-              { sag: "Gildenmeisterin Ilka", text: "Bestanden. Kupfer leitet Wärme – wer mein Feld noch heißer macht, füttert es nur. Das hast du gemerkt. Oder Glück gehabt. Beides zählt." },
+              { sag: "Gildenmeisterin Ilka", text: "Bestanden. Kupfer leitet Wärme – wer mein Feld noch heißer macht, hilft ihm nur." },
               { geben: { werkzeug: ["gasbrenner"] } },
-              { sag: "Gildenmeisterin Ilka", text: "Ein Gasbrenner. Einmal pro Kampf gibt er deinem Elemental die Energie, die es zum Zünden braucht. Behandle ihn wie deine Augenbrauen: Du willst ihn behalten." },
-              { setze: "flammenschein" },
-              { sag: "Gildenmeisterin Ilka", text: "Der Wagen der grauen Reiter rollte durchs Osttor. Richtung Teilchin." }
+              { sag: "Gildenmeisterin Ilka", text: "Der Gasbrenner gibt deinem Elemental einmal pro Kampf Energie zum Zünden. Der Wagen fuhr durchs Osttor, Richtung Teilchin." },
+              { setze: "flammenschein" }
             ], sonst: [
-              { sag: "Gildenmeisterin Ilka", text: "Nicht bestanden. Ruh dich aus. Die Halle läuft nicht weg." }
+              { sag: "Gildenmeisterin Ilka", text: "Nicht bestanden. Ruh dich aus und komm wieder." }
             ] }
           ] }
         ] }
@@ -380,12 +414,12 @@ var DIALOGE = {
   // schickt dich zurück – pedantisch, aber sie hat recht.
   ilka_reihenfolge: [
     { wahl: "Was kommt zuerst?", optionen: [
-      { text: "Gashahn am Tisch öffnen", dann: [{ sag: "Gildenmeisterin Ilka", text: "Und dann stehst du im Gas und suchst deine Schutzbrille? Nein. Zuerst: Brille auf, Haare zurück, Platz frei. Noch mal von vorn – sprich mich an." }] },
+      { text: "Gashahn am Tisch öffnen", dann: [{ sag: "Gildenmeisterin Ilka", text: "Erst Brille auf, Haare zurück, Platz frei. Noch mal von vorn." }] },
       { text: "Schutzbrille auf, Haare zurück, Platz frei", dann: [
         { wahl: "Und dann?", optionen: [
           { text: "Luftzufuhr am Brenner schließen", dann: [
             { wahl: "Dann?", optionen: [
-              { text: "Streichholz an den Brenner halten", dann: [{ sag: "Gildenmeisterin Ilka", text: "Woran soll das brennen? Es kommt ja noch gar kein Gas. Erst der Gashahn am Tisch. Von vorn." }] },
+              { text: "Streichholz an den Brenner halten", dann: [{ sag: "Gildenmeisterin Ilka", text: "Es kommt ja noch kein Gas. Erst der Gashahn. Von vorn." }] },
               { text: "Gashahn am Tisch öffnen", dann: [
                 { wahl: "Dann?", optionen: [
                   { text: "Streichholz entzünden, seitlich an den Brennerrand halten", dann: [
@@ -394,41 +428,33 @@ var DIALOGE = {
                         { sag: "Gildenmeisterin Ilka", text: "Richtig. Die Flamme brennt – leuchtend, weil die Luftzufuhr noch zu ist." },
                         { setze: "brenner_teil1" }
                       ] },
-                      { text: "Luftzufuhr ganz aufdrehen", dann: [{ sag: "Gildenmeisterin Ilka", text: "Ohne Gas brennt die schönste Luft nicht. Die Gaszufuhr am Brenner. Von vorn." }] }
+                      { text: "Luftzufuhr ganz aufdrehen", dann: [{ sag: "Gildenmeisterin Ilka", text: "Ohne Gas brennt nichts. Erst die Gaszufuhr. Von vorn." }] }
                     ] }
                   ] },
-                  { text: "Gaszufuhr am Brenner öffnen und warten", dann: [{ sag: "Gildenmeisterin Ilka", text: "Und das Gas strömt, während du nach Streichhölzern suchst? Erst die Flamme bereithalten. Von vorn." }] }
+                  { text: "Gaszufuhr am Brenner öffnen und warten", dann: [{ sag: "Gildenmeisterin Ilka", text: "Dann strömt Gas aus, während du suchst. Erst die Flamme bereithalten. Von vorn." }] }
                 ] }
               ] }
             ] }
           ] },
-          { text: "Luftzufuhr ganz öffnen", dann: [{ sag: "Gildenmeisterin Ilka", text: "Mit offener Luftzufuhr schlägt dir die Flamme beim Zünden zurück. Erst schließen. Von vorn." }] }
+          { text: "Luftzufuhr ganz öffnen", dann: [{ sag: "Gildenmeisterin Ilka", text: "Dann schlägt die Flamme beim Zünden zurück. Erst schließen. Von vorn." }] }
         ] }
       ] }
     ] }
   ],
 
-  labor_brenner: [
-    { erzaehl: "Das Labor der Gilde. Hitzefeste Handschuhe, ein Sandeimer, ein Regal voller Tiegel. Ein Lehrling nickt dir zu." },
-    { heilen: true },
-    { erzaehl: "Deine Elementals ruhen sich aus. Sie sind wieder bei Kräften." },
-    { speichern: true },
-    { erzaehl: "(Gespeichert.)" }
-  ],
+  labor_brenner: labor("Das Labor der Gilde."),
 
   kind: [
     { wenn: "knopf_zurueck", dann: [
-      { sag: "Kind", text: "Knopf schläft jetzt. Auf meinem Kissen. Mama sagt, das ist unhygienisch. Ist mir egal." }
+      { sag: "Kind", text: "Knopf schläft auf meinem Kissen. Mama findet das unhygienisch. Ist mir egal." }
     ], sonst: [
       { wenn: "knopf_gefunden", dann: [
         { sag: "Kind", text: "KNOPF! Da bist du ja!" },
-        { erzaehl: "Das kleine Zink-Elemental hüpft zurück zu seinem Kind." },
-        { sag: "Kind", text: "Danke. Weißt du … mein Bruder ist auch weg. Die grauen Reiter. Ich dachte, wenn Knopf auch weg ist, dann ist alles weg." },
-        { sag: "Kind", text: "Hier. Das hat Papa aus der Gilde. Du brauchst es mehr als ich." },
+        { sag: "Kind", text: "Danke. Mein Bruder ist auch weg – die grauen Reiter. Hier, das brauchst du mehr als ich." },
         { geben: { vorrat: { tiegelzange: 1 } } },
         { setze: "knopf_zurueck" }
       ], sonst: [
-        { sag: "Kind", text: "Hast du Knopf gesehen? Mein Elemental. Er ist klein und bläulich und ein bisschen feige. Er ist zum Brunnen gelaufen, glaub ich." },
+        { sag: "Kind", text: "Hast du Knopf gesehen? Mein Elemental. Klein, bläulich, ein bisschen feige. Er ist zum Brunnen gelaufen." },
         { setze: "knopf_gesucht" }
       ] }
     ] }
@@ -438,13 +464,12 @@ var DIALOGE = {
     { wennNicht: "knopf_gesucht", dann: [
       { erzaehl: "Der Brunnen von Brenner. Das Wasser ist kühl und klar." }
     ], sonst: [
-      { wenn: "knopf_gefunden", dann: [{ erzaehl: "Das Wasser plätschert. Knopf ist bei seinem Kind." }], sonst: [
-        { erzaehl: "Hinter dem Brunnenrand flackert ein kleines Licht. Es zittert. Es ist nicht wild – es hat Angst." },
-        { erzaehl: "Du prüfst es vorsichtig. Glänzend, bläulich-grau. Der Magnet: nichts. Das Lämpchen leuchtet." },
-        { wahl: "Das Kind hat „bläulich“ gesagt. Welcher Stoff ist Knopf?", optionen: [
+      { wenn: "knopf_gefunden", dann: [{ erzaehl: "Knopf ist bei seinem Kind." }], sonst: [
+        { erzaehl: "Hinter dem Brunnen zittert ein kleines Licht. Du prüfst es: glänzend, bläulich-grau. Magnet: nichts. Das Lämpchen leuchtet." },
+        { wahl: "Welcher Stoff ist Knopf?", optionen: [
           { text: "Eisen", dann: [{ erzaehl: "Das Licht weicht zurück. Eisen hätte der Magnet gepackt." }] },
           { text: "Zink", dann: [
-            { erzaehl: "„Zink?“, sagst du leise. „Knopf?“ Das Licht hört auf zu zittern und kommt dir entgegen." },
+            { erzaehl: "„Knopf?“ Das Licht hört auf zu zittern und kommt zu dir." },
             { setze: "knopf_gefunden" }
           ] },
           { text: "Kupfer", dann: [{ erzaehl: "Das Licht weicht zurück. Kupfer wäre rötlich." }] }
@@ -454,7 +479,7 @@ var DIALOGE = {
   ],
 
   ausgang_gesperrt_brenner: [
-    { erzaehl: "Die Torwache mustert dich. „Ohne Flammenschein lässt dich hier niemand mit einem Feuerwesen hinaus. Frag Gildenmeisterin Ilka.“" }
+    { erzaehl: "Die Torwache: „Ohne Flammenschein lässt dich niemand mit einem Feuerwesen hinaus. Frag Gildenmeisterin Ilka.“" }
   ],
 
   abspann_kapitel1: [

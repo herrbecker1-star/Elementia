@@ -63,7 +63,7 @@ var ARTEN = {
     steckbrief: { farbe: "bläulich-grau", glanz: true, magnetisch: false, leitfaehig: true, verformbar: false },
     warmVerformbar: true,
     form: "stueck",
-    reaktionen: ["wuchtstoss", "zinkflamme", "zinkschild"]
+    reaktionen: ["wuchtstoss", "zinksulfid", "zinkschild"]
   },
 
   schwefel: {
@@ -83,6 +83,8 @@ var ARTEN = {
 //                      Ziele mit niedriger Schmelztemperatur leiden mehr
 //          "leitung"   nimmt die Wärme des Feldes und leitet sie ins Ziel
 //          "schutz"    kein Schaden, nur Wirkung auf sich selbst
+//          "reaktion"  Reaktion mit dem Ziel selbst; gegenMetall /
+//                      gegenNichtmetall, oder gegen: { art: Faktor }
 //  kraft   Grundschaden
 //  ae      Aktivierungsenergie, die der Zug kostet
 //  o2      Sauerstoff, den der Zug verbraucht (und mindestens braucht)
@@ -95,10 +97,16 @@ var REAKTIONEN = {
     text: "Hart und ehrlich wie auf dem Amboss." },
   leichtschlag: { name: "Rempler", art: "wucht", kraft: 7, ae: 0,
     text: "Ein schneller, leichter Stoß." },
-  blankhieb: { name: "Blankhieb", art: "wucht", kraft: 12, ae: 1,
+  // 12 → 13 am 25.10.2026 (Kupfer war mit 37 % am schwächsten). 14 wäre
+  // zu viel: Kupfer gewönne dann 92 % gegen Kohlenstoff.
+  blankhieb: { name: "Blankhieb", art: "wucht", kraft: 13, ae: 1,
     text: "Kupfer ist weich, aber schwer – das Gewicht macht den Schlag." },
-  wuchtstoss: { name: "Wuchtstoß", art: "wucht", kraft: 13, ae: 1,
-    text: "Mit den Schildplatten voran." },
+  // 13 → 16 am 25.10.2026: Zink ist als einziger Stoff gegen Hitze UND
+  // Wucht empfindlich (schmilzt bei 420 °C, kalt spröde) und gewann nur
+  // 7 % seiner Paarungen (mit korrigierter KI gemessen). Mit 16 und der
+  // Zinksulfid-Reaktion sind es 42 %; die Stoffwerte bleiben.
+  wuchtstoss: { name: "Wuchtstoß", art: "wucht", kraft: 16, ae: 1,
+    text: "Mit den schweren Zinkplatten voran." },
 
   funkenflug: { name: "Funkenflug", art: "hitze", kraft: 14, ae: 4, o2: 8, waerme: 10,
     text: "Fein verteiltes Eisen verbrennt in Funken zu Eisenoxid – wie Eisenwolle in der Flamme." },
@@ -107,8 +115,6 @@ var REAKTIONEN = {
     text: "Magnesium verbrennt mit gleißend weißem Licht zu Magnesiumoxid. Wer hineinsieht, ist geblendet." },
   glut: { name: "Glut", art: "hitze", kraft: 13, ae: 3, o2: 10, waerme: 12,
     text: "Holzkohle entzündet sich leicht, glüht und verbrennt zu Kohlenstoffdioxid." },
-  zinkflamme: { name: "Zinkflamme", art: "hitze", kraft: 12, ae: 4, o2: 8, waerme: 10,
-    text: "Fein verteiltes Zink verbrennt mit bläulich-grüner Flamme zu weißem Zinkoxid." },
   blaue_flamme: { name: "Blaue Flamme", art: "hitze", kraft: 12, ae: 2, o2: 8, waerme: 8,
     wirkung: { reizgas: 3, dauer: 2 },
     text: "Schwefel entzündet sich leicht und brennt mit blauer Flamme. Es entsteht stechendes Schwefeldioxid." },
@@ -119,9 +125,26 @@ var REAKTIONEN = {
   // Keine Verbrennung, sondern die Reaktion mit dem Ziel selbst:
   // Schwefel bildet mit Metallen Sulfide (Fe + S → FeS, stark exotherm).
   // Mit einem Nichtmetall passiert fast nichts.
+  // Je unedler das Metall, desto heftiger die Reaktion mit Schwefel:
+  // Magnesium 2,4 > Eisen und Zink 1,5 > Kupfer 1,1. Dazu Kohlenstoff
+  // 1,5: Schwefeldampf über glühender Holzkohle gibt Schwefelkohlenstoff
+  // (CS₂) – so wird er technisch hergestellt. Alle drei Ausnahmen seit
+  // 25.10.2026, gemessen gegen Einbahnstraßen (Siege für den Gegner):
+  //   Magnesium 2,0 → 78 %, 2,4 → 44 % (vorher 99 %)
+  //   Kohlenstoff 1,4 → 73 %, 1,5 → 57 %, 1,8 → 15 % (vorher 100 %)
+  //   Kupfer 1,1 mit Blankhieb 13 → 48 % (vorher 8 %)
   sulfidbildung: { name: "Sulfidbildung", art: "reaktion", kraft: 13, ae: 4, waerme: 12,
-    gegenMetall: 1.5, gegenNichtmetall: 0.4,
+    gegenMetall: 1.5, gegenNichtmetall: 0.4, gegen: { magnesium: 2.4, kohlenstoff: 1.5, kupfer: 1.1 },
     text: "Schwefel greift das Metall selbst an und bildet ein Sulfid – wie Eisen und Schwefel zu Eisensulfid." },
+
+  // Zink und Schwefel reagieren heftig und stark exotherm zu Zinksulfid
+  // (Zn + S → ZnS) – mit anderen Stoffen passiert dabei nichts. Ersetzt
+  // am 25.10.2026 die Zinkflamme, die die KI nie gewählt hat. Faktor 1,6
+  // gemessen: 1,4 → 16 %, 1,6 → 38 %, 2,0 → 98 % Siege gegen Schwefel –
+  // die Kurve ist steil, kleine Änderungen hier kippen die Paarung.
+  zinksulfid: { name: "Zinksulfid", art: "reaktion", kraft: 14, ae: 3, waerme: 15,
+    gegen: { schwefel: 1.6 }, gegenMetall: 0.3, gegenNichtmetall: 0.3,
+    text: "Zink und Schwefel reagieren heftig zu Zinksulfid. Mit anderen Stoffen geschieht fast nichts." },
 
   waermeleitung: { name: "Wärmeleitung", art: "leitung", kraft: 0, ae: 2,
     text: "Kupfer leitet Wärme besser als fast jeder andere Stoff – es nimmt die Hitze des Feldes auf und gibt sie weiter." },

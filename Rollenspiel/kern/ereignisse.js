@@ -28,6 +28,24 @@
 //    { wennGleich: ["letzter_kampf", "sieg"], dann: [ … ], sonst: [ … ] }
 //    { ablauf: "reiter_szenen" }   einen anderen benannten Ablauf einschieben
 //
+//  Szenen, die gespielt statt erzählt werden (seit 25.10.2026):
+//    { film: [ … ], kurz: "…" }   überspringbare Szene. Übersprungen sind
+//                                 sag, einblenden, gehen, zeichen, warte und
+//                                 verfolgen sofort fertig; Wahlen, Flags und
+//                                 Gegenstände gelten trotzdem. "kurz" ist dann
+//                                 die eine Zeile, die stattdessen erscheint.
+//    { gehen: { wer: "mutter", nach: [[13, 9], [15, 13]], parallel: true } }
+//                                 wer = Figur der Karte, "held" oder eine mit
+//                                 erscheinen gesetzte; nach = Kachel [x, y]
+//                                 oder eine Liste davon (Wegpunkte)
+//    { erscheinen: { name: "reiter1", figur: 9, bei: [29, 13] } }  (oder bild: "wagen")
+//    { verschwinden: "reiter1" }
+//    { zeichen: { wer: "lumi", art: "!" } }    "!", "?", "…" oder "♥" über dem Kopf
+//    { warte: 600 }                            Millisekunden
+//    { verfolgen: { wer: "wagen", nach: [41, 13] } }
+//                                 Steuerung frei, wer fährt davon – immer
+//                                 etwas schneller als die Spielfigur
+//
 //  Alles, was den Spielstand ändert (geben, welt, karte, heilen), geht
 //  über die Anzeige – so bleibt diese Datei ohne Spielstand-Wissen.
 //
@@ -44,14 +62,22 @@ var EREIGNISSE = (function () {
     return !!(flags && flags[name]);
   }
 
+  function rufe(anzeige, name, wert) {
+    return Promise.resolve(anzeige[name] ? anzeige[name](wert) : undefined);
+  }
+
+  function istKachel(k) {
+    return Array.isArray(k) && k.length === 2 && typeof k[0] === "number" && typeof k[1] === "number";
+  }
+
   function ausfuehren(schritte, flags, anzeige) {
     var i = 0;
     function weiter() {
       if (!schritte || i >= schritte.length) return Promise.resolve();
       var s = schritte[i++];
 
-      if (s.sag !== undefined) return anzeige.sag(s.sag, s.text).then(weiter);
-      if (s.erzaehl !== undefined) return anzeige.sag(null, s.erzaehl).then(weiter);
+      if (s.sag !== undefined) return Promise.resolve(anzeige.sag(s.sag, s.text)).then(weiter);
+      if (s.erzaehl !== undefined) return Promise.resolve(anzeige.sag(null, s.erzaehl)).then(weiter);
 
       if (s.wahl !== undefined) {
         var texte = s.optionen.map(function (o) { return o.text; });
@@ -81,6 +107,16 @@ var EREIGNISSE = (function () {
         return ausfuehren(flags[s.wennGleich[0]] === s.wennGleich[1] ? s.dann : s.sonst, flags, anzeige).then(weiter);
       }
       if (s.ablauf !== undefined) return ausfuehren(anzeige.ablauf(s.ablauf), flags, anzeige).then(weiter);
+
+      // Gespielte Szenen. Eine Anzeige ohne diese Fähigkeiten (der
+      // Prüfstand) überspringt die Bewegungen einfach.
+      if (s.film !== undefined) {
+        return rufe(anzeige, "filmStart").then(function () {
+          return ausfuehren(s.film, flags, anzeige);
+        }).then(function () { return rufe(anzeige, "filmEnde", s.kurz); }).then(weiter);
+      }
+      var bewegung = ["gehen", "erscheinen", "verschwinden", "zeichen", "warte", "verfolgen"].filter(function (n) { return s[n] !== undefined; })[0];
+      if (bewegung) return rufe(anzeige, bewegung, s[bewegung]).then(weiter);
       if (s.wennElemental !== undefined) {
         return ausfuehren(anzeige.hatElemental(s.wennElemental) ? s.dann : s.sonst, flags, anzeige).then(weiter);
       }
@@ -128,7 +164,20 @@ var EREIGNISSE = (function () {
           arten.forEach(function (a) { if (!a || typeof ARTEN !== "undefined" && !ARTEN[a]) fehler.push(hier + ": Kampf gegen unbekannte Art " + a); });
         } else if (s.geben !== undefined) {
           if (s.geben.elemental && typeof ARTEN !== "undefined" && !ARTEN[s.geben.elemental.art]) fehler.push(hier + ": unbekannte Art " + s.geben.elemental.art);
-        } else if (s.setze === undefined && !s.heilen && !s.speichern && !s.benennen &&
+        } else if (s.film !== undefined) {
+          gehe(s.film, hier + ".film");
+        } else if (s.gehen !== undefined || s.verfolgen !== undefined) {
+          var g = s.gehen || s.verfolgen;
+          var ziele = istKachel(g.nach) ? [g.nach] : g.nach;
+          if (!g.wer) fehler.push(hier + ": wer fehlt");
+          if (!Array.isArray(ziele) || !ziele.length || !ziele.every(istKachel)) fehler.push(hier + ": nach braucht [x, y] oder eine Liste davon");
+        } else if (s.erscheinen !== undefined) {
+          if (!s.erscheinen.name || !istKachel(s.erscheinen.bei)) fehler.push(hier + ": erscheinen braucht name und bei: [x, y]");
+          if (typeof s.erscheinen.figur !== "number" && !s.erscheinen.bild) fehler.push(hier + ": erscheinen braucht figur oder bild");
+        } else if (s.zeichen !== undefined) {
+          if (["!", "?", "…", "♥"].indexOf(s.zeichen.art) < 0) fehler.push(hier + ": unbekanntes Zeichen " + s.zeichen.art);
+        } else if (s.verschwinden === undefined && s.warte === undefined &&
+                   s.setze === undefined && !s.heilen && !s.speichern && !s.benennen &&
                    s.welt === undefined && s.einblenden === undefined && s.karte === undefined) {
           fehler.push(hier + ": unbekannter Schritt");
         }
