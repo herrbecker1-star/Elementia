@@ -91,8 +91,7 @@ class KampfSzene extends Phaser.Scene {
       : this.k.erkannt
         ? "Ein wildes " + ARTEN[daten.gegner[0].art].name + " stellt sich dir in den Weg!"
         : "Ein unbekanntes Elemental stellt sich dir in den Weg! Was mag es sein?";
-    this.zeigeText(erster);
-    this.zeigeHauptmenue();
+    this.bereit = this.rundeStarten(erster);
 
     // Prüfschalter ?zuege=lupe,magnet,bestimmen:schwefel,ki,fangen:spatel
     // spielt eine Zugfolge durch die echte Szene – für kopflose Fotos
@@ -101,7 +100,31 @@ class KampfSzene extends Phaser.Scene {
     if (zuege) this.spieleZuege(zuege.split(","));
   }
 
+  // Beginn jeder Runde: Ist der Gegner schneller, handelt er zuerst –
+  // erst danach erscheint das eigene Menü. Man wählt also immer dann,
+  // wenn das eigene Elemental an der Reihe ist.
+  async rundeStarten(einleitung) {
+    this.beschaeftigt = true;
+    var log = KAMPF.rundeBeginnen(this.k);
+    if (log.length) {
+      if (einleitung) await this.wartenAufTipp(einleitung);
+      for (var i = 0; i < log.length; i++) await this.spieleEintrag(log[i]);
+      this.markiere(null);
+      this.aktualisieren();
+      if (this.k.ende) { await this.beenden(); return; }
+    }
+    this.beschaeftigt = false;
+    if (window.PROBE_MELDEN) window.PROBE_MELDEN("Runde " + this.k.runde + " bereit");
+    this.zeigeText(einleitung && !log.length ? einleitung : "Was tust du?");
+    this.zeigeHauptmenue();
+    // Prüfschalter &menue=angriff: das Angriffsmenü gleich offen (für Fotos)
+    if (/[?&]menue=angriff\b/.test(location.search)) this.menueReaktion();
+  }
+
   async spieleZuege(liste) {
+    var vorab = this.time.addEvent({ delay: 60, loop: true, callback: this.weiter, callbackScope: this });
+    await this.bereit;
+    vorab.remove();
     for (var i = 0; i < liste.length && !this.k.ende; i++) {
       var teil = liste[i].split(":"), a;
       if (teil[0] === "ki") a = KAMPF.kiWahl(this.k, "spieler");
@@ -160,7 +183,8 @@ class KampfSzene extends Phaser.Scene {
   zeichneInfo(c, seite) {
     var k = this.k, el = KAMPF.aktiv(k, seite);
     var w = KAMPF.werte(el);
-    var b = MASS.px(220), h = MASS.px(62);
+    // Der Gegnerkasten hat eine Zeile mehr: LP und darunter die Befunde.
+    var b = MASS.px(220), h = MASS.px(seite === "gegner" ? 76 : 62);
     c.breite = b; c.hoehe = h;
     c.grund.clear().fillStyle(FARBE.papier, 0.93).fillRoundedRect(0, 0, b, h, MASS.px(10))
       .lineStyle(MASS.px(2), FARBE.papierRand, 1).strokeRoundedRect(0, 0, b, h, MASS.px(10));
@@ -181,7 +205,7 @@ class KampfSzene extends Phaser.Scene {
       var ae = k.seiten.spieler.ae;
       c.zeile.setText("LP " + el.zh + "/" + w.zhMax + "  ·  Energie " + ae + "/" + KAMPF.AE_MAX);
     } else {
-      c.zeile.setText(this.befundZeile());
+      c.zeile.setText("LP " + el.zh + "/" + w.zhMax + "\n" + this.befundZeile());
     }
     c.zeile.setPosition(MASS.px(10), MASS.px(40));
   }
@@ -260,16 +284,25 @@ class KampfSzene extends Phaser.Scene {
   menueReaktion() {
     var szene = this, k = this.k;
     var el = KAMPF.aktiv(k, "spieler");
+    // Jeder Knopf zeigt die Stärke und die Energie. Ist der Gegner erkannt,
+    // steht statt der Grundkraft der geschätzte Schaden gegen genau ihn –
+    // bei einem unerkannten Gegner verriete die Schätzung den Stoff.
+    var kennt = !k.wild || k.erkannt;
     var eintraege = ARTEN[el.art].reaktionen.map(function (id) {
-      var r = REAKTIONEN[id], grund = KAMPF.hindernis(k, "spieler", id);
-      return { text: r.name + "\n" + r.ae + " AE", aktiv: !grund, grund: grund, beiKlick: function () { szene.ausfuehren({ typ: "reaktion", id: id }); } };
+      var r = REAKTIONEN[id], grund = KAMPF.hindernis(k, "spieler", id), staerke;
+      if (r.art === "schutz") staerke = "Schutz";
+      else if (kennt) staerke = "≈ " + KAMPF.schaetzeSchaden(k, "spieler", id, true) + " Schaden";
+      else staerke = r.art === "leitung" ? "Kraft: Wärme" : "Kraft " + r.kraft;
+      return { text: r.name + "\n" + staerke + " · " + r.ae + " E", aktiv: !grund, grund: grund, beiKlick: function () { szene.ausfuehren({ typ: "reaktion", id: id }); } };
     });
     eintraege.push({ text: "Kraft sammeln", beiKlick: function () { szene.ausfuehren({ typ: "sammeln" }); } });
     if (this.stand.werkzeuge.indexOf("gasbrenner") >= 0) {
-      eintraege.push({ text: "Gasbrenner\n+4 AE", aktiv: !k.brennerBenutzt, grund: "Das Gas ist für diesen Kampf verbraucht.", beiKlick: function () { szene.ausfuehren({ typ: "brenner" }); } });
+      eintraege.push({ text: "Gasbrenner\n+4 E", aktiv: !k.brennerBenutzt, grund: "Das Gas ist für diesen Kampf verbraucht.", beiKlick: function () { szene.ausfuehren({ typ: "brenner" }); } });
     }
     eintraege.push(this.zurueck());
-    this.zeigeText("Welcher Angriff? Feuer braucht Sauerstoff und heizt das Feld auf.");
+    var zs = k.seiten.gegner.status;
+    this.zeigeText("Energie (E) " + k.seiten.spieler.ae + "/" + KAMPF.AE_MAX + ". Jede Runde +3, Wärme im Feld gibt mehr. Kraft sammeln: +2." +
+      (zs.schutz || zs.tarnung ? " Der Gegner ist geschützt: Dein nächster Treffer wirkt schwächer." : ""));
     this.zeigeKnoepfe(eintraege);
   }
 
@@ -333,10 +366,7 @@ class KampfSzene extends Phaser.Scene {
     var gegnerArt = KAMPF.aktiv(this.k, "gegner").art;
     if (this.k.erkannt && this.k.wild && this.stand.bekannt.indexOf(gegnerArt) < 0) this.stand.bekannt.push(gegnerArt);
     if (this.k.ende) { await this.beenden(); return; }
-    this.beschaeftigt = false;
-    if (window.PROBE_MELDEN) window.PROBE_MELDEN("Runde " + this.k.runde + " bereit");
-    this.zeigeText("Was tust du?");
-    this.zeigeHauptmenue();
+    await this.rundeStarten();
   }
 
   spieleEintrag(e) {
@@ -347,7 +377,7 @@ class KampfSzene extends Phaser.Scene {
     if (e.reaktion) {
       var bild = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
       var richtung = e.seite === "spieler" ? 1 : -1;
-      this.tweens.add({ targets: bild, x: bild.x + richtung * MASS.px(36), duration: 250, yoyo: true, ease: "Quad.easeOut" });
+      this.tweens.add({ targets: bild, x: bild.x + richtung * MASS.px(36), duration: 160, yoyo: true, ease: "Quad.easeOut" });
       var art = REAKTIONEN[e.reaktion].art;
       if (art === "hitze" || art === "reaktion" || art === "leitung") this.aufblitzen(e.seite === "spieler" ? this.bildGegner : this.bildSpieler, 0xff8a3a);
     }
@@ -361,11 +391,12 @@ class KampfSzene extends Phaser.Scene {
     if (e.befund !== undefined) this.aktualisieren();
     return new Promise(function (fertig) {
       szene.weiterWartet = fertig;
-      // Jede Meldung steht mindestens 0,7 s – sonst blättert ein schneller
+      // Jede Meldung steht mindestens 0,3 s – sonst blättert ein schneller
       // Finger durch die Runde, ohne dass man sieht, wer was getan hat.
-      szene.sperreBis = szene.time.now + 700;
+      // (Fassung 6 hatte 0,7 s und 2,2 s – beim Spielen zu langsam.)
+      szene.sperreBis = szene.time.now + 300;
       // Wer nicht tippt, liest trotzdem mit: Nach einer Weile geht es von selbst weiter.
-      szene.selbstWeiter = szene.time.delayedCall(Math.max(2200, e.text.length * 55), function () { szene.sperreBis = 0; szene.weiter(); });
+      szene.selbstWeiter = szene.time.delayedCall(Math.max(1300, e.text.length * 35), function () { szene.sperreBis = 0; szene.weiter(); });
     });
   }
 
@@ -388,7 +419,7 @@ class KampfSzene extends Phaser.Scene {
     this.zeigeText(text);
     return new Promise(function (fertig) {
       szene.weiterWartet = fertig;
-      szene.selbstWeiter = szene.time.delayedCall(Math.max(2000, text.length * 50), function () { szene.weiter(); });
+      szene.selbstWeiter = szene.time.delayedCall(Math.max(1300, text.length * 35), function () { szene.weiter(); });
     });
   }
 

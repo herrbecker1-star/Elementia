@@ -195,7 +195,11 @@ var KAMPF = (function () {
 
   // Erwarteter Schaden ohne Zufallsstreuung – für die KI und für
   // die Anzeige „etwa … Schaden".
-  function schaetzeSchaden(k, seite, reaktionId) {
+  // ohneSchutz: so, als stünde beim Ziel kein Schild – für die Anzeige
+  // im Angriffsmenü. Ein Schild dämpft nur den nächsten Treffer; mit ihm
+  // gerechnet sähe jeder Angriff wertlos aus.
+  function schaetzeSchaden(k, seite, reaktionId, ohneSchutz) {
+    if (ohneSchutz) return ohneSchild(k, gegenueber(seite), function () { return schaden(k, seite, reaktionId, 1); });
     return schaden(k, seite, reaktionId, 1);
   }
 
@@ -320,10 +324,46 @@ var KAMPF = (function () {
   //   { typ: "fangen", geraet } | { typ: "wechseln", nr } | { typ: "fliehen" }
   // gegnerAktion: optional (Prüfstand); sonst wählt die KI.
   // Liefert das Protokoll dieser Runde.
+  // Handelt der Gegner vor dem Spieler? Der Schnellere zuerst, bei
+  // gleichem Tempo entscheidet der Zufall.
+  function gegnerZuerst(k) {
+    var ts = werte(aktiv(k, "spieler")).tempo;
+    var tg = werte(aktiv(k, "gegner")).tempo;
+    return tg > ts || (tg === ts && k.zufall() < 0.5);
+  }
+
+  // Für die Kampfszene (seit 25.10.2026): Ist der Gegner schneller,
+  // handelt er JETZT – bevor der Spieler wählt. So wählt man immer erst,
+  // wenn das eigene Elemental an der Reihe ist. Vorher wählte man, und
+  // danach griff manchmal erst der Gegner an; das verwirrte.
+  // Der Prüfstand ruft nur zug() und spielt damit wie bisher.
+  function rundeBeginnen(k) {
+    k.log = [];
+    if (k.ende) return k.log;
+    var g = kiWahl(k, "gegner");
+    var zuerst = gegnerZuerst(k);
+    k.reihenfolge = zuerst ? "gegner" : "spieler";
+    if (zuerst && (g.typ === "reaktion" || g.typ === "sammeln")) {
+      if (g.typ === "reaktion") { fuehreAus(k, "gegner", g.id); pruefeErschoepfung(k); }
+      else gegnerSammelt(k);
+      k.gegnerHatGehandelt = true;
+    } else {
+      k.geplant = g;
+    }
+    return k.log;
+  }
+
+  function gegnerSammelt(k) {
+    k.seiten.gegner.ae = Math.min(AE_MAX, k.seiten.gegner.ae + 2);
+    k.log.push({ seite: "gegner", handelt: true, text: name(k, "gegner") + " sammelt Kraft." });
+  }
+
   function zug(k, aktion, gegnerAktion) {
     if (k.ende) throw new Error("Der Kampf ist schon vorbei.");
     k.log = [];
-    var g = gegnerAktion || kiWahl(k, "gegner");
+    var g = gegnerAktion || k.geplant || kiWahl(k, "gegner");
+    var gegnerFertig = !!k.gegnerHatGehandelt, fest = k.reihenfolge;
+    k.geplant = null; k.gegnerHatGehandelt = false; k.reihenfolge = null;
     var sp = k.seiten.spieler;
 
     // Alles, was keine Reaktion ist, geschieht zuerst.
@@ -362,16 +402,11 @@ var KAMPF = (function () {
     // Runde nicht mehr – sonst schlug Magnesium Eisens Hammerschlag.
     var reihenfolge = [];
     if (aktion.typ === "reaktion") reihenfolge.push({ seite: "spieler", id: aktion.id, wer: aktiv(k, "spieler") });
-    if (g.typ === "reaktion") reihenfolge.push({ seite: "gegner", id: g.id, wer: aktiv(k, "gegner") });
-    else if (g.typ === "sammeln") { k.seiten.gegner.ae = Math.min(AE_MAX, k.seiten.gegner.ae + 2); k.log.push({ seite: "gegner", handelt: true, text: name(k, "gegner") + " sammelt Kraft." }); }
-    if (reihenfolge.length === 2) {
-      var ts = werte(aktiv(k, "spieler")).tempo;
-      var tg = werte(aktiv(k, "gegner")).tempo;
-      if (tg > ts || (tg === ts && k.zufall() < 0.5)) reihenfolge.reverse();
-      // Wer zuerst handelt, soll man sehen – nicht erraten.
-      var erster = reihenfolge[0].seite;
-      k.log.push({ seite: erster, handelt: true, text: name(k, erster) + " ist schneller." });
+    if (!gegnerFertig) {
+      if (g.typ === "reaktion") reihenfolge.push({ seite: "gegner", id: g.id, wer: aktiv(k, "gegner") });
+      else if (g.typ === "sammeln") gegnerSammelt(k);
     }
+    if (reihenfolge.length === 2 && (fest ? fest === "gegner" : gegnerZuerst(k))) reihenfolge.reverse();
     for (var i = 0; i < reihenfolge.length; i++) {
       var z = reihenfolge[i];
       if (aktiv(k, z.seite) !== z.wer || z.wer.zh <= 0) continue;     // erschöpft oder ausgewechselt
@@ -494,6 +529,7 @@ var KAMPF = (function () {
   return {
     grundwerte: grundwerte,
     werte: werte,
+    rundeBeginnen: rundeBeginnen,
     STARTER_BONUS: STARTER_BONUS,
     GRUPPE_LERNT: GRUPPE_LERNT,
     hitzeFaktor: hitzeFaktor,

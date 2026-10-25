@@ -102,28 +102,71 @@ class BuchSzene extends Phaser.Scene {
     return o;
   }
 
+  // Die Gruppe als Liste: Wer oben steht, beginnt den Kampf. Mit ▲ ▼
+  // ändert man die Reihenfolge; Antippen der Zeile zeigt die Details.
   zeigeGruppe(f) {
     var szene = this, stand = this.stand;
     if (!stand.gruppe.length) { this.text(f.x, f.y, "Noch begleitet dich kein Elemental.", 16); return; }
-    var spalten = 2, zeileH = MASS.px(76), spB = (f.b - MASS.px(12)) / spalten;
+    var luecke = MASS.px(5), fussH = MASS.px(18);
+    var zeileH = Math.min(MASS.px(64), (f.h - fussH - luecke * (SPIELSTAND.GRUPPE_MAX - 1)) / SPIELSTAND.GRUPPE_MAX);
+    var knopfB = MASS.px(44), rechts = f.x + f.b;
+    var ersterFit = stand.gruppe.findIndex(function (el) { return el.zh > 0; });
     stand.gruppe.forEach(function (el, i) {
-      var x = f.x + (i % spalten) * (spB + MASS.px(12)), y = f.y + Math.floor(i / spalten) * (zeileH + MASS.px(8));
-      var w = KAMPF.werte(el);
-      szene.bild(x, y, el.art, zeileH, false);
-      var tx = x + zeileH * 1.5 + MASS.px(8);
-      szene.text(tx, y, (el.spitzname || ARTEN[el.art].name) + "  ·  Stufe " + el.stufe, 16, null, "bold");
+      var y = f.y + i * (zeileH + luecke), w = KAMPF.werte(el);
+      var grund = szene.add.graphics();
+      grund.fillStyle(i === ersterFit ? 0xe3eeee : 0xffffff, i === ersterFit ? 0.9 : 0.35).fillRoundedRect(f.x, y, f.b, zeileH, MASS.px(6))
+        .lineStyle(MASS.px(1.5), i === ersterFit ? 0x2f5d62 : 0xc9a66b, 1).strokeRoundedRect(f.x, y, f.b, zeileH, MASS.px(6));
+      szene.inhalt.push(grund);
+      var bild = szene.bild(f.x + MASS.px(4), y + MASS.px(3), el.art, zeileH - MASS.px(6), false);
+      var tx = f.x + MASS.px(10) + bild.displayWidth;
+      szene.text(tx, y + MASS.px(3), (el.spitzname || ARTEN[el.art].name) + "  ·  Stufe " + el.stufe +
+        (i === ersterFit ? "   – kämpft zuerst" : ""), 14, null, "bold");
+      var bb = Math.min(MASS.px(220), rechts - tx - 2 * knopfB - MASS.px(24)), anteil = el.zh / w.zhMax;
       var balken = szene.add.graphics();
-      var bb = spB - (tx - x) - MASS.px(8), anteil = el.zh / w.zhMax;
-      balken.fillStyle(0x3a2a1c, 0.25).fillRoundedRect(tx, y + MASS.px(26), bb, MASS.px(9), MASS.px(4))
+      balken.fillStyle(0x3a2a1c, 0.25).fillRoundedRect(tx, y + zeileH * 0.48, bb, MASS.px(7), MASS.px(3))
         .fillStyle(anteil > 0.5 ? 0x4f9a5a : anteil > 0.2 ? 0xd9a63a : 0xc0453a, 1)
-        .fillRoundedRect(tx, y + MASS.px(26), Math.max(0, bb * anteil), MASS.px(9), MASS.px(4));
+        .fillRoundedRect(tx, y + zeileH * 0.48, Math.max(0, bb * anteil), MASS.px(7), MASS.px(3));
       szene.inhalt.push(balken);
-      szene.text(tx, y + MASS.px(40), (el.zh > 0 ? "LP " + el.zh + "/" + w.zhMax : "erschöpft – ab ins Labor") +
-        "\nErfahrung " + el.ep + "/" + KAMPF.epBisNaechste(el.stufe), 12, "#5a4632");
-      szene.antippbar(x, y, spB, zeileH, function () { szene.zeigeDetailVon(el, el.art, "gruppe"); });
+      szene.text(tx + bb + MASS.px(8), y + zeileH * 0.48 - MASS.px(4),
+        (el.zh > 0 ? "LP " + el.zh + "/" + w.zhMax : "erschöpft") + "  ·  Erfahrung " + el.ep + "/" + KAMPF.epBisNaechste(el.stufe), 12, "#5a4632");
+      szene.antippbar(f.x, y, f.b - 2 * knopfB - MASS.px(16), zeileH, function () { szene.zeigeDetailVon(el, el.art, "gruppe"); });
+      // ▲ ▼ – tauschen mit dem Nachbarn und speichern
+      [["▲", -1], ["▼", 1]].forEach(function (p, n) {
+        var ziel = i + p[1], geht = ziel >= 0 && ziel < stand.gruppe.length;
+        var k = baueKnopf(szene, p[0], function () {
+          if (!geht) return;
+          var t = stand.gruppe[i]; stand.gruppe[i] = stand.gruppe[ziel]; stand.gruppe[ziel] = t;
+          SPIELSTAND.speichern(stand);
+          szene.neuZeichnen();
+        }, { hoehe: Math.min(36, zeileH / MASS.dpr - 10), schrift: 15, mindestbreite: 40 });
+        k.setPosition(rechts - MASS.px(6) - knopfB / 2 - (1 - n) * (knopfB + MASS.px(6)), y + zeileH / 2).setAlpha(geht ? 1 : 0.3);
+        szene.inhalt.push(k);
+      });
     });
-    this.text(f.x, f.y + f.h - MASS.px(20), (stand.lager.length ? "Im Lager warten " + stand.lager.length + " weitere Elementals. " : "") +
-      "Antippen zeigt Werte und Angriffe.", 13, "#5a4632");
+    this.text(f.x, f.y + f.h - fussH + MASS.px(2), (stand.lager.length ? "Im Lager warten " + stand.lager.length + " weitere Elementals. " : "") +
+      "Wer oben steht, beginnt den Kampf. Antippen zeigt Werte und Angriffe.", 12, "#5a4632");
+  }
+
+  // Eine einfache Tabelle: breiten in Pixeln, zeilen[0] ist die Kopfzeile.
+  // Liefert die Höhe.
+  tabelle(x, y, breiten, zeilen, groesse) {
+    var szene = this, g = this.add.graphics(), pad = MASS.px(3), yy = y;
+    this.inhalt.push(g);
+    var gesamt = breiten.reduce(function (a, b) { return a + b; }, 0);
+    zeilen.forEach(function (zeile, z) {
+      var texte = [], h = 0, xx = x;
+      zeile.forEach(function (zelle, s) {
+        var t = szene.text(xx + pad, yy + pad, String(zelle), groesse || 11, z === 0 ? "#2b2b2b" : "#3a2a1c", z === 0 ? "bold" : "");
+        t.setWordWrapWidth(breiten[s] - 2 * pad, true);
+        texte.push(t); h = Math.max(h, t.height + 2 * pad); xx += breiten[s];
+      });
+      if (z === 0) g.fillStyle(0xe3eeee, 1).fillRect(x, yy, gesamt, h);
+      g.lineStyle(MASS.px(1), 0x2f5d62, 0.6).strokeRect(x, yy, gesamt, h);
+      var sx = x;
+      breiten.slice(0, -1).forEach(function (b) { sx += b; g.lineBetween(sx, yy, sx, yy + h); });
+      yy += h;
+    });
+    return yy - y;
   }
 
   zeigeStoffbuch(f) {
@@ -167,48 +210,50 @@ class BuchSzene extends Phaser.Scene {
     var w = KAMPF.werte(probe), s = a.stoff;
     var komma = function (z) { return String(Math.round(z * 100) / 100).replace(".", ","); };
 
-    // Links: Bild, Name, Beschreibung
-    var linksB = Math.min(f.b * 0.36, MASS.px(260));
-    var bildH = Math.min(f.h * 0.42, MASS.px(120));
-    var bild = this.bild(f.x, f.y, art, bildH, false);
-    this.text(f.x + bild.displayWidth + MASS.px(8), f.y, (el && el.spitzname) || a.name, 17, null, "bold");
-    this.text(f.x + bild.displayWidth + MASS.px(8), f.y + MASS.px(24), a.formel + " · " + a.klasse +
-      "\n" + (el ? "Stufe " + el.stufe + (el.starter ? " · Starter" : "") : "Werte auf Stufe 5"), 13, "#5a4632");
-    this.text(f.x, f.y + bildH + MASS.px(8), a.beschreibung || "", 13).setWordWrapWidth(linksB, true);
+    // Linkes Drittel: das Bild so groß wie möglich, darunter Name, Klasse
+    // und Beschreibung. Erst die Texte setzen, dann bekommt das Bild den Rest.
+    var linksB = f.b / 3 - MASS.px(8);
+    var name = this.text(f.x, 0, (el && el.spitzname) || a.name, 16, null, "bold");
+    var info = this.text(f.x, 0, a.formel + " · " + a.klasse + " · " + (el ? "Stufe " + el.stufe + (el.starter ? " · Starter" : "") : "Werte auf Stufe 5"), 11, "#5a4632");
+    info.setWordWrapWidth(linksB, true);
+    var beschr = this.text(f.x, 0, a.beschreibung || "", 11, "#3a2a1c");
+    beschr.setWordWrapWidth(linksB, true);
+    var textH = name.height + info.height + beschr.height + MASS.px(8);
+    var o = this.add.image(f.x, f.y, "el-" + art).setOrigin(0, 0);
+    o.setScale(Math.min(linksB / o.width, (f.h - textH) / o.height));
+    this.inhalt.push(o);
+    var ty = f.y + o.displayHeight + MASS.px(4);
+    name.setY(ty); info.setY(ty + name.height); beschr.setY(ty + name.height + info.height + MASS.px(4));
 
-    // Rechts: Werte, Empfindlichkeiten, Angriffe
+    // Rechte zwei Drittel: zwei Tabellen nebeneinander, darunter die Angriffe
     var x = f.x + linksB + MASS.px(16), b = f.b - linksB - MASS.px(16), y = f.y;
-    var bonus = probe.starter ? "  (+" + Math.round(KAMPF.STARTER_BONUS * 100) + " % als Starter)" : "";
-    var stufeLP = s.schmelz >= 1000 ? "hoch" : s.schmelz >= 500 ? "mittel" : "niedrig";
-    var werteText =
-      "LP " + (el ? el.zh + "/" : "") + w.zhMax + bonus + " – Schmelzpunkt " + s.schmelz + " °C (" + stufeLP + ")" +
-      "\nAbwehr " + w.abwehr + " – Härte " + komma(s.haerte) + " · Tempo " + komma(w.tempo) + " – Dichte " + komma(s.dichte) + " g/cm³ (leicht ist schnell)";
-    var t = this.text(x, y, werteText, 12, "#3a2a1c"); t.setWordWrapWidth(b, true); y += t.height + MASS.px(4);
 
+    var bonus = probe.starter ? " (+" + Math.round(KAMPF.STARTER_BONUS * 100) + " %)" : "";
+    var bWerte = b * 0.6 - MASS.px(6), bTrifft = b - bWerte - MASS.px(6);
+    var h1 = this.tabelle(x, y, [bWerte * 0.24, bWerte * 0.26, bWerte * 0.5], [
+      ["Wert", "Zahl", "kommt von"],
+      ["LP", (el ? el.zh + "/" : "") + w.zhMax + bonus, "Schmelzpunkt " + s.schmelz + " °C"],
+      ["Abwehr", w.abwehr, "Härte " + komma(s.haerte)],
+      ["Tempo", komma(w.tempo), "Dichte " + komma(s.dichte) + " g/cm³"]
+    ]);
     var sulf = REAKTIONEN.sulfidbildung, sf = (sulf.gegen && sulf.gegen[art]) || (a.klasse === "Metall" ? sulf.gegenMetall : sulf.gegenNichtmetall);
     var spr = KAMPF.wuchtFaktor(art, 20);
-    var empf = [
-      "Feuer ×" + komma(KAMPF.hitzeFaktor(art)),
-      "Schlag ×" + komma(spr) + (spr > 1 ? " (spröde" + (a.warmVerformbar ? ", warm formbar" : "") + ")" : " (verformbar)"),
-      "Sulfidbildung ×" + komma(sf),
-      "Wärmeleitung ×" + komma(KAMPF.leitFaktor(art))
-    ].join(" · ");
-    t = this.text(x, y, "Trifft es: " + empf, 12, "#3a2a1c"); t.setWordWrapWidth(b, true); y += t.height + MASS.px(6);
+    var h2 = this.tabelle(x + bWerte + MASS.px(6), y, [bTrifft * 0.55, bTrifft * 0.45], [
+      ["So stark trifft es", "×"],
+      ["Feuer", "×" + komma(KAMPF.hitzeFaktor(art))],
+      ["Schlag", "×" + komma(spr) + (spr > 1 ? " spröde" : "")],
+      ["Sulfidbildung", "×" + komma(sf)],
+      ["Wärme", "×" + komma(KAMPF.leitFaktor(art))]
+    ]);
+    y += Math.max(h1, h2) + MASS.px(6);
 
     var ARTNAME = { wucht: "Schlag", hitze: "Feuer", reaktion: "Stoffreaktion", leitung: "Wärme", schutz: "Schutz" };
+    var zeilen = [["Angriff", "Art", "Kraft", "E", "Wirkung"]];
     a.reaktionen.forEach(function (id) {
-      var r = REAKTIONEN[id], teile = [ARTNAME[r.art]];
-      if (r.art === "leitung") teile.push("Kraft: Wärme des Feldes");
-      else if (r.kraft) teile.push("Kraft " + r.kraft);
-      teile.push(r.ae + " Energie");
-      if (r.o2) teile.push("braucht Sauerstoff");
-      var stark = Object.keys(r.gegen || {}).filter(function (z) { return r.gegen[z] >= 1.5; }).map(function (z) { return ARTEN[z].name; });
-      if (r.art === "reaktion" && r.gegenMetall > 1) stark.unshift("Metalle");
-      if (stark.length) teile.push("stark gegen " + stark.join(", "));
-      var kopf = szene.text(x, y, r.name + " – " + teile.join(" · "), 12, null, "bold");
-      kopf.setWordWrapWidth(b, true); y += kopf.height;
-      var tx = szene.text(x, y, r.text, 11, "#5a4632"); tx.setWordWrapWidth(b, true); y += tx.height + MASS.px(4);
+      var r = REAKTIONEN[id];
+      zeilen.push([r.name, ARTNAME[r.art], r.art === "leitung" ? "Wärme ÷ 4" : r.art === "schutz" ? "–" : r.kraft, r.ae, r.text]);
     });
+    this.tabelle(x, y, [b * 0.2, b * 0.15, b * 0.1, b * 0.05, b * 0.5], zeilen);
   }
 
   zeigeGepaeck(f) {
