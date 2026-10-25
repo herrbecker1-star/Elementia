@@ -86,6 +86,11 @@ class LadeSzene extends Phaser.Scene {
       if (suche.get("kampf") || suche.get("probegruppe")) {
         // Probegruppe, bis die Starterwahl (M3) steht.
         stand.gruppe = [KAMPF.neuesElemental("eisen", 5), KAMPF.neuesElemental("magnesium", 5)];
+        // &voll=1: Gruppe voll und zwei im Lager – zum Prüfen des Lagers
+        if (suche.get("voll") === "1") {
+          stand.gruppe.push(KAMPF.neuesElemental("zink", 3), KAMPF.neuesElemental("kohlenstoff", 4));
+          stand.lager = [KAMPF.neuesElemental("kupfer", 4), KAMPF.neuesElemental("schwefel", 5)];
+        }
         stand.vorrat = { reagenzglas: 3, tiegelzange: 2, spatel: 2 };
         stand.werkzeuge = ["lupe", "magnet", "stromkreis", "hammer", "gasbrenner"];
         stand.bekannt = ["eisen", "magnesium"];

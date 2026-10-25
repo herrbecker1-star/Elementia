@@ -22,7 +22,8 @@ class BuchSzene extends Phaser.Scene {
     this.reiterKnoepfe = [
       baueKnopf(this, "Gruppe", function () { szene.zeige("gruppe"); }, { hoehe: 36, schrift: 14, mindestbreite: 110 }),
       baueKnopf(this, "Stoffbuch", function () { szene.zeige("stoffbuch"); }, { hoehe: 36, schrift: 14, mindestbreite: 110 }),
-      baueKnopf(this, "Gepäck", function () { szene.zeige("gepaeck"); }, { hoehe: 36, schrift: 14, mindestbreite: 110 })
+      baueKnopf(this, "Gepäck", function () { szene.zeige("gepaeck"); }, { hoehe: 36, schrift: 14, mindestbreite: 110 }),
+      baueKnopf(this, "Lager", function () { szene.zeige("lager"); }, { hoehe: 36, schrift: 14, mindestbreite: 90 })
     ];
     this.schliessen = baueKnopf(this, "Schließen", function () {
       szene.scene.stop();
@@ -71,7 +72,7 @@ class BuchSzene extends Phaser.Scene {
     this.reiterKnoepfe.forEach(function (k, i) {
       k.setVisible(!imDetail);
       k.setPosition(x + k.width / 2, rand * 2 + k.height / 2);
-      k.setAlpha(["gruppe", "stoffbuch", "gepaeck"][i] === szene.reiter ? 1 : 0.6);
+      k.setAlpha(["gruppe", "stoffbuch", "gepaeck", "lager"][i] === szene.reiter ? 1 : 0.6);
       x += k.width + MASS.px(8);
     });
     this.zurueckKnopf.setVisible(imDetail).setPosition(rand * 2 + this.zurueckKnopf.width / 2, rand * 2 + this.zurueckKnopf.height / 2);
@@ -81,6 +82,7 @@ class BuchSzene extends Phaser.Scene {
     var flaeche = { x: rand * 2, y: oben, b: b - rand * 4, h: h - oben - rand * 2 };
     if (imDetail) this.zeigeDetail(flaeche);
     else if (this.reiter === "gruppe") this.zeigeGruppe(flaeche);
+    else if (this.reiter === "lager") this.zeigeLager(flaeche);
     else if (this.reiter === "stoffbuch") this.zeigeStoffbuch(flaeche);
     else this.zeigeGepaeck(flaeche);
   }
@@ -145,6 +147,42 @@ class BuchSzene extends Phaser.Scene {
     });
     this.text(f.x, f.y + f.h - fussH + MASS.px(2), (stand.lager.length ? "Im Lager warten " + stand.lager.length + " weitere Elementals. " : "") +
       "Wer oben steht, beginnt den Kampf. Antippen zeigt Werte und Angriffe.", 12, "#5a4632");
+  }
+
+  // Das Lager: wer nicht in die Gruppe passt (höchstens vier). „In die
+  // Gruppe“ holt ein Elemental nach vorn; ist die Gruppe voll, tauscht es
+  // mit dem untersten der Gruppe (SPIELSTAND.ausLager).
+  zeigeLager(f) {
+    var szene = this, stand = this.stand;
+    if (!stand.lager.length) {
+      this.text(f.x, f.y, "Das Lager ist leer.", 16);
+      this.text(f.x, f.y + MASS.px(26), "Fängst du mehr Elementals, als in deine Gruppe passen (" + SPIELSTAND.GRUPPE_MAX + "), warten sie hier.", 13, "#5a4632")
+        .setWordWrapWidth(f.b, true);
+      return;
+    }
+    var spalten = 2, luecke = MASS.px(6), zeileH = MASS.px(56);
+    var spB = (f.b - luecke) / spalten, knopfB = MASS.px(120);
+    stand.lager.forEach(function (el, i) {
+      var x = f.x + (i % spalten) * (spB + luecke), y = f.y + Math.floor(i / spalten) * (zeileH + luecke);
+      if (y + zeileH > f.y + f.h - MASS.px(20)) return;
+      var w = KAMPF.werte(el);
+      var grund = szene.add.graphics();
+      grund.fillStyle(0xffffff, 0.35).fillRoundedRect(x, y, spB, zeileH, MASS.px(6)).lineStyle(MASS.px(1.5), 0xc9a66b, 1).strokeRoundedRect(x, y, spB, zeileH, MASS.px(6));
+      szene.inhalt.push(grund);
+      var bild = szene.bild(x + MASS.px(4), y + MASS.px(3), el.art, zeileH - MASS.px(6), false);
+      var tx = x + MASS.px(10) + bild.displayWidth;
+      szene.text(tx, y + MASS.px(4), (el.spitzname || ARTEN[el.art].name) + " · Stufe " + el.stufe, 14, null, "bold");
+      szene.text(tx, y + MASS.px(24), "LP " + el.zh + "/" + w.zhMax, 12, "#5a4632");
+      szene.antippbar(x, y, spB - knopfB - MASS.px(10), zeileH, function () { szene.zeigeDetailVon(el, el.art, "lager"); });
+      var k = baueKnopf(szene, "in die Gruppe", function () {
+        SPIELSTAND.ausLager(stand, i);
+        SPIELSTAND.speichern(stand);
+        szene.neuZeichnen();
+      }, { hoehe: 32, schrift: 13, mindestbreite: 110 });
+      k.setPosition(x + spB - MASS.px(6) - k.width / 2, y + zeileH / 2);
+      szene.inhalt.push(k);
+    });
+    this.text(f.x, f.y + f.h - MASS.px(16), "Ist die Gruppe voll, tauscht das Elemental mit dem untersten der Gruppe.", 12, "#5a4632");
   }
 
   // Eine einfache Tabelle: breiten in Pixeln, zeilen[0] ist die Kopfzeile.
@@ -249,7 +287,7 @@ class BuchSzene extends Phaser.Scene {
 
     var ARTNAME = { wucht: "Schlag", hitze: "Feuer", reaktion: "Stoffreaktion", leitung: "Wärme", schutz: "Schutz" };
     var zeilen = [["Angriff", "Art", "Kraft", "E", "Wirkung"]];
-    a.reaktionen.forEach(function (id) {
+    (el ? KAMPF.angriffe(el) : a.reaktionen).forEach(function (id) {
       var r = REAKTIONEN[id];
       zeilen.push([r.name, ARTNAME[r.art], r.art === "leitung" ? "Wärme ÷ 4" : r.art === "schutz" ? "–" : r.kraft, r.ae, r.text]);
     });

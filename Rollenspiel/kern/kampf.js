@@ -103,10 +103,62 @@ var KAMPF = (function () {
   }
 
   function neuesElemental(artId, stufe, starter) {
-    var el = { art: artId, stufe: stufe, ep: 0 };
+    var el = { art: artId, stufe: stufe, ep: 0, angriffe: ARTEN[artId].reaktionen.slice() };
     if (starter) el.starter = true;
     el.zh = werte(el).zhMax;
     return el;
+  }
+
+  // ----------------------------------------------------------
+  //  Angriffe lernen (seit 25.10.2026)
+  //  Jedes Elemental hat seine eigene Liste (el.angriffe), anfangs die
+  //  Angriffe seiner Art. Bei Stufe 6, 8 und 10 darf es einen neuen
+  //  lernen: aus den allgemeinen Angriffen, die ihm laut Katalog
+  //  zustehen (kannAngriff, daten\elementals.js). Höchstens 4.
+  // ----------------------------------------------------------
+  var LERNSTUFEN = [6, 8, 10], ANGRIFFE_MAX = 4;
+
+  function angriffe(el) {
+    return el.angriffe || ARTEN[el.art].reaktionen;
+  }
+
+  // Zwei Vorschläge, fest bestimmt (gleiches Elemental, gleiche Vorschläge):
+  // zuerst Angriffe einer Art, die es noch gar nicht kann (Schlag, Feuer,
+  // Schutz …), dann die stärkeren.
+  // Lernbar ist ein Angriff mit lernbar: true (daten\elementals.js), der
+  // dem Stoff zusteht und nicht stärker ist als der stärkste Angriff
+  // seiner eigenen Art. Gemessen 25.10.2026 auf Stufe 10 (Spanne der
+  // Siegquoten): ohne Lernen 45 · alles Erlaubte lernbar 61–91 (Eisen mit
+  // Wuchtstoß 99 %) · mit Kraftgrenze 64 · nur Grundangriffe 44–47.
+  // Darum sind vorerst nur Rempler, Schlag und Standfest lernbar.
+  function kannLernen(el, id) {
+    var r = REAKTIONEN[id];
+    if (!r.lernbar || r.fuer.nur || !kannAngriff(el.art, id)) return false;
+    var eigeneMax = Math.max.apply(null, ARTEN[el.art].reaktionen.map(function (x) { return REAKTIONEN[x].kraft || 0; }));
+    return (r.kraft || 0) <= eigeneMax;
+  }
+
+  function lernVorschlaege(el) {
+    var kann = angriffe(el), arten = kann.map(function (id) { return REAKTIONEN[id].art; });
+    return Object.keys(REAKTIONEN).filter(function (id) {
+      return kann.indexOf(id) < 0 && kannLernen(el, id);
+    }).sort(function (a, b) {
+      var neuA = arten.indexOf(REAKTIONEN[a].art) < 0 ? 0 : 1, neuB = arten.indexOf(REAKTIONEN[b].art) < 0 ? 0 : 1;
+      return neuA - neuB || (REAKTIONEN[b].kraft || 0) - (REAKTIONEN[a].kraft || 0) || (a < b ? -1 : 1);
+    }).slice(0, 2);
+  }
+
+  // Lernt id; ist die Liste voll, ersetzt es den Angriff ersetze.
+  function lernen(el, id, ersetze) {
+    var liste = angriffe(el).slice();
+    if (liste.indexOf(id) >= 0 || !kannLernen(el, id)) return false;
+    if (liste.length >= ANGRIFFE_MAX) {
+      var nr = liste.indexOf(ersetze);
+      if (nr < 0) return false;
+      liste[nr] = id;
+    } else liste.push(id);
+    el.angriffe = liste;
+    return true;
   }
 
   function epBisNaechste(stufe) { return 10 + 10 * stufe; }
@@ -121,6 +173,8 @@ var KAMPF = (function () {
       el.stufe++;
       el.zh += werte(el).zhMax - alt;
       neu.push(el.stufe);
+      // Merken, dass nach dem Kampf ein Angriff gelernt werden darf
+      if (LERNSTUFEN.indexOf(el.stufe) >= 0) el.lernen = (el.lernen || 0) + 1;
     }
     return neu;
   }
@@ -288,10 +342,10 @@ var KAMPF = (function () {
     var ander = gegenueber(seite);
     var zs = k.seiten[ander].status;
     var drohung = 0;
-    ARTEN[aktiv(k, ander).art].reaktionen.forEach(function (id) {
+    angriffe(aktiv(k, ander)).forEach(function (id) {
       if (REAKTIONEN[id].art !== "schutz" && !hindernis(k, ander, id)) drohung = Math.max(drohung, schaetzeSchaden(k, ander, id));
     });
-    ARTEN[el.art].reaktionen.forEach(function (id) {
+    angriffe(el).forEach(function (id) {
       if (hindernis(k, seite, id)) return;
       var r = REAKTIONEN[id], w;
       if (r.art === "schutz") {
@@ -530,6 +584,13 @@ var KAMPF = (function () {
     grundwerte: grundwerte,
     werte: werte,
     rundeBeginnen: rundeBeginnen,
+    angriffe: angriffe,
+    lernVorschlaege: lernVorschlaege,
+    kannLernen: kannLernen,
+    lernen: lernen,
+    LERNSTUFEN: LERNSTUFEN,
+    ANGRIFFE_MAX: ANGRIFFE_MAX,
+    befundText: function (eig, wert) { return BEFUND_TEXT[eig](wert); },
     STARTER_BONUS: STARTER_BONUS,
     GRUPPE_LERNT: GRUPPE_LERNT,
     hitzeFaktor: hitzeFaktor,

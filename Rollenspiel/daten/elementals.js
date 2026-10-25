@@ -104,15 +104,18 @@ var ARTEN = {
 //            { leitet: true }           gute Leiter für Strom und Wärme
 //            { brennbar: true }         brennbare Stoffe (Feld brennbar an der Art)
 //            { nur: "schwefel" }        spezieller Angriff einer einzigen Art
+//  lernbar true: darf bei Stufe 6/8/10 gelernt werden (KAMPF.kannLernen).
+//          Vorerst nur die Grundangriffe – die chemischen erst, wenn das
+//          Balancing auf hohen Stufen stimmt (Messung in kern\kampf.js).
 //          Angriffe sind allgemein: Name und Text beschreiben, was passiert,
 //          nicht, wer es tut. Die internen Schlüssel (hammerschlag …) sind
 //          älter als die Namen und bleiben wegen Spielständen und Tests.
 // ------------------------------------------------------------
 var REAKTIONEN = {
 
-  hammerschlag: { name: "Schlag", art: "wucht", kraft: 10, ae: 1, fuer: {},
+  hammerschlag: { name: "Schlag", art: "wucht", kraft: 10, ae: 1, fuer: {}, lernbar: true,
     text: "Harter Schlag mit voller Wucht." },
-  leichtschlag: { name: "Rempler", art: "wucht", kraft: 7, ae: 0, fuer: {},
+  leichtschlag: { name: "Rempler", art: "wucht", kraft: 7, ae: 0, fuer: {}, lernbar: true,
     text: "Schneller, leichter Stoß." },
   // 12 → 13 am 25.10.2026 (Kupfer war mit 37 % am schwächsten). 14 wäre
   // zu viel: Kupfer gewönne dann 92 % gegen Kohlenstoff.
@@ -169,7 +172,7 @@ var REAKTIONEN = {
   russwolke: { name: "Rußwolke", art: "schutz", kraft: 0, ae: 2, fuer: { nur: "kohlenstoff" },
     wirkung: { tarnung: 1 },
     text: "Feiner Ruß verdeckt die Sicht. Der nächste Treffer wirkt nur halb." },
-  standfest: { name: "Standfest", art: "schutz", kraft: 0, ae: 1, fuer: {},
+  standfest: { name: "Standfest", art: "schutz", kraft: 0, ae: 1, fuer: {}, lernbar: true,
     wirkung: { schutz: 0.5 },
     text: "Abwehrhaltung: Der nächste Treffer wirkt nur halb." },
   anlaufen: { name: "Oxidschicht", art: "schutz", kraft: 0, ae: 2, o2: 3, braucht: { waerme: 30 }, fuer: { klasse: "Metall" },

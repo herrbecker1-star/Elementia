@@ -42,6 +42,9 @@
 //    { verschwinden: "reiter1" }
 //    { zeichen: { wer: "lumi", art: "!" } }    "!", "?", "…" oder "♥" über dem Kopf
 //    { warte: 600 }                            Millisekunden
+//    { minispiel: "werkbank", sprecher: "Mara", proben: [ { stoff, flag, lob } ] }
+//                                 Stoffe mit Werkzeugen prüfen und bestimmen
+//                                 (kern\werkbank.js); danach gelten die Flags
 //    { verfolgen: { wer: "wagen", nach: [41, 13] } }
 //                                 Steuerung frei, wer fährt davon – immer
 //                                 etwas schneller als die Spielfigur
@@ -115,6 +118,14 @@ var EREIGNISSE = (function () {
           return ausfuehren(s.film, flags, anzeige);
         }).then(function () { return rufe(anzeige, "filmEnde", s.kurz); }).then(weiter);
       }
+      // Minispiel (Werkbank): Die Anzeige spielt es und meldet „fertig“.
+      // Jede Probe trägt ein Flag; es gilt danach als gesetzt – die
+      // Werkbank löst eine Probe spätestens beim zweiten Fehlgriff auf.
+      if (s.minispiel !== undefined) {
+        return rufe(anzeige, "minispiel", s).then(function () {
+          (s.proben || []).forEach(function (p) { if (p.flag) flags[p.flag] = true; });
+        }).then(weiter);
+      }
       var bewegung = ["gehen", "erscheinen", "verschwinden", "zeichen", "warte", "verfolgen"].filter(function (n) { return s[n] !== undefined; })[0];
       if (bewegung) return rufe(anzeige, bewegung, s[bewegung]).then(weiter);
       if (s.wennElemental !== undefined) {
@@ -174,6 +185,10 @@ var EREIGNISSE = (function () {
         } else if (s.erscheinen !== undefined) {
           if (!s.erscheinen.name || !istKachel(s.erscheinen.bei)) fehler.push(hier + ": erscheinen braucht name und bei: [x, y]");
           if (typeof s.erscheinen.figur !== "number" && !s.erscheinen.bild) fehler.push(hier + ": erscheinen braucht figur oder bild");
+        } else if (s.minispiel !== undefined) {
+          if (s.minispiel !== "werkbank") fehler.push(hier + ": unbekanntes Minispiel " + s.minispiel);
+          if (!Array.isArray(s.proben) || !s.proben.length) fehler.push(hier + ": Werkbank ohne Proben");
+          else s.proben.forEach(function (p, i) { if (typeof ARTEN !== "undefined" && !ARTEN[p.stoff]) fehler.push(hier + ".proben[" + i + "]: unbekannter Stoff " + p.stoff); });
         } else if (s.zeichen !== undefined) {
           if (["!", "?", "…", "♥"].indexOf(s.zeichen.art) < 0) fehler.push(hier + ": unbekanntes Zeichen " + s.zeichen.art);
         } else if (s.verschwinden === undefined && s.warte === undefined &&

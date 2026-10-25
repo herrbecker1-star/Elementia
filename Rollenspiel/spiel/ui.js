@@ -12,6 +12,19 @@
 
 var TIPPGESCHWINDIGKEIT = 45;   // Zeichen je Sekunde in der Dialogbox
 
+// Gemalte Einblendungen, die es schon als Bild gibt (Name → Datei).
+// Fehlt ein Name hier, zeigt das Spiel einen Rahmen mit dem Bildnamen.
+// Neue Bilder auch in sw.js (DATEIEN) eintragen.
+var SZENENBILDER = {
+  starterwahl_eisen: "grafik/szenen/starterwahl_eisen.jpg",
+  starterwahl_magnesium: "grafik/szenen/starterwahl_magnesium.jpg",
+  reiter_ankunft: "grafik/szenen/reiter_ankunft.jpg",
+  leerer_dorfplatz: "grafik/szenen/leerer_dorfplatz.jpg",
+  grossmutters_buch: "grafik/szenen/grossmutters_buch.jpg",
+  aufbruch: "grafik/szenen/aufbruch.jpg",
+  lumis_kolben: "grafik/szenen/lumis_kolben.jpg"
+};
+
 class UiSzene extends Phaser.Scene {
   constructor() { super("ui"); }
 
@@ -299,6 +312,14 @@ class UiSzene extends Phaser.Scene {
         return g.parallel ? null : b.fertig;
       },
       verfolgen: function (v) { return szene.verfolgen(v); },
+      // Minispiel Werkbank (spiel\werkbank.js): eigene Szene über allem
+      minispiel: function (cfg) {
+        szene.dialog.setVisible(false);
+        return new Promise(function (fertig) {
+          szene.scene.launch("werkbank", { cfg: cfg, beiEnde: fertig });
+          szene.scene.bringToTop("werkbank");
+        });
+      },
       karte: function (k) { szene.oberwelt.wechsleKarte(k.ziel, k.punkt); },
       ablauf: function (name) { return DIALOGE[name] || []; },
       hatElemental: function (art) { return szene.oberwelt.stand.gruppe.some(function (el) { return el.art === art; }); }
@@ -437,7 +458,25 @@ class UiSzene extends Phaser.Scene {
 
   // Gemalte Einblendung. Solange das Bild fehlt, ein Platzhalter mit
   // Bildname – so sieht man beim Spielen, wo später ein Bild hinkommt.
+  // Szenenbilder werden erst geladen, wenn sie gebraucht werden – der
+  // Spielstart soll im Schul-WLAN nicht auf sieben große Bilder warten.
+  // Kommt ein Bild nicht binnen 2,5 s, erscheint der Platzhalter.
   einblenden(name, text) {
+    var szene = this, schluessel = "szene-" + name, pfad = SZENENBILDER[name];
+    if (!pfad || this.textures.exists(schluessel)) return this.einblendenZeigen(name, text);
+    this.dialog.setVisible(false);
+    return new Promise(function (fertig) {
+      var erledigt = false;
+      function weiter() { if (erledigt) return; erledigt = true; fertig(); }
+      szene.load.image(schluessel, pfad);
+      szene.load.once("complete", weiter);
+      szene.load.start();
+      szene.time.delayedCall(2500, weiter);
+      if (szene.imFilm) szene.filmOffen.push(weiter);   // Überspringen wartet nicht aufs Laden
+    }).then(function () { return szene.schnell() ? null : szene.einblendenZeigen(name, text); });
+  }
+
+  einblendenZeigen(name, text) {
     var szene = this, b = this.scale.width, h = this.scale.height;
     this.dialog.setVisible(false);
     var ebene = this.add.container(0, 0).setDepth(30).setAlpha(0);

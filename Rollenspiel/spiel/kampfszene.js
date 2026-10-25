@@ -62,6 +62,9 @@ class KampfSzene extends Phaser.Scene {
     this.infoSpieler = this.baueInfo();
     this.feldAnzeige = this.add.graphics();
     this.feldText = this.add.text(0, 0, "", { fontFamily: SCHRIFT.familie, fontSize: MASS.px(12) + "px", color: "#f4ead5", lineSpacing: MASS.px(4) });
+    // Antippen der drei Balken erklärt, was das Feld gerade bewirkt.
+    this.feldZone = this.add.zone(0, 0, 10, 10).setOrigin(0, 0).setInteractive();
+    this.feldZone.on("pointerdown", function () { szene.feldErklaeren(); });
 
     this.leiste = this.add.graphics();
     this.text = this.add.text(0, 0, "", {
@@ -98,6 +101,11 @@ class KampfSzene extends Phaser.Scene {
     // von Abläufen, die sonst nur ein Finger auslöst.
     var zuege = new URLSearchParams(location.search).get("zuege");
     if (zuege) this.spieleZuege(zuege.split(","));
+    // Prüfschalter &lernfenster=1: das Lernfenster sofort zeigen (für Fotos)
+    if (/[?&]lernfenster=1\b/.test(location.search)) {
+      var probeEl = KAMPF.aktiv(this.k, "spieler");
+      this.bereit.then(function () { szene.lernDialog(probeEl); });
+    }
   }
 
   // Beginn jeder Runde: Ist der Gegner schneller, handelt er zuerst –
@@ -119,6 +127,7 @@ class KampfSzene extends Phaser.Scene {
     this.zeigeHauptmenue();
     // Prüfschalter &menue=angriff: das Angriffsmenü gleich offen (für Fotos)
     if (/[?&]menue=angriff\b/.test(location.search)) this.menueReaktion();
+    if (/[?&]menue=feld\b/.test(location.search)) this.feldErklaeren();
   }
 
   async spieleZuege(liste) {
@@ -233,6 +242,17 @@ class KampfSzene extends Phaser.Scene {
     this.feldText.setText(werte.map(function (w) { return w[0]; }).join("\n"));
   }
 
+  // Kurzfassung des Blatts „Energie und Kampffeld“ mit den Werten von jetzt
+  feldErklaeren() {
+    if (this.beschaeftigt) return;
+    var f = this.k.feld, plus = Math.floor(f.waerme / 30);
+    this.zeigeText(
+      "Sauerstoff " + Math.round(f.sauerstoff) + ": Feuer braucht und verbraucht ihn." +
+      " Wärme " + Math.round(f.waerme) + ": " + (plus ? "+" + plus + " E je Runde für beide" : "noch kein Energie-Bonus (ab 30)") +
+      (f.waerme >= 50 ? ", Zink ist formbar" : "") + "." +
+      " Feuchte " + Math.round(f.feuchte) + ": " + (f.feuchte > 70 ? "Feuer trifft nur mit 70 %." : "Feuer brennt normal (dämpft erst über 70)."));
+  }
+
   aktualisieren() {
     this.zeichneInfo(this.infoGegner, "gegner");
     this.zeichneInfo(this.infoSpieler, "spieler");
@@ -288,7 +308,7 @@ class KampfSzene extends Phaser.Scene {
     // steht statt der Grundkraft der geschätzte Schaden gegen genau ihn –
     // bei einem unerkannten Gegner verriete die Schätzung den Stoff.
     var kennt = !k.wild || k.erkannt;
-    var eintraege = ARTEN[el.art].reaktionen.map(function (id) {
+    var eintraege = KAMPF.angriffe(el).map(function (id) {
       var r = REAKTIONEN[id], grund = KAMPF.hindernis(k, "spieler", id), staerke;
       if (r.art === "schutz") staerke = "Schutz";
       else if (kennt) staerke = "≈ " + KAMPF.schaetzeSchaden(k, "spieler", id, true) + " Schaden";
@@ -423,6 +443,47 @@ class KampfSzene extends Phaser.Scene {
     });
   }
 
+  // Eine Auswahl mit Knöpfen; liefert die Nummer der gewählten Option.
+  waehle(text, optionen) {
+    var szene = this;
+    this.beschaeftigt = false;
+    this.zeigeText(text);
+    return new Promise(function (fertig) {
+      szene.zeigeKnoepfe(optionen.map(function (t, i) {
+        return { text: t, beiKlick: function () { szene.leereKnoepfe(); szene.beschaeftigt = true; fertig(i); } };
+      }));
+    });
+  }
+
+  angriffKurz(id) {
+    var r = REAKTIONEN[id], art = { wucht: "Schlag", hitze: "Feuer", reaktion: "Stoffreaktion", leitung: "Wärme", schutz: "Schutz" }[r.art];
+    return r.name + "\n" + art + (r.kraft ? " " + r.kraft : "") + " · " + r.ae + " E";
+  }
+
+  // Bei Stufe 6, 8 und 10: zwei Vorschläge (KAMPF.lernVorschlaege). Bei vier
+  // Angriffen wählt man, welcher ersetzt wird – oder lernt keinen.
+  async lernDialog(el) {
+    var name = el.spitzname || ARTEN[el.art].name;
+    var vorschlaege = KAMPF.lernVorschlaege(el);
+    if (!vorschlaege.length) return;
+    var szene = this;
+    var w = await this.waehle(name + " ist jetzt Stufe " + el.stufe + " und kann einen neuen Angriff lernen. Welchen?",
+      vorschlaege.map(function (id) { return szene.angriffKurz(id); }).concat(["keinen"]));
+    if (w >= vorschlaege.length) return;
+    var neu = vorschlaege[w], liste = KAMPF.angriffe(el);
+    if (liste.length < KAMPF.ANGRIFFE_MAX) {
+      KAMPF.lernen(el, neu);
+      await this.wartenAufTipp(name + " kann jetzt " + REAKTIONEN[neu].name + ".");
+      return;
+    }
+    var w2 = await this.waehle(name + " kann höchstens " + KAMPF.ANGRIFFE_MAX + " Angriffe. Welchen soll " + REAKTIONEN[neu].name + " ersetzen?",
+      liste.map(function (id) { return szene.angriffKurz(id); }).concat(["doch nicht"]));
+    if (w2 >= liste.length) return;
+    var alt = liste[w2];
+    KAMPF.lernen(el, neu, alt);
+    await this.wartenAufTipp(name + " vergisst " + REAKTIONEN[alt].name + " und kann jetzt " + REAKTIONEN[neu].name + ".");
+  }
+
   async beenden() {
     var k = this.k, stand = this.stand, ende = k.ende;
     if (ende === "gefangen") {
@@ -439,6 +500,11 @@ class KampfSzene extends Phaser.Scene {
       await this.wartenAufTipp(imDorf
         ? "Du wachst in Mutters Werkstatt auf. Es riecht nach Salbe. Deine Elementals haben sich erholt – und du bist klüger als vorhin."
         : "Du wachst im Labor der Gilde auf. Jemand hat deine Elementals versorgt. „Beim nächsten Mal erst denken, dann zünden“, brummt eine Stimme.");
+    }
+    // Angriffe lernen: Wer gerade Stufe 6, 8 oder 10 erreicht hat, darf wählen.
+    for (var n = 0; n < stand.gruppe.length; n++) {
+      var el = stand.gruppe[n];
+      while (el.lernen > 0) { el.lernen--; await this.lernDialog(el); }
     }
     var beiEnde = this.daten.beiEnde;
     this.scene.stop();
@@ -477,6 +543,8 @@ class KampfSzene extends Phaser.Scene {
     var feldX = rand + this.infoGegner.breite + MASS.px(10);
     this.feldAnzeige.setPosition(feldX, rand);
     this.feldText.setPosition(feldX + MASS.px(8), rand + MASS.px(6));
+    this.feldZone.setPosition(feldX, rand).setSize(MASS.px(186), MASS.px(62));
+    if (this.feldZone.input) this.feldZone.input.hitArea.setSize(MASS.px(186), MASS.px(62));
     this.zeichneFeld();
 
     // Untere Leiste: Text links, Knöpfe rechts

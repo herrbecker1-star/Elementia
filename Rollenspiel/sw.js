@@ -12,7 +12,7 @@
 // ============================================================
 
 // Bei JEDER Veröffentlichung erhöhen – sonst holt kein Handy die neue Fassung.
-var FASSUNG = 7;
+var FASSUNG = 8;
 var SPEICHER = "elementia-abenteuer-" + FASSUNG;
 
 var DATEIEN = [
@@ -24,10 +24,12 @@ var DATEIEN = [
   "kern/spielstand.js",
   "kern/kampf.js",
   "kern/fangen.js",
+  "kern/werkbank.js",
   "kern/welt.js",
   "kern/auftreten.js",
   "daten/auftreten.js",
   "spiel/buch.js",
+  "spiel/werkbank.js",
   "daten/elementals.js",
   "spiel/kampfszene.js",
   "grafik/elementals/eisen.png",
@@ -39,6 +41,13 @@ var DATEIEN = [
   "grafik/kampf/dorf.jpg",
   "grafik/kampf/wald.jpg",
   "grafik/kampf/steppe.jpg",
+  "grafik/szenen/starterwahl_eisen.jpg",
+  "grafik/szenen/starterwahl_magnesium.jpg",
+  "grafik/szenen/reiter_ankunft.jpg",
+  "grafik/szenen/leerer_dorfplatz.jpg",
+  "grafik/szenen/grossmutters_buch.jpg",
+  "grafik/szenen/aufbruch.jpg",
+  "grafik/szenen/lumis_kolben.jpg",
   "kern/ereignisse.js",
   "daten/dialoge.js",
   "spiel/bausteine.js",

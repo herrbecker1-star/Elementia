@@ -80,7 +80,7 @@ function alleFlags(flags, dann, sonst) {
 function starterWahl(art) {
   var schmiede = art === "eisen";
   return [
-    { einblenden: "starterwahl", text: schmiede
+    { einblenden: schmiede ? "starterwahl_eisen" : "starterwahl_magnesium", text: schmiede
       ? "Ein Funke springt vom glühenden Eisen. Er wächst, bekommt Augen – und sieht dich an."
       : "Das Blatt-Amulett deiner Mutter blitzt auf. Etwas Silbriges schwebt vor dir." },
     { geben: { elemental: { art: art, stufe: 3, starter: true } } },
@@ -257,18 +257,17 @@ var DIALOGE = {
     ] }
   ],
 
-  mara_kisten: [].concat(
-    kistenRaetsel("Mara", "Kiste 1: rötlich glänzende Bleche. Sie lassen sich biegen, und das Lämpchen leuchtet hell.", "kupfer", "kiste1",
-      "Kupfer. Leitet den Strom wie kein Zweiter – darum sind Drähte aus Kupfer."),
-    kistenRaetsel("Mara", "Kiste 2: schwarze, leichte Brocken, matt. Unter dem Hammer zerbröseln sie. Das Lämpchen leuchtet schwach.", "kohlenstoff", "kiste2",
-      "Holzkohle, also Kohlenstoff. Leitet – und ist trotzdem kein Metall."),
-    kistenRaetsel("Mara", "Kiste 3: zitronengelbes Pulver, ohne Glanz. Das Lämpchen bleibt dunkel.", "schwefel", "kiste3",
-      "Schwefel. Ganz sicher kein Metall."),
-    kistenRaetsel("Mara", "Kiste 4: graue, glänzende Nägel. Der Magnet hält sie fest.", "eisen", "kiste4",
-      "Eisen. Der Einzige hier, den der Magnet festhält."),
-    kistenRaetsel("Mara", "Kiste 5: bläulich-graue, glänzende Platten. Sie leiten, der Magnet wirkt nicht, und unter dem Hammer splittern sie.", "zink", "kiste5",
-      "Zink. Kalt ist es spröde, warm lässt es sich formen.")
-  ),
+  // Seit 25.10.2026 ein Minispiel (Werkbank, kern\werkbank.js): prüfen
+  // mit Lupe, Magnet, Lämpchen und Hammer, dann zum Stoff legen.
+  mara_kisten: [
+    { minispiel: "werkbank", sprecher: "Mara", proben: [
+      { stoff: "kupfer", flag: "kiste1", lob: "Kupfer. Leitet den Strom wie kein Zweiter – darum sind Drähte aus Kupfer." },
+      { stoff: "kohlenstoff", flag: "kiste2", lob: "Holzkohle, also Kohlenstoff. Leitet – und ist trotzdem kein Metall." },
+      { stoff: "schwefel", flag: "kiste3", lob: "Schwefel. Ganz sicher kein Metall." },
+      { stoff: "eisen", flag: "kiste4", lob: "Eisen. Der Einzige hier, den der Magnet festhält." },
+      { stoff: "zink", flag: "kiste5", lob: "Zink. Kalt ist es spröde, warm lässt es sich formen." }
+    ] }
+  ],
 
   koehler: [
     { wennNicht: "reiter_da", dann: [
@@ -395,7 +394,9 @@ var DIALOGE = {
           { text: "Die rauschende – Luftzufuhr offen.", dann: [
             { sag: "Gildenmeisterin Ilka", text: "Richtig. Mehr Luft, mehr Sauerstoff, heißere Flamme. Teil drei: ein Kampf gegen mein Kupfer." },
             { kampf: { gegner: [{ art: "kupfer", stufe: 5 }], wild: false, name: "Gildenmeisterin Ilka", ort: "dorf",
-                       feld: { sauerstoff: 100, waerme: 45, feuchte: 20 } } },
+                       // Wärme 30 statt 45 seit 25.10.2026: Bei 45 gewann ein
+                       // Magnesium-Starter auf Stufe 5 nur 37 % (jetzt 55 %, Eisen 80 %).
+                       feld: { sauerstoff: 100, waerme: 30, feuchte: 20 } } },
             { wennGleich: ["letzter_kampf", "sieg"], dann: [
               { sag: "Gildenmeisterin Ilka", text: "Bestanden. Kupfer leitet Wärme – wer mein Feld noch heißer macht, hilft ihm nur." },
               { geben: { werkzeug: ["gasbrenner"] } },

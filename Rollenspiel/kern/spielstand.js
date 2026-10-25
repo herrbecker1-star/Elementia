@@ -45,6 +45,16 @@ var SPIELSTAND = (function () {
     return "lager";
   }
 
+  // Holt das Elemental Nummer nr aus dem Lager in die Gruppe. Ist die
+  // Gruppe voll, geht das unterste Gruppenmitglied an seinen Platz.
+  function ausLager(stand, nr) {
+    var el = stand.lager[nr];
+    if (!el) return;
+    if (stand.gruppe.length < GRUPPE_MAX) { stand.lager.splice(nr, 1); stand.gruppe.push(el); return; }
+    stand.lager[nr] = stand.gruppe[stand.gruppe.length - 1];
+    stand.gruppe[stand.gruppe.length - 1] = el;
+  }
+
   // Alles, was von außen kommt – localStorage oder abgetippter Code –,
   // wird geprüft, bevor das Spiel es anfasst. Ein halber Spielstand
   // soll mit einer Meldung scheitern, nicht mit einem schwarzen Bild.
@@ -62,6 +72,10 @@ var SPIELSTAND = (function () {
     // Seit Fassung 6 (25.10.2026) trägt der Starter eine Markierung. In
     // älteren Ständen bekommt sie das erste Elemental der gewählten Art.
     var alle = stand.gruppe.concat(stand.lager);
+    // Seit Fassung 8: eigene Angriffsliste je Elemental (Angriffe lernen)
+    alle.forEach(function (el) {
+      if (!Array.isArray(el.angriffe) && typeof ARTEN !== "undefined" && ARTEN[el.art]) el.angriffe = ARTEN[el.art].reaktionen.slice();
+    });
     if (stand.flags.starter && !alle.some(function (el) { return el.starter; })) {
       var erster = alle.filter(function (el) { return el.art === stand.flags.starter; })[0];
       if (erster) erster.starter = true;
@@ -120,6 +134,7 @@ var SPIELSTAND = (function () {
     GRUPPE_MAX: GRUPPE_MAX,
     neu: neu,
     aufnehmen: aufnehmen,
+    ausLager: ausLager,
     pruefen: pruefen,
     speichern: speichern,
     laden: laden,
