@@ -44,13 +44,24 @@ var KAMPF = (function () {
   // ersten Fassung (30 + T/80, 4 + 2·Härte) gewann Eisen 100 % aller
   // Paarungen, weil es Hitze UND Wucht zugleich widersteht. Die
   // Richtung bleibt – Eisen ist zäh –, der Abstand schrumpft.
+  //
+  // Stufen im Gleichtakt (Fassung 9, 25.10.2026): LP und Kraft wachsen
+  // um denselben Faktor, die Abwehr wächst nicht – Härte ist eine
+  // Stoffeigenschaft, keine Erfahrung. So braucht ein Kampf auf jeder
+  // Stufe gleich viele Treffer, und jede Stufe spielt sich wie Stufe 5,
+  // auf die das Balancing abgestimmt ist. Vorher wuchsen LP (+10 %),
+  // Kraft (+8 %) und Abwehr (+5 %) verschieden schnell: Die Kämpfe
+  // wurden länger, und die Spanne der Siegquoten stieg von 17 (Stufe 5)
+  // auf 47 (Stufe 10) und 52 (Stufe 15). Jetzt 17–19 auf allen Stufen.
+  // Auf Stufe 5 sind alle Werte gleich geblieben.
   function grundwerte(artId, stufe) {
     var s = ARTEN[artId].stoff;
+    var wachstum = 1 + 0.1 * (stufe - 1);
     return {
-      zhMax: Math.round((40 + Math.min(s.schmelz, 2000) / 200) * (1 + 0.1 * (stufe - 1))),
-      abwehr: Math.round((8 + s.haerte) * (1 + 0.05 * (stufe - 1))),
+      zhMax: Math.round((40 + Math.min(s.schmelz, 2000) / 200) * wachstum),
+      abwehr: Math.round((8 + s.haerte) * 1.2),
       tempo: Math.round((12 - s.dichte) * 10) / 10 + stufe * 0.1,
-      kraft: 1 + 0.08 * (stufe - 1)
+      kraft: wachstum * 1.32 / 1.4
     };
   }
 

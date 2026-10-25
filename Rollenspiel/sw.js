@@ -12,7 +12,7 @@
 // ============================================================
 
 // Bei JEDER Veröffentlichung erhöhen – sonst holt kein Handy die neue Fassung.
-var FASSUNG = 8;
+var FASSUNG = 9;
 var SPEICHER = "elementia-abenteuer-" + FASSUNG;
 
 var DATEIEN = [
