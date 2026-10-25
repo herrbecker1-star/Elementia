@@ -33,7 +33,8 @@ var KAMPF = (function () {
   // ----------------------------------------------------------
   //  Werte aus Stoffeigenschaften
   // ----------------------------------------------------------
-  // Zusammenhalt: je höher die Schmelztemperatur, desto stärker hält
+  // LP (im Spiel so genannt, intern zh, früher „Zusammenhalt“):
+  //   je höher die Schmelztemperatur, desto stärker hält
   //   der Stoff zusammen (gedeckelt bei 2000 °C, sonst wäre Kohlenstoff
   //   mit 3640 °C unverwundbar).
   // Abwehr: aus der Mohshärte.
@@ -84,8 +85,28 @@ var KAMPF = (function () {
     return ARTEN[artId].steckbrief.leitfaehig ? 1.3 : 0.7;
   }
 
-  function neuesElemental(artId, stufe) {
-    return { art: artId, stufe: stufe, ep: 0, zh: grundwerte(artId, stufe).zhMax };
+  // Die Werte eines konkreten Elementals. Das Starter-Elemental (aus
+  // Schmiede oder Garten) ist stärker als alles, was man fängt: Es ist
+  // der Gefährte der ganzen Reise. +5 % auf LP und Kraft, gemessen
+  // 25.10.2026: Der Starter gewinnt gegen wilde Elementals gleicher
+  // Stufe im Mittel 73 % (Eisen 79, Magnesium 68; ohne Bonus 59/44).
+  // Der Bonus wirkt doppelt (länger stehen UND härter treffen): 10 %
+  // ergaben schon 90 %, 20 % fast 100 % – dann wäre jeder Kampf entschieden.
+  var STARTER_BONUS = 0.05;
+  function werte(el) {
+    var w = grundwerte(el.art, el.stufe);
+    if (el.starter) {
+      w.zhMax = Math.round(w.zhMax * (1 + STARTER_BONUS));
+      w.kraft *= 1 + STARTER_BONUS;
+    }
+    return w;
+  }
+
+  function neuesElemental(artId, stufe, starter) {
+    var el = { art: artId, stufe: stufe, ep: 0 };
+    if (starter) el.starter = true;
+    el.zh = werte(el).zhMax;
+    return el;
   }
 
   function epBisNaechste(stufe) { return 10 + 10 * stufe; }
@@ -96,9 +117,9 @@ var KAMPF = (function () {
     el.ep += betrag;
     while (el.ep >= epBisNaechste(el.stufe)) {
       el.ep -= epBisNaechste(el.stufe);
-      var alt = grundwerte(el.art, el.stufe).zhMax;
+      var alt = werte(el).zhMax;
       el.stufe++;
-      el.zh += grundwerte(el.art, el.stufe).zhMax - alt;
+      el.zh += werte(el).zhMax - alt;
       neu.push(el.stufe);
     }
     return neu;
@@ -184,8 +205,8 @@ var KAMPF = (function () {
     var an = aktiv(k, seite), ziel = aktiv(k, gegenueber(seite));
     var zs = k.seiten[gegenueber(seite)].status;
     var basis = r.art === "leitung" ? k.feld.waerme / 4 : r.kraft;
-    basis *= grundwerte(an.art, an.stufe).kraft;
-    var abwehr = grundwerte(ziel.art, ziel.stufe).abwehr + (zs.abwehrPlus || 0);
+    basis *= werte(an).kraft;
+    var abwehr = werte(ziel).abwehr + (zs.abwehrPlus || 0);
     var s = basis * 20 / (10 + abwehr);
     if (r.art === "wucht") s *= wuchtFaktor(ziel.art, k.feld.waerme);
     else if (r.art === "leitung") s *= leitFaktor(ziel.art);
@@ -206,7 +227,7 @@ var KAMPF = (function () {
 
     var grund = hindernis(k, seite, reaktionId);
     if (grund) {
-      k.log.push({ seite: seite, text: wer + " versucht " + r.name + ". " + grund });
+      k.log.push({ seite: seite, handelt: true, text: wer + " versucht " + r.name + ". " + grund });
       // Eine erstickte Flamme hat die Energie trotzdem verbraucht.
       if (r.o2 && k.feld.sauerstoff < r.o2) s.ae = Math.max(0, s.ae - r.ae);
       return;
@@ -224,7 +245,7 @@ var KAMPF = (function () {
       var ziel = aktiv(k, ander);
       ziel.zh = Math.max(0, ziel.zh - betrag);
       if (voll) k.log.push({ volltreffer: true, text: "Volltreffer!" });
-      k.log.push({ seite: ander, schaden: betrag, text: name(k, ander) + " verliert " + betrag + " Zusammenhalt." });
+      k.log.push({ seite: ander, schaden: betrag, text: name(k, ander) + " verliert " + betrag + " LP." });
       if (s.status.geblendet) { s.status.geblendet--; }
       delete z.status.schutz;
       delete z.status.tarnung;
@@ -309,14 +330,17 @@ var KAMPF = (function () {
     switch (aktion.typ) {
       case "untersuchen": untersuchen(k, aktion.werkzeug); break;
       case "bestimmen": bestimmen(k, aktion.art); break;
-      case "fangen": FANGEN.versuch(k, aktion.geraet); break;
+      case "fangen":
+        FANGEN.versuch(k, aktion.geraet);
+        if (k.ende === "gefangen") verteileErfahrung(k, 0.5);
+        break;
       case "wechseln":
         if (!sp.gruppe[aktion.nr] || sp.gruppe[aktion.nr].zh <= 0) throw new Error("Wechsel nicht möglich.");
         sp.aktiv = aktion.nr; sp.status = {};
         k.log.push({ text: "Du rufst " + name(k, "spieler") + "." });
         break;
       case "fliehen": fliehen(k); break;
-      case "sammeln": sp.ae = Math.min(AE_MAX, sp.ae + 2); k.log.push({ text: name(k, "spieler") + " sammelt Kraft." }); break;
+      case "sammeln": sp.ae = Math.min(AE_MAX, sp.ae + 2); k.log.push({ seite: "spieler", handelt: true, text: name(k, "spieler") + " sammelt Kraft." }); break;
       case "brenner":
         // Der Gasbrenner aus Brenner: einmal je Kampf Aktivierungsenergie
         // von außen – und seine Flamme heizt das Feld auf.
@@ -339,11 +363,14 @@ var KAMPF = (function () {
     var reihenfolge = [];
     if (aktion.typ === "reaktion") reihenfolge.push({ seite: "spieler", id: aktion.id, wer: aktiv(k, "spieler") });
     if (g.typ === "reaktion") reihenfolge.push({ seite: "gegner", id: g.id, wer: aktiv(k, "gegner") });
-    else if (g.typ === "sammeln") { k.seiten.gegner.ae = Math.min(AE_MAX, k.seiten.gegner.ae + 2); k.log.push({ text: name(k, "gegner") + " sammelt Kraft." }); }
+    else if (g.typ === "sammeln") { k.seiten.gegner.ae = Math.min(AE_MAX, k.seiten.gegner.ae + 2); k.log.push({ seite: "gegner", handelt: true, text: name(k, "gegner") + " sammelt Kraft." }); }
     if (reihenfolge.length === 2) {
-      var ts = grundwerte(aktiv(k, "spieler").art, aktiv(k, "spieler").stufe).tempo;
-      var tg = grundwerte(aktiv(k, "gegner").art, aktiv(k, "gegner").stufe).tempo;
+      var ts = werte(aktiv(k, "spieler")).tempo;
+      var tg = werte(aktiv(k, "gegner")).tempo;
       if (tg > ts || (tg === ts && k.zufall() < 0.5)) reihenfolge.reverse();
+      // Wer zuerst handelt, soll man sehen – nicht erraten.
+      var erster = reihenfolge[0].seite;
+      k.log.push({ seite: erster, handelt: true, text: name(k, erster) + " ist schneller." });
     }
     for (var i = 0; i < reihenfolge.length; i++) {
       var z = reihenfolge[i];
@@ -399,19 +426,30 @@ var KAMPF = (function () {
     return false;
   }
 
-  function verteileErfahrung(k) {
+  // Das aktive Elemental bekommt die volle Erfahrung, alle anderen der
+  // Gruppe 20 % – auch erschöpfte, sie haben zugesehen. Ein Fang bringt
+  // die Hälfte (anteil 0.5).
+  var GRUPPE_LERNT = 0.2;
+  function verteileErfahrung(k, anteil) {
     var gegner = k.seiten.gegner.gruppe;
-    var summe = gegner.reduce(function (a, el) { return a + 12 * el.stufe; }, 0);
-    var el = aktiv(k, "spieler");
+    var summe = Math.round(gegner.reduce(function (a, el) { return a + 12 * el.stufe; }, 0) * (anteil || 1));
+    var sp = k.seiten.spieler, el = aktiv(k, "spieler");
     var stufen = erfahrung(el, summe);
     k.log.push({ text: name(k, "spieler") + " gewinnt " + summe + " Erfahrung." });
     stufen.forEach(function (st) { k.log.push({ text: name(k, "spieler") + " erreicht Stufe " + st + "!" }); });
+    var rest = Math.round(summe * GRUPPE_LERNT);
+    var andere = sp.gruppe.filter(function (g) { return g !== el; });
+    if (!andere.length || !rest) return;
+    k.log.push({ text: "Die Gruppe lernt mit (+" + rest + " Erfahrung)." });
+    andere.forEach(function (g) {
+      erfahrung(g, rest).forEach(function (st) { k.log.push({ text: (g.spitzname || ARTEN[g.art].name) + " erreicht Stufe " + st + "!" }); });
+    });
   }
 
   function fliehen(k) {
     if (!k.wild) { k.log.push({ text: "Vor einem Stoffmeister läuft man nicht davon." }); return; }
-    var ts = grundwerte(aktiv(k, "spieler").art, aktiv(k, "spieler").stufe).tempo;
-    var tg = grundwerte(aktiv(k, "gegner").art, aktiv(k, "gegner").stufe).tempo;
+    var ts = werte(aktiv(k, "spieler")).tempo;
+    var tg = werte(aktiv(k, "gegner")).tempo;
     var p = Math.max(0.3, Math.min(0.95, 0.6 + (ts - tg) / 20));
     if (k.zufall() < p) { k.ende = "geflohen"; k.log.push({ text: "Du ziehst dich zurück." }); }
     else k.log.push({ text: "Kein Durchkommen – das Elemental schneidet dir den Weg ab." });
@@ -455,6 +493,9 @@ var KAMPF = (function () {
 
   return {
     grundwerte: grundwerte,
+    werte: werte,
+    STARTER_BONUS: STARTER_BONUS,
+    GRUPPE_LERNT: GRUPPE_LERNT,
     hitzeFaktor: hitzeFaktor,
     wuchtFaktor: wuchtFaktor,
     leitFaktor: leitFaktor,

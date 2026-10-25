@@ -16,13 +16,16 @@
 var FANGEN = (function () {
   "use strict";
 
-  // Grundchance je Seltenheit – vorläufig, gemessen im Prüfstand.
-  var GRUND = { haeufig: 0.35, selten: 0.25, sehr_selten: 0.15 };
+  // Grundchance je Seltenheit. Am 25.10.2026 angehoben (vorher 0,35 /
+  // 0,25 / 0,15), weil Fangen beim Spielen zu schwer war: Ein häufiges
+  // Elemental mit halben LP im Reagenzglas gelang nur zu 35 %, jetzt zu
+  // 55 %; mit passendem Gerät zu 90 %.
+  var GRUND = { haeufig: 0.55, selten: 0.4, sehr_selten: 0.25 };
   var ERKANNT_BONUS = 1.5;
   var HOECHSTENS = 0.9;
-  var ERHOLUNG_BEI_FEHLSCHLAG = 0.05;   // Anteil des Zusammenhalts
-  var FLUCHT_AB_VERSUCH = 3;
-  var FLUCHT_CHANCE = 0.35;
+  var ERHOLUNG_BEI_FEHLSCHLAG = 0.05;   // Anteil der LP
+  var FLUCHT_AB_VERSUCH = 4;            // vorher 3
+  var FLUCHT_CHANCE = 0.25;             // vorher 0,35
 
   // Eignung: Faktor und der Satz, der sie begründet.
   function eignung(geraet, artId) {
@@ -47,7 +50,7 @@ var FANGEN = (function () {
   function chance(k, geraet) {
     var g = k.seiten.gegner;
     var el = g.gruppe[g.aktiv];
-    var anteil = el.zh / KAMPF.grundwerte(el.art, el.stufe).zhMax;
+    var anteil = el.zh / KAMPF.werte(el).zhMax;
     var p = GRUND[ARTEN[el.art].seltenheit] * (1.5 - anteil) * eignung(geraet, el.art).faktor;
     if (k.erkannt) p *= ERKANNT_BONUS;
     return Math.max(0, Math.min(HOECHSTENS, p));
@@ -76,7 +79,7 @@ var FANGEN = (function () {
 
     var e = eignung(geraet, el.art);
     k.log.push({ text: e.faktor < 1 ? "Es entwischt! " + e.grund : "Es entwischt!" });
-    var max = KAMPF.grundwerte(el.art, el.stufe).zhMax;
+    var max = KAMPF.werte(el).zhMax;
     el.zh = Math.min(max, el.zh + Math.ceil(max * ERHOLUNG_BEI_FEHLSCHLAG));
     k.fehlversuche++;
     if (k.fehlversuche >= FLUCHT_AB_VERSUCH && k.zufall() < FLUCHT_CHANCE) {

@@ -59,6 +59,13 @@ var SPIELSTAND = (function () {
     ["gruppe", "lager", "vorrat", "werkzeuge", "bekannt"].forEach(function (f) {
       if (!stand[f] || typeof stand[f] !== "object") stand[f] = anfang[f];
     });
+    // Seit Fassung 6 (25.10.2026) trägt der Starter eine Markierung. In
+    // älteren Ständen bekommt sie das erste Elemental der gewählten Art.
+    var alle = stand.gruppe.concat(stand.lager);
+    if (stand.flags.starter && !alle.some(function (el) { return el.starter; })) {
+      var erster = alle.filter(function (el) { return el.art === stand.flags.starter; })[0];
+      if (erster) erster.starter = true;
+    }
     if (typeof stand.x !== "number" || typeof stand.y !== "number") { stand.x = null; stand.y = null; }
     if (["unten", "links", "rechts", "oben"].indexOf(stand.richtung) < 0) stand.richtung = "unten";
     return stand;

@@ -374,7 +374,7 @@ class OberweltSzene extends Phaser.Scene {
     // Hierher kehrt man nach einer Niederlage zurück.
     this.stand.labor = { karte: this.stand.karte, x: Math.round(this.held.x), y: Math.round(this.held.y) };
     this.stand.gruppe.concat(this.stand.lager).forEach(function (el) {
-      el.zh = KAMPF.grundwerte(el.art, el.stufe).zhMax;
+      el.zh = KAMPF.werte(el).zhMax;
     });
   }
 

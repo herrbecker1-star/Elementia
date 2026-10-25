@@ -51,10 +51,10 @@ class UiSzene extends Phaser.Scene {
       if (szene.wahlKnoepfe.length) szene.wahlTreffen(0);
     } });
     if (probeDialog && DIALOGE[probeDialog]) this.dialogFuehren(DIALOGE[probeDialog], this.oberwelt.stand.flags);
-    else if (suche.get("buch")) {
-      // Prüfschalter ?buch=gruppe|stoffbuch|gepaeck
+    else if (suche.get("buch") || suche.get("detail")) {
+      // Prüfschalter ?buch=gruppe|stoffbuch|gepaeck, ?detail=<art>
       this.menueOffen = true;
-      this.scene.launch("buch", { stand: this.oberwelt.stand, reiter: suche.get("buch") });
+      this.scene.launch("buch", { stand: this.oberwelt.stand, reiter: suche.get("buch"), detail: suche.get("detail") });
     }
     else if (probeKampf && ARTEN[probeKampf]) this.dialogFuehren([{ kampf: { art: probeKampf, stufe: Number(suche.get("stufe")) || 5, ort: suche.get("ort") || "dorf",
       // &gegen=Name: Prüfungskampf gegen einen Stoffmeister statt eines wilden Elementals
@@ -321,7 +321,7 @@ class UiSzene extends Phaser.Scene {
   geben(g) {
     var stand = this.oberwelt.stand, teile = [];
     if (g.elemental) {
-      var el = KAMPF.neuesElemental(g.elemental.art, g.elemental.stufe || 3);
+      var el = KAMPF.neuesElemental(g.elemental.art, g.elemental.stufe || 3, g.elemental.starter);
       SPIELSTAND.aufnehmen(stand, el);
       if (stand.bekannt.indexOf(el.art) < 0) stand.bekannt.push(el.art);
       teile.push(ARTEN[el.art].name + " (Stufe " + el.stufe + ") schließt sich dir an");

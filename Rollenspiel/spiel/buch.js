@@ -28,15 +28,34 @@ class BuchSzene extends Phaser.Scene {
       szene.scene.stop();
       if (szene.beiEnde) szene.beiEnde();
     }, { hoehe: 36, schrift: 14, mindestbreite: 110 });
+    this.zurueckKnopf = baueKnopf(this, "‹ Zurück", function () { szene.zeige(szene.vorDetail || "gruppe"); }, { hoehe: 36, schrift: 14, mindestbreite: 110 });
 
     this.scale.on("resize", this.neuZeichnen, this);
     this.events.once("shutdown", function () { szene.scale.off("resize", szene.neuZeichnen, szene); });
-    this.zeige(daten.reiter || "gruppe");
+    // Prüfschalter ?detail=<art>: sofort die Detailansicht dieser Art
+    if (daten.detail && ARTEN[daten.detail]) {
+      var eigenes = this.stand.gruppe.filter(function (el) { return el.art === daten.detail; })[0];
+      this.zeigeDetailVon(eigenes || null, daten.detail, eigenes ? "gruppe" : "stoffbuch");
+    } else this.zeige(daten.reiter || "gruppe");
   }
 
   zeige(reiter) {
     this.reiter = reiter;
     this.neuZeichnen();
+  }
+
+  // Detailansicht: ein eigenes Elemental (el) oder eine bekannte Art (el = null, Stufe 5)
+  zeigeDetailVon(el, art, vorher) {
+    this.detail = { el: el, art: art };
+    this.vorDetail = vorher;
+    this.zeige("detail");
+  }
+
+  // Eine unsichtbare Fläche, die antippbar macht, was darunter gezeichnet ist.
+  antippbar(x, y, b, h, beiKlick) {
+    var z = this.add.zone(x, y, b, h).setOrigin(0, 0).setInteractive({ useHandCursor: true });
+    z.on("pointerdown", beiKlick);
+    this.inhalt.push(z);
   }
 
   neuZeichnen() {
@@ -48,17 +67,20 @@ class BuchSzene extends Phaser.Scene {
       .fillStyle(FARBE.papier, 0.98).fillRoundedRect(rand, rand, b - 2 * rand, h - 2 * rand, MASS.px(14))
       .lineStyle(MASS.px(3), FARBE.papierRand, 1).strokeRoundedRect(rand, rand, b - 2 * rand, h - 2 * rand, MASS.px(14));
 
-    var szene = this, x = rand * 2;
+    var szene = this, x = rand * 2, imDetail = this.reiter === "detail";
     this.reiterKnoepfe.forEach(function (k, i) {
+      k.setVisible(!imDetail);
       k.setPosition(x + k.width / 2, rand * 2 + k.height / 2);
       k.setAlpha(["gruppe", "stoffbuch", "gepaeck"][i] === szene.reiter ? 1 : 0.6);
       x += k.width + MASS.px(8);
     });
+    this.zurueckKnopf.setVisible(imDetail).setPosition(rand * 2 + this.zurueckKnopf.width / 2, rand * 2 + this.zurueckKnopf.height / 2);
     this.schliessen.setPosition(b - rand * 2 - this.schliessen.width / 2, rand * 2 + this.schliessen.height / 2);
 
     var oben = rand * 2 + MASS.px(48);
     var flaeche = { x: rand * 2, y: oben, b: b - rand * 4, h: h - oben - rand * 2 };
-    if (this.reiter === "gruppe") this.zeigeGruppe(flaeche);
+    if (imDetail) this.zeigeDetail(flaeche);
+    else if (this.reiter === "gruppe") this.zeigeGruppe(flaeche);
     else if (this.reiter === "stoffbuch") this.zeigeStoffbuch(flaeche);
     else this.zeigeGepaeck(flaeche);
   }
@@ -86,7 +108,7 @@ class BuchSzene extends Phaser.Scene {
     var spalten = 2, zeileH = MASS.px(76), spB = (f.b - MASS.px(12)) / spalten;
     stand.gruppe.forEach(function (el, i) {
       var x = f.x + (i % spalten) * (spB + MASS.px(12)), y = f.y + Math.floor(i / spalten) * (zeileH + MASS.px(8));
-      var w = KAMPF.grundwerte(el.art, el.stufe);
+      var w = KAMPF.werte(el);
       szene.bild(x, y, el.art, zeileH, false);
       var tx = x + zeileH * 1.5 + MASS.px(8);
       szene.text(tx, y, (el.spitzname || ARTEN[el.art].name) + "  ·  Stufe " + el.stufe, 16, null, "bold");
@@ -96,12 +118,12 @@ class BuchSzene extends Phaser.Scene {
         .fillStyle(anteil > 0.5 ? 0x4f9a5a : anteil > 0.2 ? 0xd9a63a : 0xc0453a, 1)
         .fillRoundedRect(tx, y + MASS.px(26), Math.max(0, bb * anteil), MASS.px(9), MASS.px(4));
       szene.inhalt.push(balken);
-      szene.text(tx, y + MASS.px(40), (el.zh > 0 ? "Zusammenhalt " + el.zh + "/" + w.zhMax : "erschöpft – ab ins Labor") +
+      szene.text(tx, y + MASS.px(40), (el.zh > 0 ? "LP " + el.zh + "/" + w.zhMax : "erschöpft – ab ins Labor") +
         "\nErfahrung " + el.ep + "/" + KAMPF.epBisNaechste(el.stufe), 12, "#5a4632");
+      szene.antippbar(x, y, spB, zeileH, function () { szene.zeigeDetailVon(el, el.art, "gruppe"); });
     });
-    if (stand.lager.length) {
-      this.text(f.x, f.y + f.h - MASS.px(20), "Im Lager warten " + stand.lager.length + " weitere Elementals.", 13, "#5a4632");
-    }
+    this.text(f.x, f.y + f.h - MASS.px(20), (stand.lager.length ? "Im Lager warten " + stand.lager.length + " weitere Elementals. " : "") +
+      "Antippen zeigt Werte und Angriffe.", 13, "#5a4632");
   }
 
   zeigeStoffbuch(f) {
@@ -129,6 +151,63 @@ class BuchSzene extends Phaser.Scene {
       szene.text(tx, y + MASS.px(26), kennt ? a.formel + " · " + a.klasse + (gefangen[art] ? "\n✓ gefangen" : "") : (a.seltenheit !== "haeufig" ? "selten" : ""), 12, "#5a4632");
       var hinweis = szene.text(x + MASS.px(6), y + bh + MASS.px(12), kennt ? FUNDHINWEISE[art].genau : FUNDHINWEISE[art].vage, 11, kennt ? FARBE.tinte : "#6b4a2b", kennt ? "" : "italic");
       hinweis.setWordWrapWidth(zB - MASS.px(12), true);
+      // Einmal erkannt genügt: Werte und Angriffe stehen dann im Buch.
+      if (kennt) szene.antippbar(x, y, zB, zH, function () { szene.zeigeDetailVon(null, art, "stoffbuch"); });
+    });
+  }
+
+  // ============================================================
+  //  Detail: Werte mit Herkunft, Empfindlichkeiten, Angriffe
+  //  Alles wird aus den Regeln in kern\kampf.js abgeleitet – was hier
+  //  steht, ist genau das, womit der Kampf rechnet.
+  // ============================================================
+  zeigeDetail(f) {
+    var szene = this, art = this.detail.art, a = ARTEN[art], el = this.detail.el;
+    var probe = el || { art: art, stufe: 5 };
+    var w = KAMPF.werte(probe), s = a.stoff;
+    var komma = function (z) { return String(Math.round(z * 100) / 100).replace(".", ","); };
+
+    // Links: Bild, Name, Beschreibung
+    var linksB = Math.min(f.b * 0.36, MASS.px(260));
+    var bildH = Math.min(f.h * 0.42, MASS.px(120));
+    var bild = this.bild(f.x, f.y, art, bildH, false);
+    this.text(f.x + bild.displayWidth + MASS.px(8), f.y, (el && el.spitzname) || a.name, 17, null, "bold");
+    this.text(f.x + bild.displayWidth + MASS.px(8), f.y + MASS.px(24), a.formel + " · " + a.klasse +
+      "\n" + (el ? "Stufe " + el.stufe + (el.starter ? " · Starter" : "") : "Werte auf Stufe 5"), 13, "#5a4632");
+    this.text(f.x, f.y + bildH + MASS.px(8), a.beschreibung || "", 13).setWordWrapWidth(linksB, true);
+
+    // Rechts: Werte, Empfindlichkeiten, Angriffe
+    var x = f.x + linksB + MASS.px(16), b = f.b - linksB - MASS.px(16), y = f.y;
+    var bonus = probe.starter ? "  (+" + Math.round(KAMPF.STARTER_BONUS * 100) + " % als Starter)" : "";
+    var stufeLP = s.schmelz >= 1000 ? "hoch" : s.schmelz >= 500 ? "mittel" : "niedrig";
+    var werteText =
+      "LP " + (el ? el.zh + "/" : "") + w.zhMax + bonus + " – Schmelzpunkt " + s.schmelz + " °C (" + stufeLP + ")" +
+      "\nAbwehr " + w.abwehr + " – Härte " + komma(s.haerte) + " · Tempo " + komma(w.tempo) + " – Dichte " + komma(s.dichte) + " g/cm³ (leicht ist schnell)";
+    var t = this.text(x, y, werteText, 12, "#3a2a1c"); t.setWordWrapWidth(b, true); y += t.height + MASS.px(4);
+
+    var sulf = REAKTIONEN.sulfidbildung, sf = (sulf.gegen && sulf.gegen[art]) || (a.klasse === "Metall" ? sulf.gegenMetall : sulf.gegenNichtmetall);
+    var spr = KAMPF.wuchtFaktor(art, 20);
+    var empf = [
+      "Feuer ×" + komma(KAMPF.hitzeFaktor(art)),
+      "Schlag ×" + komma(spr) + (spr > 1 ? " (spröde" + (a.warmVerformbar ? ", warm formbar" : "") + ")" : " (verformbar)"),
+      "Sulfidbildung ×" + komma(sf),
+      "Wärmeleitung ×" + komma(KAMPF.leitFaktor(art))
+    ].join(" · ");
+    t = this.text(x, y, "Trifft es: " + empf, 12, "#3a2a1c"); t.setWordWrapWidth(b, true); y += t.height + MASS.px(6);
+
+    var ARTNAME = { wucht: "Schlag", hitze: "Feuer", reaktion: "Stoffreaktion", leitung: "Wärme", schutz: "Schutz" };
+    a.reaktionen.forEach(function (id) {
+      var r = REAKTIONEN[id], teile = [ARTNAME[r.art]];
+      if (r.art === "leitung") teile.push("Kraft: Wärme des Feldes");
+      else if (r.kraft) teile.push("Kraft " + r.kraft);
+      teile.push(r.ae + " Energie");
+      if (r.o2) teile.push("braucht Sauerstoff");
+      var stark = Object.keys(r.gegen || {}).filter(function (z) { return r.gegen[z] >= 1.5; }).map(function (z) { return ARTEN[z].name; });
+      if (r.art === "reaktion" && r.gegenMetall > 1) stark.unshift("Metalle");
+      if (stark.length) teile.push("stark gegen " + stark.join(", "));
+      var kopf = szene.text(x, y, r.name + " – " + teile.join(" · "), 12, null, "bold");
+      kopf.setWordWrapWidth(b, true); y += kopf.height;
+      var tx = szene.text(x, y, r.text, 11, "#5a4632"); tx.setWordWrapWidth(b, true); y += tx.height + MASS.px(4);
     });
   }
 

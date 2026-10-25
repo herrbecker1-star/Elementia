@@ -22,6 +22,7 @@ var ARTEN = {
 
   eisen: {
     name: "Eisen", formel: "Fe", klasse: "Metall", bild: "eisen", seltenheit: "haeufig",
+    beschreibung: "Graues, hartes Metall. Der Magnet hält es fest. An feuchter Luft rostet es. Aus Eisen schmiedet man Werkzeuge.",
     stoff: { haerte: 4, dichte: 7.87, schmelz: 1538 },
     steckbrief: { farbe: "grau", glanz: true, magnetisch: true, leitfaehig: true, verformbar: true },
     form: "stueck",
@@ -30,6 +31,7 @@ var ARTEN = {
 
   magnesium: {
     name: "Magnesium", formel: "Mg", klasse: "Metall", bild: "magnesium", seltenheit: "haeufig",
+    beschreibung: "Leichtes, silbriges Metall. Es verbrennt mit gleißend hellem Licht. In jeder grünen Pflanze steckt etwas Magnesium.",
     stoff: { haerte: 2.5, dichte: 1.74, schmelz: 650 },
     steckbrief: { farbe: "silbrig", glanz: true, magnetisch: false, leitfaehig: true, verformbar: true },
     form: "stueck",
@@ -41,6 +43,7 @@ var ARTEN = {
     // Nichtmetall in Maras Kisten. Genau diese Ausnahme macht den
     // Steckbrief lehrreich: Leitfähigkeit allein heißt nicht Metall.
     name: "Kohlenstoff", formel: "C", klasse: "Nichtmetall", bild: "kohlenstoff", seltenheit: "haeufig",
+    beschreibung: "Schwarze, leichte Holzkohle. Leitet den Strom und ist trotzdem kein Metall. Verbrennt zu Kohlenstoffdioxid.",
     stoff: { haerte: 1.5, dichte: 2.26, schmelz: 3640 },   // Grafit, sublimiert
     steckbrief: { farbe: "schwarz", glanz: false, magnetisch: false, leitfaehig: true, verformbar: false },
     form: "stueck",
@@ -49,6 +52,7 @@ var ARTEN = {
 
   kupfer: {
     name: "Kupfer", formel: "Cu", klasse: "Metall", bild: "kupfer", seltenheit: "selten",
+    beschreibung: "Rötliches, weiches Metall. Leitet Strom und Wärme besser als fast alle Stoffe – darum sind Kabel aus Kupfer.",
     stoff: { haerte: 3, dichte: 8.96, schmelz: 1085 },
     steckbrief: { farbe: "rötlich", glanz: true, magnetisch: false, leitfaehig: true, verformbar: true },
     form: "stueck",
@@ -59,6 +63,7 @@ var ARTEN = {
     // Bei Raumtemperatur spröde; gut verformbar erst zwischen 100 und
     // 150 °C. Darum hier "verformbar: false".
     name: "Zink", formel: "Zn", klasse: "Metall", bild: "zink", seltenheit: "haeufig",
+    beschreibung: "Bläulich-graues Metall. Kalt spröde, warm formbar. Als dünne Schicht schützt es Eisen vor Rost (verzinken).",
     stoff: { haerte: 2.5, dichte: 7.14, schmelz: 420 },
     steckbrief: { farbe: "bläulich-grau", glanz: true, magnetisch: false, leitfaehig: true, verformbar: false },
     warmVerformbar: true,
@@ -68,6 +73,7 @@ var ARTEN = {
 
   schwefel: {
     name: "Schwefel", formel: "S", klasse: "Nichtmetall", bild: "schwefel", seltenheit: "selten",
+    beschreibung: "Gelbes Pulver, leitet keinen Strom. Schmilzt schon bei 115 °C und brennt mit blauer Flamme zu stechendem Schwefeldioxid.",
     stoff: { haerte: 2, dichte: 2.07, schmelz: 115 },
     steckbrief: { farbe: "gelb", glanz: false, magnetisch: false, leitfaehig: false, verformbar: false },
     form: "pulver",

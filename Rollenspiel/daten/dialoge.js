@@ -83,7 +83,7 @@ function starterWahl(art) {
     { einblenden: "starterwahl", text: schmiede
       ? "Ein Funke springt vom glühenden Eisen. Er wächst, bekommt Augen – und sieht dich an."
       : "Das Blatt-Amulett deiner Mutter blitzt auf. Etwas Silbriges schwebt vor dir." },
-    { geben: { elemental: { art: art, stufe: 3 } } },
+    { geben: { elemental: { art: art, stufe: 3, starter: true } } },
     { benennen: true },
     { setze: "starter", wert: art },
     { sag: schmiede ? "Vater" : "Mutter", text: "Dein erstes Elemental begleitet dich ein Leben lang. Lumi wartet auf dem Dorfplatz." }

@@ -137,14 +137,29 @@ class KampfSzene extends Phaser.Scene {
     c.stufe = this.add.text(0, 0, "", { fontFamily: SCHRIFT.familie, fontSize: MASS.px(13) + "px", color: "#6b4a2b" }).setOrigin(1, 0);
     c.balken = this.add.graphics();
     c.zeile = this.add.text(0, 0, "", { fontFamily: SCHRIFT.familie, fontSize: MASS.px(12) + "px", color: "#5a4632" });
-    c.add([c.grund, c.name, c.stufe, c.balken, c.zeile]);
+    c.rahmen = this.add.graphics();
+    c.add([c.grund, c.name, c.stufe, c.balken, c.zeile, c.rahmen]);
     c.anteil = 1;
     return c;
   }
 
+  // Wer gerade handelt, bekommt einen farbigen Rahmen: grün die eigene
+  // Seite, rot der Gegner. null nimmt beide Rahmen weg.
+  markiere(seite) {
+    var szene = this;
+    [["spieler", this.infoSpieler, 0x3f9a4a], ["gegner", this.infoGegner, 0xc0453a]].forEach(function (p) {
+      var c = p[1];
+      c.rahmen.clear();
+      if (p[0] === seite && c.breite) {
+        c.rahmen.lineStyle(MASS.px(4), p[2], 1).strokeRoundedRect(-MASS.px(2), -MASS.px(2), c.breite + MASS.px(4), c.hoehe + MASS.px(4), MASS.px(12));
+      }
+    });
+    this.markiert = seite;
+  }
+
   zeichneInfo(c, seite) {
     var k = this.k, el = KAMPF.aktiv(k, seite);
-    var w = KAMPF.grundwerte(el.art, el.stufe);
+    var w = KAMPF.werte(el);
     var b = MASS.px(220), h = MASS.px(62);
     c.breite = b; c.hoehe = h;
     c.grund.clear().fillStyle(FARBE.papier, 0.93).fillRoundedRect(0, 0, b, h, MASS.px(10))
@@ -164,7 +179,7 @@ class KampfSzene extends Phaser.Scene {
     });
     if (seite === "spieler") {
       var ae = k.seiten.spieler.ae;
-      c.zeile.setText("Zusammenhalt " + el.zh + "/" + w.zhMax + "  ·  Energie " + ae + "/" + KAMPF.AE_MAX);
+      c.zeile.setText("LP " + el.zh + "/" + w.zhMax + "  ·  Energie " + ae + "/" + KAMPF.AE_MAX);
     } else {
       c.zeile.setText(this.befundZeile());
     }
@@ -233,7 +248,7 @@ class KampfSzene extends Phaser.Scene {
   zeigeHauptmenue() {
     var szene = this, k = this.k;
     this.zeigeKnoepfe([
-      { text: "Reaktion", beiKlick: function () { szene.menueReaktion(); } },
+      { text: "Angriff", beiKlick: function () { szene.menueReaktion(); } },
       { text: "Untersuchen", beiKlick: function () { szene.menueUntersuchen(); } },
       { text: "Bestimmen", aktiv: k.wild && !k.erkannt, grund: k.wild ? "Du weißt schon, was es ist." : "Den Stoff eines Stoffmeisters kennst du – er hat ihn dir genannt.", beiKlick: function () { szene.menueBestimmen(); } },
       { text: "Fangen", aktiv: k.wild, beiKlick: function () { szene.menueFangen(); } },
@@ -254,7 +269,7 @@ class KampfSzene extends Phaser.Scene {
       eintraege.push({ text: "Gasbrenner\n+4 AE", aktiv: !k.brennerBenutzt, grund: "Das Gas ist für diesen Kampf verbraucht.", beiKlick: function () { szene.ausfuehren({ typ: "brenner" }); } });
     }
     eintraege.push(this.zurueck());
-    this.zeigeText("Welche Reaktion? Verbrennungen brauchen Sauerstoff und heizen das Feld auf.");
+    this.zeigeText("Welcher Angriff? Feuer braucht Sauerstoff und heizt das Feld auf.");
     this.zeigeKnoepfe(eintraege);
   }
 
@@ -308,9 +323,12 @@ class KampfSzene extends Phaser.Scene {
     this.beschaeftigt = true;
     this.leereKnoepfe();
     var log = KAMPF.zug(this.k, aktion);
+    // Was du gewählt hast (Untersuchen, Fangen …), geschieht zuerst.
+    this.markiere("spieler");
     for (var i = 0; i < log.length; i++) {
       await this.spieleEintrag(log[i]);
     }
+    this.markiere(null);
     this.aktualisieren();
     var gegnerArt = KAMPF.aktiv(this.k, "gegner").art;
     if (this.k.erkannt && this.k.wild && this.stand.bekannt.indexOf(gegnerArt) < 0) this.stand.bekannt.push(gegnerArt);
@@ -325,16 +343,17 @@ class KampfSzene extends Phaser.Scene {
     var szene = this;
     if (window.PROBE_MELDEN) window.PROBE_MELDEN("› " + e.text);
     this.zeigeText(e.text);
+    if (e.reaktion || e.handelt) this.markiere(e.seite);
     if (e.reaktion) {
       var bild = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
       var richtung = e.seite === "spieler" ? 1 : -1;
-      this.tweens.add({ targets: bild, x: bild.x + richtung * MASS.px(30), duration: 120, yoyo: true, ease: "Quad.easeOut" });
+      this.tweens.add({ targets: bild, x: bild.x + richtung * MASS.px(36), duration: 250, yoyo: true, ease: "Quad.easeOut" });
       var art = REAKTIONEN[e.reaktion].art;
       if (art === "hitze" || art === "reaktion" || art === "leitung") this.aufblitzen(e.seite === "spieler" ? this.bildGegner : this.bildSpieler, 0xff8a3a);
     }
     if (e.schaden) {
       var ziel = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
-      this.tweens.add({ targets: ziel, x: ziel.x + MASS.px(8), duration: 50, yoyo: true, repeat: 3 });
+      this.tweens.add({ targets: ziel, x: ziel.x + MASS.px(8), duration: 70, yoyo: true, repeat: 3 });
       this.aktualisieren();
     }
     if (e.volltreffer) this.cameras.main.shake(180, 0.006);
@@ -342,14 +361,18 @@ class KampfSzene extends Phaser.Scene {
     if (e.befund !== undefined) this.aktualisieren();
     return new Promise(function (fertig) {
       szene.weiterWartet = fertig;
+      // Jede Meldung steht mindestens 0,7 s – sonst blättert ein schneller
+      // Finger durch die Runde, ohne dass man sieht, wer was getan hat.
+      szene.sperreBis = szene.time.now + 700;
       // Wer nicht tippt, liest trotzdem mit: Nach einer Weile geht es von selbst weiter.
-      szene.selbstWeiter = szene.time.delayedCall(Math.max(1400, e.text.length * 45), function () { szene.weiter(); });
+      szene.selbstWeiter = szene.time.delayedCall(Math.max(2200, e.text.length * 55), function () { szene.sperreBis = 0; szene.weiter(); });
     });
   }
 
   weiter() {
     var f = this.weiterWartet;
     if (!f) return;
+    if (this.sperreBis && this.time.now < this.sperreBis) return;
     this.weiterWartet = null;
     if (this.selbstWeiter) { this.selbstWeiter.remove(); this.selbstWeiter = null; }
     f();
@@ -380,7 +403,7 @@ class KampfSzene extends Phaser.Scene {
       this.tweens.add({ targets: this.bildGegner, alpha: 0, x: this.bildGegner.x + MASS.px(80), duration: 700 });
     } else if (ende === "niederlage") {
       // Kein „Game Over“: zurück ins Labor, alle erholt.
-      stand.gruppe.forEach(function (el) { el.zh = KAMPF.grundwerte(el.art, el.stufe).zhMax; });
+      stand.gruppe.forEach(function (el) { el.zh = KAMPF.werte(el).zhMax; });
       var imDorf = !stand.labor || stand.labor.karte === "stoffingen";
       await this.wartenAufTipp(imDorf
         ? "Du wachst in Mutters Werkstatt auf. Es riecht nach Salbe. Deine Elementals haben sich erholt – und du bist klüger als vorhin."
