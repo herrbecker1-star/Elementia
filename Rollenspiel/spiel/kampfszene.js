@@ -128,6 +128,7 @@ class KampfSzene extends Phaser.Scene {
     // Prüfschalter &menue=angriff: das Angriffsmenü gleich offen (für Fotos)
     if (/[?&]menue=angriff\b/.test(location.search)) this.menueReaktion();
     if (/[?&]menue=feld\b/.test(location.search)) this.feldErklaeren();
+    if (/[?&]menue=bestimmen\b/.test(location.search)) this.menueBestimmen();
   }
 
   async spieleZuege(liste) {
@@ -198,7 +199,11 @@ class KampfSzene extends Phaser.Scene {
     c.grund.clear().fillStyle(FARBE.papier, 0.93).fillRoundedRect(0, 0, b, h, MASS.px(10))
       .lineStyle(MASS.px(2), FARBE.papierRand, 1).strokeRoundedRect(0, 0, b, h, MASS.px(10));
     c.name.setText(seite === "gegner" && k.wild && !k.erkannt ? "???" : KAMPF.name(k, seite)).setPosition(MASS.px(10), MASS.px(6));
-    c.stufe.setText("Stufe " + el.stufe).setPosition(b - MASS.px(10), MASS.px(8));
+    // Status neben der Stufe, damit man sieht, warum etwas schiefgeht.
+    var st = k.seiten[seite].status, zeichen = [];
+    if (st.vergiftet) zeichen.push("GIFT");
+    if (st.geblendet) zeichen.push("GEBLENDET");
+    c.stufe.setText((zeichen.length ? zeichen.join(" ") + " · " : "") + "Stufe " + el.stufe).setPosition(b - MASS.px(10), MASS.px(8));
     var ziel = el.zh / w.zhMax;
     // Der Balken läuft dem Wert nach – so sieht man, wie viel ein Treffer kostete.
     this.tweens.addCounter({
@@ -226,6 +231,7 @@ class KampfSzene extends Phaser.Scene {
     if (b.magnetisch !== undefined) t.push(b.magnetisch ? "magnetisch" : "nicht magnetisch");
     if (b.leitfaehig !== undefined) t.push(b.leitfaehig ? "leitet" : "leitet nicht");
     if (b.verformbar !== undefined) t.push(b.verformbar ? "verformbar" : "spröde");
+    if (b.brennt !== undefined) t.push(b.brennt ? "brennt" : "brennt nicht");
     return t.length ? t.join(" · ") : "noch nicht untersucht";
   }
 
@@ -250,7 +256,8 @@ class KampfSzene extends Phaser.Scene {
       "Sauerstoff " + Math.round(f.sauerstoff) + ": Feuer braucht und verbraucht ihn." +
       " Wärme " + Math.round(f.waerme) + ": " + (plus ? "+" + plus + " E je Runde für beide" : "noch kein Energie-Bonus (ab 30)") +
       (f.waerme >= 50 ? ", Zink ist formbar" : "") + "." +
-      " Feuchte " + Math.round(f.feuchte) + ": " + (f.feuchte > 70 ? "Feuer trifft nur mit 70 %." : "Feuer brennt normal (dämpft erst über 70)."));
+      " Feuchte " + Math.round(f.feuchte) + ": " + (f.feuchte > 70 ? "Feuer wirkt nur halb." : "Feuer brennt normal (halb erst über 70).") +
+      (f.waerme >= KAMPF.REGEL.hitzeFeuer && f.feuchte <= 70 ? " Große Hitze: Feuer wirkt ×1,5." : ""));
   }
 
   aktualisieren() {
@@ -304,17 +311,19 @@ class KampfSzene extends Phaser.Scene {
   menueReaktion() {
     var szene = this, k = this.k;
     var el = KAMPF.aktiv(k, "spieler");
-    // Jeder Knopf zeigt die Stärke und die Energie, beides relativ. Ist der
-    // Gegner erkannt, steht dort, welchen Anteil seiner vollen LP ein Treffer
-    // etwa nimmt (25 % ≈ vier Treffer). Bei einem unerkannten Gegner verriete
-    // das den Stoff – dann die eigene Stärke (Schlag auf Stufe 1 = 100 %).
+    // Jeder Knopf zeigt Stärke und Energie; Trefferchance und Nebenwirkung
+    // in % stehen im Text daneben (auf dem Knopf ist dafür kein Platz – bei
+    // vier Spalten am Handy schon gar nicht). Ist der Gegner erkannt, steht statt der Stärke,
+    // welchen Anteil seiner vollen LP ein Treffer etwa nimmt (25 % ≈ vier
+    // Treffer). Bei einem unerkannten Gegner verriete das den Stoff – dann
+    // die Stärke des Angriffs (Skala bis 100, seit Fassung 12).
     var kennt = !k.wild || k.erkannt;
     var gegnerLP = KAMPF.werte(KAMPF.aktiv(k, "gegner")).zhMax;
     var eintraege = KAMPF.angriffe(el).map(function (id) {
       var r = REAKTIONEN[id], grund = KAMPF.hindernis(k, "spieler", id), staerke;
-      if (r.art === "schutz") staerke = "Schutz";
+      if (r.typ === "schutz") staerke = "Schutz";
       else if (kennt) staerke = "≈ " + Math.round(KAMPF.schaetzeSchaden(k, "spieler", id, true) / gegnerLP * 100) + " % LP";
-      else staerke = r.art === "leitung" ? "Stärke: je nach Wärme" : "Stärke " + KAMPF.staerke(el, id) + " %";
+      else staerke = r.typ === "waerme" ? "Stärke " + KAMPF.waermeStaerke(k) : "Stärke " + KAMPF.staerke(el, id);
       return { text: r.name + "\n" + staerke + " · " + r.ae + " E", aktiv: !grund, grund: grund, beiKlick: function () { szene.ausfuehren({ typ: "reaktion", id: id }); } };
     });
     eintraege.push({ text: "Kraft sammeln", beiKlick: function () { szene.ausfuehren({ typ: "sammeln" }); } });
@@ -323,7 +332,9 @@ class KampfSzene extends Phaser.Scene {
     }
     eintraege.push(this.zurueck());
     var zs = k.seiten.gegner.status;
-    this.zeigeText("Energie (E) " + k.seiten.spieler.ae + "/" + KAMPF.AE_MAX + ". Jede Runde +3, Wärme im Feld gibt mehr. Kraft sammeln: +2." +
+    var zusatz = KAMPF.angriffe(el).filter(function (id) { return angriffZusatz(id).length; })
+      .map(function (id) { return REAKTIONEN[id].name + ": " + angriffZusatz(id).join(", ") + "."; }).join(" ");
+    this.zeigeText((zusatz ? zusatz + " " : "") + "Energie (E) " + k.seiten.spieler.ae + "/" + KAMPF.AE_MAX + ". Jede Runde +3, Wärme im Feld gibt mehr. Kraft sammeln: +2." +
       (zs.schutz || zs.tarnung ? " Der Gegner ist geschützt: Dein nächster Treffer wirkt schwächer." : ""));
     this.zeigeKnoepfe(eintraege);
   }
@@ -400,8 +411,8 @@ class KampfSzene extends Phaser.Scene {
       var bild = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
       var richtung = e.seite === "spieler" ? 1 : -1;
       this.tweens.add({ targets: bild, x: bild.x + richtung * MASS.px(36), duration: 160, yoyo: true, ease: "Quad.easeOut" });
-      var art = REAKTIONEN[e.reaktion].art;
-      if (art === "hitze" || art === "reaktion" || art === "leitung") this.aufblitzen(e.seite === "spieler" ? this.bildGegner : this.bildSpieler, 0xff8a3a);
+      var typ = REAKTIONEN[e.reaktion].typ;
+      if (typ === "feuer" || typ === "reaktion" || typ === "waerme") this.aufblitzen(e.seite === "spieler" ? this.bildGegner : this.bildSpieler, 0xff8a3a);
     }
     if (e.schaden) {
       var ziel = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
@@ -458,9 +469,9 @@ class KampfSzene extends Phaser.Scene {
   }
 
   angriffKurz(id, el) {
-    var r = REAKTIONEN[id], art = { wucht: "Schlag", hitze: "Feuer", reaktion: "Stoffreaktion", leitung: "Wärme", schutz: "Schutz" }[r.art];
+    var r = REAKTIONEN[id], typ = r.typ === "schutz" ? "Schutz" : TYPEN[r.typ].name;
     var st = KAMPF.staerke(el, id);
-    return r.name + "\n" + art + (st ? " " + st + " %" : "") + " · " + r.ae + " E";
+    return r.name + "\n" + typ + (st ? " " + st : "") + " · " + r.ae + " E";
   }
 
   // Bei Stufe 6, 8 und 10: zwei Vorschläge (KAMPF.lernVorschlaege). Bei vier
@@ -470,7 +481,9 @@ class KampfSzene extends Phaser.Scene {
     var vorschlaege = KAMPF.lernVorschlaege(el);
     if (!vorschlaege.length) return;
     var szene = this;
-    var w = await this.waehle(name + " ist jetzt Stufe " + el.stufe + " und kann einen neuen Angriff lernen. Welchen?",
+    var zusatz = vorschlaege.filter(function (id) { return angriffZusatz(id).length; })
+      .map(function (id) { return REAKTIONEN[id].name + ": " + angriffZusatz(id).join(", ") + "."; }).join(" ");
+    var w = await this.waehle(name + " ist jetzt Stufe " + el.stufe + " und kann einen neuen Angriff lernen. Welchen?" + (zusatz ? " " + zusatz : ""),
       vorschlaege.map(function (id) { return szene.angriffKurz(id, el); }).concat(["keinen"]));
     if (w >= vorschlaege.length) return;
     var neu = vorschlaege[w], liste = KAMPF.angriffe(el);

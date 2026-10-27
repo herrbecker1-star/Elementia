@@ -267,32 +267,38 @@ class BuchSzene extends Phaser.Scene {
     var x = f.x + linksB + MASS.px(16), b = f.b - linksB - MASS.px(16), y = f.y;
 
     var bonus = probe.starter ? " (+" + Math.round(KAMPF.STARTER_BONUS * 100) + " %)" : "";
+    var g = GRUPPEN[a.gruppe];
     var bWerte = b * 0.6 - MASS.px(6), bTrifft = b - bWerte - MASS.px(6);
-    var h1 = this.tabelle(x, y, [bWerte * 0.24, bWerte * 0.26, bWerte * 0.5], [
+    // Seit Fassung 12: fünf Kampfwerte wie im Spiel der 1. Generation.
+    // Die Gruppe gibt die Verteilung, der Stoff den Feinschliff.
+    var h1 = this.tabelle(x, y, [bWerte * 0.3, bWerte * 0.22, bWerte * 0.48], [
       ["Wert", "Zahl", "kommt von"],
       ["LP", (el ? el.zh + "/" : "") + w.zhMax + bonus, "Schmelzpunkt " + s.schmelz + " °C"],
-      ["Abwehr", w.abwehr, "Härte " + komma(s.haerte)],
-      ["Tempo", komma(w.tempo), "Dichte " + komma(s.dichte) + " g/cm³"]
-    ]);
-    var sulf = REAKTIONEN.sulfidbildung, sf = (sulf.gegen && sulf.gegen[art]) || (a.klasse === "Metall" ? sulf.gegenMetall : sulf.gegenNichtmetall);
-    var spr = KAMPF.wuchtFaktor(art, 20);
-    var h2 = this.tabelle(x + bWerte + MASS.px(6), y, [bTrifft * 0.55, bTrifft * 0.45], [
-      ["So stark trifft es", "×"],
-      ["Feuer", "×" + komma(KAMPF.hitzeFaktor(art))],
-      ["Schlag", "×" + komma(spr) + (spr > 1 ? " spröde" : "")],
-      ["Sulfidbildung", "×" + komma(sf)],
-      ["Wärme", "×" + komma(KAMPF.leitFaktor(art))]
-    ]);
+      ["Angriff", w.angriff + bonus, g.name],
+      ["Verteidigung", w.verteidigung, g.name + ", Härte " + komma(s.haerte)],
+      ["Sp.-Angriff", w.spAngriff + bonus, g.name],
+      ["Sp.-Verteid.", w.spVerteidigung, g.name],
+      ["Tempo", w.tempo, "Dichte " + komma(s.dichte) + " g/cm³"]
+    ], 10);
+    // Die Spalte der Typtabelle (daten\typen.js) für diesen Stoff – nur die
+    // Typen, die es im Spiel schon als Angriff gibt.
+    var typen = Object.keys(TYPEN).filter(function (t) {
+      return Object.keys(REAKTIONEN).some(function (id) { return REAKTIONEN[id].typ === t; });
+    });
+    var bruch = function (f) { return f === 0.5 ? "×½" : "×" + f; };
+    var h2 = this.tabelle(x + bWerte + MASS.px(6), y, [bTrifft * 0.38, bTrifft * 0.62], [["So stark trifft es", a.klasse]].concat(typen.map(function (t) {
+      var wk = typWirkung(t, art, 20);
+      return [TYPEN[t].name, bruch(wk.faktor) + (wk.wort ? " " + wk.wort : "")];
+    })), 10);
     y += Math.max(h1, h2) + MASS.px(6);
 
-    var ARTNAME = { wucht: "Schlag", hitze: "Feuer", reaktion: "Stoffreaktion", leitung: "Wärme", schutz: "Schutz" };
-    // Stärke relativ: ein Schlag auf Stufe 1 = 100 %; sie wächst mit der Stufe.
-    var zeilen = [["Angriff", "Art", "Stärke", "E", "Wirkung"]];
+    var zeilen = [["Angriff", "Typ", "Stärke", "E", "Wirkung"]];
     (el ? KAMPF.angriffe(el) : a.reaktionen).forEach(function (id) {
       var r = REAKTIONEN[id];
-      zeilen.push([r.name, ARTNAME[r.art], r.art === "leitung" ? "je nach Wärme" : r.art === "schutz" ? "–" : KAMPF.staerke(probe, id) + " %", r.ae, r.text]);
+      var st = r.typ === "waerme" ? "Wärme + " + KAMPF.REGEL.waermeGrund : r.typ === "schutz" ? "–" : String(KAMPF.staerke(probe, id));
+      zeilen.push([r.name, r.typ === "schutz" ? "Schutz" : TYPEN[r.typ].name, st, r.ae, [r.text].concat(angriffZusatz(id)).join(" ")]);
     });
-    this.tabelle(x, y, [b * 0.2, b * 0.15, b * 0.1, b * 0.05, b * 0.5], zeilen);
+    this.tabelle(x, y, [b * 0.2, b * 0.13, b * 0.12, b * 0.05, b * 0.5], zeilen, 10);
   }
 
   zeigeGepaeck(f) {

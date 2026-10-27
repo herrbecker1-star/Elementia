@@ -5,8 +5,9 @@
 //  entschieden wird; der Prüfstand lässt tausende Kämpfe ohne
 //  Bildschirm laufen.
 //
-//  Grundgedanke: keine Typentabelle, sondern Chemie.
-//   · Werte kommen aus Stoffeigenschaften (grundwerte).
+//  Grundgedanke (seit Fassung 12): Schadensformel wie im Spiel der
+//  1. Generation, Typtabelle aus der Chemie (daten\typen.js).
+//   · Werte kommen aus Gruppe und Stoffeigenschaften (grundwerte).
 //   · Das FELD hat Sauerstoff, Wärme und Feuchte. Verbrennungen
 //     verbrauchen Sauerstoff und heizen das Feld auf. Wärme gibt
 //     beiden Seiten mehr Aktivierungsenergie – wer Feuer macht,
@@ -25,103 +26,96 @@ var KAMPF = (function () {
   var AE_START = 3, AE_MAX = 10, AE_JE_RUNDE = 3;
   var WAERME_ABKUEHLUNG = 4;
   var LUFTZUFUHR = 3;             // Sauerstoff je Runde im Freien
-  var VOLLTREFFER = 1 / 12;
+  var VOLLTREFFER = 1 / 16;       // verdoppelt den Schaden vor dem „+2“ (wie Gen 2)
   var ABWEHR_PLUS_MAX = 4;        // Schutzschichten stapeln sich nicht endlos
-  var GEBLENDET = 0.65;           // bei 0,5 gewann Magnesium 87 % seiner Paarungen
+  var ABWEHR_PLUS_JE = 0.1;       // je Punkt +10 % Verteidigung und Sp.-Verteidigung
+  // Stellschrauben, die der Prüfstand für Messreihen verstellen darf (KAMPF.REGEL):
+  // stamm      Angriff aus der Grundausstattung der eigenen Art (Gen 2: STAB)
+  // lpFaktor   LP ×2 gegenüber Gen 2 (siehe grundwerte)
+  // waermeGrund, leitungKuehlt  Wärmeleitung (siehe waermeStaerke)
+  // sockel     dämpft den Stufenvorsprung: Werte aus (2·Stufe + sockel)
+  // stufenfaktorGlatt  2·Stufe/5 + 2 ohne Abrunden
+  // hitzeFeuer Feldwärme, ab der Feuer ×1,5 wirkt (Gen 2: Sonne); null = aus
+  // haerteDeckel  höchstens so viel Verteidigung aus der Härte (Bor: Mohs 9,3)
+  // Gemessen 27.10.2026 (Fassung 13, LIESMICH.md): Sockel 0/10/30/50 →
+  // eine Stufe Vorsprung gewinnt 94/81/70–82/76 %; ohne Abrunden springt der
+  // Stufenfaktor nicht mehr von 3 (Stufe 4) auf 4 (Stufe 5).
+  var REGEL = { stamm: 1.5, lpFaktor: 2, waermeGrund: 40, leitungKuehlt: 10, sockel: 50, stufenfaktorGlatt: true, hitzeFeuer: 80, haerteDeckel: 10 };
+  var BLENDUNG_TREFFER = 0.7;     // Trefferchance geblendet
+  var BLENDUNG_DAUER = 2;         // eigene Angriffe
+  var GIFT_ANTEIL = 0.1, GIFT_RUNDEN = 3;
   var SEITEN = ["spieler", "gegner"];
 
   // ----------------------------------------------------------
-  //  Werte aus Stoffeigenschaften
+  //  Werte aus Gruppe und Stoffeigenschaften (seit Fassung 12)
   // ----------------------------------------------------------
-  // LP (im Spiel so genannt, intern zh, früher „Zusammenhalt“):
-  //   je höher die Schmelztemperatur, desto stärker hält
-  //   der Stoff zusammen (gedeckelt bei 2000 °C, sonst wäre Kohlenstoff
-  //   mit 3640 °C unverwundbar).
-  // Abwehr: aus der Mohshärte.
-  // Tempo: leichte Stoffe sind schnell – aus der Dichte.
-  //
-  // Die Stoffwerte gehen gedämpft ein (Fassung 2, 24.09.2026): In der
-  // ersten Fassung (30 + T/80, 4 + 2·Härte) gewann Eisen 100 % aller
-  // Paarungen, weil es Hitze UND Wucht zugleich widersteht. Die
-  // Richtung bleibt – Eisen ist zäh –, der Abstand schrumpft.
-  //
-  // Stufen im Gleichtakt (Fassung 9, 25.10.2026): LP und Kraft wachsen
-  // um denselben Faktor, die Abwehr wächst nicht – Härte ist eine
-  // Stoffeigenschaft, keine Erfahrung. So braucht ein Kampf auf jeder
-  // Stufe gleich viele Treffer, und jede Stufe spielt sich wie Stufe 5,
-  // auf die das Balancing abgestimmt ist. Vorher wuchsen LP (+10 %),
-  // Kraft (+8 %) und Abwehr (+5 %) verschieden schnell: Die Kämpfe
-  // wurden länger, und die Spanne der Siegquoten stieg von 17 (Stufe 5)
-  // auf 47 (Stufe 10) und 52 (Stufe 15). Jetzt 17–19 auf allen Stufen.
-  // Auf Stufe 5 sind alle Werte gleich geblieben.
-  function grundwerte(artId, stufe) {
-    var s = ARTEN[artId].stoff;
-    var wachstum = 1 + 0.1 * (stufe - 1);
+  // Basiswerte wie im Spiel der 1. und 2. Generation:
+  //   Angriff, Sp.-Angriff, Sp.-Verteidigung  aus der Gruppe (GRUPPEN)
+  //   Verteidigung   Gruppe + 5 · (Mohshärte − 3), höchstens + REGEL.haerteDeckel
+  //   Tempo          130 − 12 · Dichte, auf 5 gerundet, mindestens 20
+  //   LP             60 + Schmelzpunkt / 100 (gedeckelt bei 2000 °C, sonst
+  //                  wäre Kohlenstoff mit 3640 °C unverwundbar)
+  // Auf der Stufe (ohne DVs und EVs), mit Sockel (seit Fassung 13):
+  //   Wert = ⌊Basis · (2 · Stufe + 50) / 100⌋ + 5
+  //   LP   = 2 · (⌊Basis · (2 · Stufe + 50) / 100⌋ + Stufe + 10)
+  // Ohne Sockel (Gen 1/2 pur) sind die Werte auf Stufe 5 so klein (10–16),
+  // dass eine Stufe mehr 10 % mehr Angriff bedeutete: 94 % Siege.
+  // Bis Fassung 11 gab es nur LP, eine Abwehr (Härte), Tempo und einen
+  // Kraft-Faktor der Stufe; siehe LIESMICH.md.
+  function basiswerte(artId) {
+    var a = ARTEN[artId], s = a.stoff, g = GRUPPEN[a.gruppe];
     return {
-      zhMax: Math.round((40 + Math.min(s.schmelz, 2000) / 200) * wachstum),
-      abwehr: Math.round((8 + s.haerte) * 1.2),
-      tempo: Math.round((12 - s.dichte) * 10) / 10 + stufe * 0.1,
-      kraft: wachstum * 1.32 / 1.4
+      lp: 60 + Math.min(s.schmelz, 2000) / 100,
+      angriff: g.angriff,
+      verteidigung: g.verteidigung + Math.min(REGEL.haerteDeckel, 5 * (s.haerte - 3)),
+      spAngriff: g.spAngriff,
+      spVerteidigung: g.spVerteidigung,
+      tempo: Math.max(20, Math.round((130 - 12 * s.dichte) / 5) * 5)
     };
   }
 
-  // Hitze trifft Stoffe mit niedriger Schmelztemperatur härter:
-  // Schwefel (115 °C) ×1,4, Zink (420 °C) ×1,15, Eisen und Kupfer ×0,8.
-  function hitzeFaktor(artId) {
-    var t = ARTEN[artId].stoff.schmelz;
-    return Math.max(0.8, Math.min(1.4, 1 + (600 - t) / 1200));
-  }
+  function aufStufe(basis, stufe) { return Math.floor(basis * (2 * stufe + REGEL.sockel) / 100) + 5; }
 
-  // Verformbare Stoffe geben nach, spröde zerbrechen. Zink ist bei
-  // Raumtemperatur spröde, wird aber warm verformbar – ist das Feld
-  // heiß (Wärme ab 50), zählt es als verformbar.
-  function wuchtFaktor(artId, waerme) {
-    var a = ARTEN[artId];
-    var verformbar = a.steckbrief.verformbar || (a.warmVerformbar && waerme >= 50);
-    return verformbar ? 0.9 : 1.15;
-  }
-
-  // Reaktionen mit dem Ziel selbst (Sulfidbildung) hängen daran,
-  // ob das Ziel ein Metall ist – oder an einem bestimmten Partner:
-  // Zink reagiert heftig mit Schwefel, mit Eisen gar nicht (gegen).
-  function stoffFaktor(r, artId) {
-    if (r.gegen && r.gegen[artId]) return r.gegen[artId];
-    return ARTEN[artId].klasse === "Metall" ? (r.gegenMetall || 1) : (r.gegenNichtmetall || 1);
-  }
-
-  // Wärmeleitung: Ein guter Wärmeleiter (alle Metalle, auch Grafit)
-  // wird durch und durch heiß; ein Isolator wie Schwefel lässt die
-  // Wärme kaum hinein. Die Antwort auf die hitzefesten Metalle.
-  function leitFaktor(artId) {
-    return ARTEN[artId].steckbrief.leitfaehig ? 1.3 : 0.7;
+  // Abweichungen von Gen 2: Sockel (oben) und LP ×2 (REGEL.lpFaktor). Mit den
+  // LP der Vorlage dauerte ein Kampf im Median 2 Runden – ein sehr wirksamer
+  // Stamm-Treffer entschied fast allein, Energie und Feld spielten keine
+  // Rolle. Mit Sockel reicht ×2 (Fassung 12 ohne Sockel: ×3); ein Kampf
+  // dauert auf Stufe 5 etwa 6–7 Runden, auf Stufe 10 etwa 6.
+  function grundwerte(artId, stufe) {
+    var b = basiswerte(artId);
+    return {
+      zhMax: REGEL.lpFaktor * (Math.floor(b.lp * (2 * stufe + REGEL.sockel) / 100) + stufe + 10),
+      angriff: aufStufe(b.angriff, stufe),
+      verteidigung: aufStufe(b.verteidigung, stufe),
+      spAngriff: aufStufe(b.spAngriff, stufe),
+      spVerteidigung: aufStufe(b.spVerteidigung, stufe),
+      tempo: aufStufe(b.tempo, stufe)
+    };
   }
 
   // Die Werte eines konkreten Elementals. Das Starter-Elemental (aus
   // Schmiede oder Garten) ist stärker als alles, was man fängt: Es ist
-  // der Gefährte der ganzen Reise. +5 % auf LP und Kraft, gemessen
-  // 25.10.2026: Der Starter gewinnt gegen wilde Elementals gleicher
-  // Stufe im Mittel 73 % (Eisen 79, Magnesium 68; ohne Bonus 59/44).
-  // Der Bonus wirkt doppelt (länger stehen UND härter treffen): 10 %
-  // ergaben schon 90 %, 20 % fast 100 % – dann wäre jeder Kampf entschieden.
+  // der Gefährte der ganzen Reise. +5 % auf LP, Angriff und Sp.-Angriff –
+  // nur für das eigene Elemental des Spielers: Das Flag starter setzt
+  // allein die Starterwahl (neuesElemental(…, true)). Lumis Elemental,
+  // wilde und Trainer haben es nie.
   var STARTER_BONUS = 0.05;
   function werte(el) {
     var w = grundwerte(el.art, el.stufe);
     if (el.starter) {
       w.zhMax = Math.round(w.zhMax * (1 + STARTER_BONUS));
-      w.kraft *= 1 + STARTER_BONUS;
+      w.angriff = Math.round(w.angriff * (1 + STARTER_BONUS));
+      w.spAngriff = Math.round(w.spAngriff * (1 + STARTER_BONUS));
     }
     return w;
   }
 
-  // Stärke eines Angriffs in Prozent, für die Anzeige (seit Fassung 10):
-  // ein Schlag (Kraft 10) auf Stufe 1 ist 100 %. Sie wächst mit der Stufe
-  // wie der Schaden selbst (Schlag auf Stufe 5: 140 %, Stufe 10: 190 %).
-  // Schutz und Wärmeleitung (hängt am Feld) haben keine feste Stärke: null.
-  var STAERKE_BEZUG = 10;
+  // Stärke eines Angriffs für die Anzeige: die feste Zahl auf der Skala
+  // bis 100. Schutz und Wärmeleitung (hängt am Feld) haben keine: null.
   function staerke(el, id) {
     var r = REAKTIONEN[id];
-    if (r.art === "schutz" || r.art === "leitung") return null;
-    return Math.round(r.kraft * werte(el).kraft / (STAERKE_BEZUG * grundwerte(el.art, 1).kraft) * 100);
+    if (r.typ === "schutz" || r.typ === "waerme") return null;
+    return r.staerke;
   }
 
   function neuesElemental(artId, stufe, starter) {
@@ -156,17 +150,17 @@ var KAMPF = (function () {
   function kannLernen(el, id) {
     var r = REAKTIONEN[id];
     if (!r.lernbar || r.fuer.nur || !kannAngriff(el.art, id)) return false;
-    var eigeneMax = Math.max.apply(null, ARTEN[el.art].reaktionen.map(function (x) { return REAKTIONEN[x].kraft || 0; }));
-    return (r.kraft || 0) <= eigeneMax;
+    var eigeneMax = Math.max.apply(null, ARTEN[el.art].reaktionen.map(function (x) { return REAKTIONEN[x].staerke || 0; }));
+    return (r.staerke || 0) <= eigeneMax;
   }
 
   function lernVorschlaege(el) {
-    var kann = angriffe(el), arten = kann.map(function (id) { return REAKTIONEN[id].art; });
+    var kann = angriffe(el), typen = kann.map(function (id) { return REAKTIONEN[id].typ; });
     return Object.keys(REAKTIONEN).filter(function (id) {
       return kann.indexOf(id) < 0 && kannLernen(el, id);
     }).sort(function (a, b) {
-      var neuA = arten.indexOf(REAKTIONEN[a].art) < 0 ? 0 : 1, neuB = arten.indexOf(REAKTIONEN[b].art) < 0 ? 0 : 1;
-      return neuA - neuB || (REAKTIONEN[b].kraft || 0) - (REAKTIONEN[a].kraft || 0) || (a < b ? -1 : 1);
+      var neuA = typen.indexOf(REAKTIONEN[a].typ) < 0 ? 0 : 1, neuB = typen.indexOf(REAKTIONEN[b].typ) < 0 ? 0 : 1;
+      return neuA - neuB || (REAKTIONEN[b].staerke || 0) - (REAKTIONEN[a].staerke || 0) || (a < b ? -1 : 1);
     }).slice(0, 2);
   }
 
@@ -269,34 +263,70 @@ var KAMPF = (function () {
     return null;
   }
 
-  // Erwarteter Schaden ohne Zufallsstreuung – für die KI und für
-  // die Anzeige „etwa … Schaden".
+  // Die Schadensformel der 2. Generation (seit Fassung 13), nach jedem
+  // Schritt abgerundet:
+  //   Schaden = (⌊⌊(⌊2·Stufe/5⌋ + 2) · Stärke · A / V⌋ / 50⌋ · Volltreffer + 2) · Faktoren · Zufall
+  // faktoren: Stamm (×1,5), Typ (×2, ×1, ×½), Feld (Gen 2: Wetter), einzeln abgerundet.
+  // zufall: 217 bis 255, geteilt durch 255 (85–100 %).
+  // voll: Volltreffer verdoppeln den Schaden vor dem „+2“ (Gen 1: die Stufe).
+  // Beispiel aus der Vorlage: Stufe 50, Stärke 80, A = V = 100, Stamm,
+  // sehr wirksam → 93 bis 110, Volltreffer 183 bis 216 (Prüfstand).
+  function formel(stufe, st, A, V, faktoren, zufall, voll) {
+    var sf = REGEL.stufenfaktorGlatt ? 2 * stufe / 5 + 2 : Math.floor(2 * stufe / 5) + 2;
+    var s = Math.floor(Math.floor(sf * st * A / V) / 50) * (voll ? 2 : 1) + 2;
+    faktoren.forEach(function (f) { s = Math.floor(s * f); });
+    return Math.floor(s * zufall / 255);
+  }
+
+  // Wärmeleitung: Stärke = Wärme des Feldes + 40 (Fassung 12: +45), höchstens 100; danach ist
+  // das Feld um 10 kühler. Nur die Feldwärme (Plan) gab bei Wärme 20 Stärke
+  // 20 – Kupfer gewann 8 %. Messreihen 27.10.2026 (Kupfer, Stufe 5): +40 →
+  // 25 %, +45 → 42 %, +50 → 51 %, aber dann schlägt Kupfer Eisen 98 %.
+  function waermeStaerke(k) { return Math.min(100, Math.round(k.feld.waerme) + REGEL.waermeGrund); }
+
+  // Das Feld als Wetter (Gen 2: Regen und Sonne): Feuchte über 70 dämpft
+  // Feuer auf die Hälfte, große Hitze (REGEL.hitzeFeuer) facht es an (×1,5).
+  // Bis Fassung 12: Feuchte ×0,7, keine Hitze-Regel.
+  function feldFaktor(k, r) {
+    if (r.typ !== "feuer") return 1;
+    if (k.feld.feuchte > 70) return 0.5;
+    if (REGEL.hitzeFeuer !== null && k.feld.waerme >= REGEL.hitzeFeuer) return 1.5;
+    return 1;
+  }
+
+  // Trefferchance (0–1): Genauigkeit des Angriffs, geblendet ×0,7.
+  function trefferChance(k, seite, reaktionId) {
+    var r = REAKTIONEN[reaktionId];
+    return (r.genau || 100) / 100 * (k.seiten[seite].status.geblendet ? BLENDUNG_TREFFER : 1);
+  }
+
+  // Mittlerer Schaden eines Treffers (Zufall 236/255 ≈ 92,5 %, ohne
+  // Volltreffer) – für die KI und für die Anzeige „≈ x % LP“.
   // ohneSchutz: so, als stünde beim Ziel kein Schild – für die Anzeige
   // im Angriffsmenü. Ein Schild dämpft nur den nächsten Treffer; mit ihm
   // gerechnet sähe jeder Angriff wertlos aus.
+  var ZUFALL_MITTEL = 236;
   function schaetzeSchaden(k, seite, reaktionId, ohneSchutz) {
-    if (ohneSchutz) return ohneSchild(k, gegenueber(seite), function () { return schaden(k, seite, reaktionId, 1); });
-    return schaden(k, seite, reaktionId, 1);
+    if (ohneSchutz) return ohneSchild(k, gegenueber(seite), function () { return schaden(k, seite, reaktionId, ZUFALL_MITTEL); });
+    return schaden(k, seite, reaktionId, ZUFALL_MITTEL);
   }
 
-  function schaden(k, seite, reaktionId, streuung) {
+  function schaden(k, seite, reaktionId, zufall, voll) {
     var r = REAKTIONEN[reaktionId];
-    if (r.art === "schutz") return 0;
+    if (r.typ === "schutz") return 0;
     var an = aktiv(k, seite), ziel = aktiv(k, gegenueber(seite));
     var zs = k.seiten[gegenueber(seite)].status;
-    var basis = r.art === "leitung" ? k.feld.waerme / 4 : r.kraft;
-    basis *= werte(an).kraft;
-    var abwehr = werte(ziel).abwehr + (zs.abwehrPlus || 0);
-    var s = basis * 20 / (10 + abwehr);
-    if (r.art === "wucht") s *= wuchtFaktor(ziel.art, k.feld.waerme);
-    else if (r.art === "leitung") s *= leitFaktor(ziel.art);
-    else if (r.art === "reaktion") s *= stoffFaktor(r, ziel.art);
-    else s *= hitzeFaktor(ziel.art);
-    if (r.art === "hitze" && k.feld.feuchte > 70) s *= 0.7;
-    if (k.seiten[seite].status.geblendet) s *= GEBLENDET;
+    var wa = werte(an), wz = werte(ziel);
+    // Physisch oder speziell hängt nur am Typ (wie in Gen 1).
+    var physisch = TYPEN[r.typ].physisch;
+    var A = physisch ? wa.angriff : wa.spAngriff;
+    var V = (physisch ? wz.verteidigung : wz.spVerteidigung) * (1 + ABWEHR_PLUS_JE * (zs.abwehrPlus || 0));
+    var st = r.typ === "waerme" ? waermeStaerke(k) : r.staerke;
+    var stamm = ARTEN[an.art].reaktionen.indexOf(reaktionId) >= 0 ? REGEL.stamm : 1;
+    var s = formel(an.stufe, st, A, V, [stamm, typWirkung(r.typ, ziel.art, k.feld.waerme).faktor, feldFaktor(k, r)], zufall, voll);
     if (zs.schutz) s *= zs.schutz;
     if (zs.tarnung) s *= 0.5;
-    return Math.max(1, Math.round(s * streuung));
+    return Math.max(1, Math.floor(s));
   }
 
   function fuehreAus(k, seite, reaktionId) {
@@ -316,27 +346,39 @@ var KAMPF = (function () {
     s.ae -= r.ae;
     k.log.push({ seite: seite, reaktion: reaktionId, text: wer + ": " + r.name + "!" });
 
-    if (r.art !== "schutz") {
-      // Volltreffer: Der Zufall gehört in die App, nicht an den
-      // Kartentisch – hier ist er erlaubt und hält Paarungen offen.
-      var voll = k.zufall() < VOLLTREFFER;
-      var betrag = schaden(k, seite, reaktionId, k.zufall.zwischen(0.8, 1.2) * (voll ? 1.5 : 1));
-      if (r.art === "leitung") k.feld.waerme = Math.max(0, k.feld.waerme - 20);
-      var ziel = aktiv(k, ander);
-      ziel.zh = Math.max(0, ziel.zh - betrag);
-      if (voll) k.log.push({ volltreffer: true, text: "Volltreffer!" });
-      k.log.push({ seite: ander, schaden: betrag, text: name(k, ander) + " verliert " + betrag + " LP." });
-      if (s.status.geblendet) { s.status.geblendet--; }
-      delete z.status.schutz;
-      delete z.status.tarnung;
+    var w = r.wirkung || {};
+    if (r.typ !== "schutz") {
+      var chance = trefferChance(k, seite, reaktionId);
+      if (s.status.geblendet && --s.status.geblendet <= 0) delete s.status.geblendet;
+      if (k.zufall() >= chance) {
+        k.log.push({ seite: seite, verfehlt: true, text: wer + " verfehlt!" });
+      } else {
+        // Volltreffer und Zufall gehören in die App, nicht an den
+        // Kartentisch – hier sind sie erlaubt und halten Paarungen offen.
+        var voll = k.zufall() < VOLLTREFFER;
+        var betrag = schaden(k, seite, reaktionId, 217 + Math.floor(k.zufall() * 39), voll);
+        if (r.typ === "waerme") k.feld.waerme = Math.max(0, k.feld.waerme - REGEL.leitungKuehlt);
+        var ziel = aktiv(k, ander);
+        ziel.zh = Math.max(0, ziel.zh - betrag);
+        if (voll) k.log.push({ volltreffer: true, text: "Volltreffer!" });
+        k.log.push({ seite: ander, schaden: betrag, text: name(k, ander) + " verliert " + betrag + " LP." });
+        delete z.status.schutz;
+        delete z.status.tarnung;
+        // Nebenwirkungen mit ihrer Chance in % – nur, wer noch steht.
+        if (ziel.zh > 0 && w.blendung && k.zufall() * 100 < w.blendung) {
+          z.status.geblendet = BLENDUNG_DAUER;
+          k.log.push({ text: name(k, ander) + " ist geblendet und trifft schlechter." });
+        }
+        if (ziel.zh > 0 && w.vergiftung && k.zufall() * 100 < w.vergiftung) {
+          z.status.vergiftet = GIFT_RUNDEN;
+          k.log.push({ text: name(k, ander) + " ist vergiftet." });
+        }
+      }
     }
 
     if (r.o2) k.feld.sauerstoff = Math.max(0, k.feld.sauerstoff - r.o2);
     if (r.waerme) k.feld.waerme = Math.min(100, k.feld.waerme + r.waerme);
 
-    var w = r.wirkung || {};
-    if (w.geblendet) { z.status.geblendet = w.geblendet; k.log.push({ text: name(k, ander) + " ist geblendet." }); }
-    if (w.reizgas) { z.status.reizgas = { schaden: w.reizgas, runden: w.dauer }; k.log.push({ text: "Stechendes Gas hängt über " + name(k, ander) + "." }); }
     if (w.schutz) s.status.schutz = w.schutz;
     if (w.tarnung) s.status.tarnung = true;
     if (w.abwehrPlus) s.status.abwehrPlus = Math.min(ABWEHR_PLUS_MAX, (s.status.abwehrPlus || 0) + w.abwehrPlus);
@@ -365,26 +407,30 @@ var KAMPF = (function () {
     var zs = k.seiten[ander].status;
     var drohung = 0;
     angriffe(aktiv(k, ander)).forEach(function (id) {
-      if (REAKTIONEN[id].art !== "schutz" && !hindernis(k, ander, id)) drohung = Math.max(drohung, schaetzeSchaden(k, ander, id));
+      if (REAKTIONEN[id].typ !== "schutz" && !hindernis(k, ander, id)) drohung = Math.max(drohung, schaetzeSchaden(k, ander, id) * trefferChance(k, ander, id));
     });
     angriffe(el).forEach(function (id) {
       if (hindernis(k, seite, id)) return;
       var r = REAKTIONEN[id], w;
-      if (r.art === "schutz") {
+      if (r.typ === "schutz") {
         var wi = r.wirkung;
-        if (wi.schutz) w = s.status.schutz ? 0 : drohung * (1 - wi.schutz) + (wi.abwehrPlus && (s.status.abwehrPlus || 0) < ABWEHR_PLUS_MAX ? 2 : 0);
+        // Verteidigung +10 % je Punkt ist auf Dauer etwa so viel wert wie
+        // ein Zehntel der Drohung je Punkt (bis Fassung 11 feste Zahlen 2 und 4).
+        var plus = wi.abwehrPlus && (s.status.abwehrPlus || 0) < ABWEHR_PLUS_MAX ? drohung * ABWEHR_PLUS_JE * wi.abwehrPlus : 0;
+        if (wi.schutz) w = s.status.schutz ? 0 : drohung * (1 - wi.schutz) + plus;
         else if (wi.tarnung) w = s.status.tarnung ? 0 : drohung * 0.5;
-        else if (wi.abwehrPlus) w = (s.status.abwehrPlus || 0) >= ABWEHR_PLUS_MAX ? 0 : 4;
+        else if (wi.abwehrPlus) w = plus;
         else w = 0;
         // Nur wer noch lange genug steht, hat vom Schutz etwas.
         if (el.zh < drohung) w *= 0.3;
       } else {
-        w = schaetzeSchaden(k, seite, id);
+        var p = trefferChance(k, seite, id);
+        w = schaetzeSchaden(k, seite, id) * p;
         // Ein Schild hält nur einen Treffer. Wer ihn nur nach dem
         // gedämpften Schaden bewertet, schlägt nie hinein und wartet
         // ewig hinter „Standfest“ – so verlor Magnesium 98 % gegen Zink
         // (gefunden 25.10.2026). Das Brechen des Schilds zählt mit.
-        if (zs.schutz || zs.tarnung) w = (w + ohneSchild(k, ander, function () { return schaetzeSchaden(k, seite, id); })) / 2;
+        if (zs.schutz || zs.tarnung) w = (w + ohneSchild(k, ander, function () { return schaetzeSchaden(k, seite, id) * p; })) / 2;
       }
       if (w > wert) { wert = w; bestes = { typ: "reaktion", id: id }; }
     });
@@ -499,10 +545,12 @@ var KAMPF = (function () {
     SEITEN.forEach(function (seite) {
       var s = k.seiten[seite];
       var el = s.gruppe[s.aktiv];
-      if (s.status.reizgas && el.zh > 0) {
-        el.zh = Math.max(0, el.zh - s.status.reizgas.schaden);
-        k.log.push({ seite: seite, schaden: s.status.reizgas.schaden, text: name(k, seite) + " hustet im Schwefeldioxid (−" + s.status.reizgas.schaden + ")." });
-        if (--s.status.reizgas.runden <= 0) delete s.status.reizgas;
+      // Vergiftung: 10 % der vollen LP am Ende jeder Runde, 3 Runden lang.
+      if (s.status.vergiftet && el.zh > 0) {
+        var gift = Math.max(1, Math.round(werte(el).zhMax * GIFT_ANTEIL));
+        el.zh = Math.max(0, el.zh - gift);
+        k.log.push({ seite: seite, schaden: gift, text: name(k, seite) + " leidet unter dem Gift (−" + gift + " LP)." });
+        if (--s.status.vergiftet <= 0) delete s.status.vergiftet;
       }
       s.ae = Math.min(AE_MAX, s.ae + AE_JE_RUNDE + Math.floor(k.feld.waerme / 30));
     });
@@ -574,7 +622,8 @@ var KAMPF = (function () {
     glanz: function (v) { return v ? "Es glänzt metallisch." : "Kein Glanz – matt."; },
     magnetisch: function (v) { return v ? "Der Magnet zieht es an!" : "Der Magnet zeigt keine Wirkung."; },
     leitfaehig: function (v) { return v ? "Das Lämpchen leuchtet – es leitet den Strom." : "Das Lämpchen bleibt dunkel – kein Strom."; },
-    verformbar: function (v) { return v ? "Unter dem Hammer verbiegt es sich." : "Unter dem Hammer splittert es – spröde."; }
+    verformbar: function (v) { return v ? "Unter dem Hammer verbiegt es sich." : "Unter dem Hammer splittert es – spröde."; },
+    brennt: function (v) { return v ? "In der Brennerflamme fängt es Feuer." : "In der Brennerflamme brennt es nicht."; }
   };
 
   function untersuchen(k, werkzeug) {
@@ -616,9 +665,11 @@ var KAMPF = (function () {
     befundText: function (eig, wert) { return BEFUND_TEXT[eig](wert); },
     STARTER_BONUS: STARTER_BONUS,
     GRUPPE_LERNT: GRUPPE_LERNT,
-    hitzeFaktor: hitzeFaktor,
-    wuchtFaktor: wuchtFaktor,
-    leitFaktor: leitFaktor,
+    basiswerte: basiswerte,
+    formel: formel,
+    trefferChance: trefferChance,
+    waermeStaerke: waermeStaerke,
+    REGEL: REGEL,
     neuesElemental: neuesElemental,
     erfahrung: erfahrung,
     epBisNaechste: epBisNaechste,

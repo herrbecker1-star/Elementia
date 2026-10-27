@@ -75,6 +75,14 @@ var SPIELSTAND = (function () {
     // Seit Fassung 8: eigene Angriffsliste je Elemental (Angriffe lernen)
     alle.forEach(function (el) {
       if (!Array.isArray(el.angriffe) && typeof ARTEN !== "undefined" && ARTEN[el.art]) el.angriffe = ARTEN[el.art].reaktionen.slice();
+      // Seit Fassung 12: Sulfidbildung heißt Sulfurierung, „Sulfid bilden“
+      // ist entfallen (Zink bekommt Funkenflug). Doppelte fallen weg.
+      if (Array.isArray(el.angriffe) && typeof ALTE_ANGRIFFE !== "undefined") {
+        el.angriffe = el.angriffe.map(function (id) { return ALTE_ANGRIFFE[id] || id; })
+          .filter(function (id, i, liste) { return liste.indexOf(id) === i; });
+      }
+      // Die LP-Skala ist seit Fassung 12 kleiner: nicht mehr als voll.
+      if (typeof KAMPF !== "undefined" && ARTEN[el.art] && typeof el.zh === "number") el.zh = Math.min(el.zh, KAMPF.werte(el).zhMax);
     });
     if (stand.flags.starter && !alle.some(function (el) { return el.starter; })) {
       var erster = alle.filter(function (el) { return el.art === stand.flags.starter; })[0];

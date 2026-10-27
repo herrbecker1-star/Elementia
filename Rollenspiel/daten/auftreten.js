@@ -24,7 +24,10 @@ var AUFTRITTE = {
     { art: "kohlenstoff", stufe: [3, 5], gewicht: 5, biome: ["meiler"], zeit: ["abend", "nacht"] },
     { art: "kohlenstoff", stufe: [3, 4], gewicht: 1, biome: ["wiese", "hain"], nurAbseits: true },
     { art: "schwefel",    stufe: [4, 6], gewicht: 3, biome: ["quelle"], zeit: ["morgen", "abend"], wetter: ["nebel", "hitze"] },
-    { art: "kupfer",      stufe: [4, 6], gewicht: 2, biome: ["wiese", "hain"], nurAbseits: true, wetter: ["klar"], zeit: ["tag"] }
+    { art: "kupfer",      stufe: [4, 6], gewicht: 2, biome: ["wiese", "hain"], nurAbseits: true, wetter: ["klar"], zeit: ["tag"] },
+    // Seit Fassung 13: Aluminium in der roten Erde des Hains (Bauxit),
+    // tagsüber. Früh zu finden – der Konter gegen Schwefel von der Quelle.
+    { art: "aluminium",   stufe: [3, 5], gewicht: 2, biome: ["hain"], nurAbseits: true, zeit: ["morgen", "tag"] }
   ],
 
   // Der Kolbenwald: feucht und dunkel. Kupfer ist hier öfter – die
@@ -35,7 +38,10 @@ var AUFTRITTE = {
     { art: "kohlenstoff", stufe: [3, 5], gewicht: 3, biome: ["wald"], zeit: ["abend", "nacht"] },
     { art: "kupfer",      stufe: [4, 6], gewicht: 2, biome: ["wald"], nurAbseits: true },
     { art: "eisen",       stufe: [3, 5], gewicht: 1, biome: ["wald"], nurAbseits: true },
-    { art: "schwefel",    stufe: [4, 6], gewicht: 3, biome: ["quelle"], zeit: ["morgen", "abend"], wetter: ["nebel", "hitze"] }
+    { art: "schwefel",    stufe: [4, 6], gewicht: 3, biome: ["quelle"], zeit: ["morgen", "abend"], wetter: ["nebel", "hitze"] },
+    // Seit Fassung 13: Bor an der warmen Quelle im Nebel – Borsäure tritt
+    // in heißen Quellen aus (die Dampfquellen der Toskana).
+    { art: "bor",         stufe: [4, 6], gewicht: 2, biome: ["quelle"], wetter: ["nebel"] }
   ],
 
   // In Brenner selbst erscheinen keine – eine Stadt voller Flammenwächter.
@@ -56,5 +62,9 @@ var FUNDHINWEISE = {
   schwefel:    { vage: "„Wo das Wasser warm ist und nach faulen Eiern riecht – aber nicht zu jeder Stunde.“",
                  genau: "An der warmen Quelle, morgens und abends, bei Nebel oder Hitze." },
   kupfer:      { vage: "„Das rote Metall meidet die Wege. Es zeigt sich nur der Sonne.“",
-                 genau: "Abseits der Wege, tagsüber bei klarem Wetter. Selten." }
+                 genau: "Abseits der Wege, tagsüber bei klarem Wetter. Selten." },
+  aluminium:   { vage: "„In der roten Erde des Hains schläft ein Silberner, den kein Feuer frisst.“",
+                 genau: "Im Hain abseits der Wege, morgens und tagsüber. Selten." },
+  bor:         { vage: "„Wo die Quelle im Kolbenwald dampft, glänzt etwas Schwarzes, das grün brennt.“",
+                 genau: "An der warmen Quelle im Kolbenwald, bei Nebel. Selten." }
 };

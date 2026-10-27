@@ -7,10 +7,13 @@
 //  Funktion grundwerte). Wer eine Zahl ändern will, ändert den
 //  Stoffwert – und der muss dann im Lehrbuch stimmen.
 //
-//  stoff.haerte   Mohshärte                        → Abwehr
+//  gruppe         Hauptgruppe oder Stoffklasse (GRUPPEN unten)
+//                 → Angriff, Verteidigung, Sp.-Angriff, Sp.-Verteidigung
+//  klasse         Stoffklasse für die Typtabelle (daten\typen.js)
+//  stoff.haerte   Mohshärte                        → Verteidigung ±
 //  stoff.dichte   g/cm³                            → Tempo (leicht = schnell)
-//  stoff.schmelz  Schmelz-/Sublimationstemp. in °C → Zusammenhalt,
-//                                                    und Hitzeempfindlichkeit
+//  stoff.schmelz  Schmelz-/Sublimationstemp. in °C → LP
+//  ausnahmen      Abweichung von der Typtabelle, mit Begründung
 //  steckbrief     was man mit Lupe, Magnet, Stromkreis und Hammer
 //                 herausfindet (Quest 1, Maras Stoffkisten)
 //  form           "stueck" | "pulver"  – entscheidet mit über das Fanggerät
@@ -21,81 +24,146 @@
 var ARTEN = {
 
   eisen: {
-    name: "Eisen", formel: "Fe", klasse: "Metall", bild: "eisen", seltenheit: "haeufig",
+    name: "Eisen", formel: "Fe", klasse: "Metall", gruppe: "nebengruppe", bild: "eisen", seltenheit: "haeufig",
     beschreibung: "Graues, hartes Metall. Der Magnet hält es fest. An feuchter Luft rostet es. Aus Eisen schmiedet man Werkzeuge.",
     stoff: { haerte: 4, dichte: 7.87, schmelz: 1538 },
-    steckbrief: { farbe: "grau", glanz: true, magnetisch: true, leitfaehig: true, verformbar: true },
+    steckbrief: { farbe: "grau", glanz: true, magnetisch: true, leitfaehig: true, verformbar: true, brennt: false },
     form: "stueck",
-    reaktionen: ["hammerschlag", "funkenflug", "standfest"]
+    reaktionen: ["blankhieb", "funkenflug", "standfest"]
   },
 
   magnesium: {
-    name: "Magnesium", formel: "Mg", klasse: "Metall", bild: "magnesium", seltenheit: "haeufig",
+    name: "Magnesium", formel: "Mg", klasse: "Metall", gruppe: "hg2", bild: "magnesium", seltenheit: "haeufig",
     beschreibung: "Leichtes, silbriges Metall. Es verbrennt mit gleißend hellem Licht. In jeder grünen Pflanze steckt etwas Magnesium.",
     stoff: { haerte: 2.5, dichte: 1.74, schmelz: 650 },
-    steckbrief: { farbe: "silbrig", glanz: true, magnetisch: false, leitfaehig: true, verformbar: true },
+    steckbrief: { farbe: "silbrig", glanz: true, magnetisch: false, leitfaehig: true, verformbar: true, brennt: true },
     form: "stueck",
-    reaktionen: ["leichtschlag", "aufflammen", "standfest"]
+    reaktionen: ["hammerschlag", "aufflammen", "standfest"]
   },
 
   kohlenstoff: {
     // Holzkohle aus dem Meiler. Leitet den Strom – als einziges
     // Nichtmetall in Maras Kisten. Genau diese Ausnahme macht den
     // Steckbrief lehrreich: Leitfähigkeit allein heißt nicht Metall.
-    name: "Kohlenstoff", formel: "C", klasse: "Nichtmetall", bild: "kohlenstoff", seltenheit: "haeufig", brennbar: true,
+    name: "Kohlenstoff", formel: "C", klasse: "Nichtmetall", gruppe: "hg4", bild: "kohlenstoff", seltenheit: "haeufig", brennbar: true,
+    ausnahmen: { waerme: { faktor: 2, wort: "Grafit leitet", merksatz: 7 } },
     beschreibung: "Schwarze, leichte Holzkohle. Leitet den Strom und ist trotzdem kein Metall. Verbrennt zu Kohlenstoffdioxid.",
     stoff: { haerte: 1.5, dichte: 2.26, schmelz: 3640 },   // Grafit, sublimiert
-    steckbrief: { farbe: "schwarz", glanz: false, magnetisch: false, leitfaehig: true, verformbar: false },
+    steckbrief: { farbe: "schwarz", glanz: false, magnetisch: false, leitfaehig: true, verformbar: false, brennt: true },
     form: "stueck",
     reaktionen: ["glut", "russwolke", "kohlenstaub"]
   },
 
   kupfer: {
-    name: "Kupfer", formel: "Cu", klasse: "Metall", bild: "kupfer", seltenheit: "selten",
+    name: "Kupfer", formel: "Cu", klasse: "Metall", gruppe: "nebengruppe", bild: "kupfer", seltenheit: "selten",
     beschreibung: "Rötliches, weiches Metall. Leitet Strom und Wärme besser als fast alle Stoffe – darum sind Kabel aus Kupfer.",
     stoff: { haerte: 3, dichte: 8.96, schmelz: 1085 },
-    steckbrief: { farbe: "rötlich", glanz: true, magnetisch: false, leitfaehig: true, verformbar: true },
+    steckbrief: { farbe: "rötlich", glanz: true, magnetisch: false, leitfaehig: true, verformbar: true, brennt: false },
     form: "stueck",
     reaktionen: ["blankhieb", "waermeleitung", "anlaufen"]
   },
 
   zink: {
     // Bei Raumtemperatur spröde; gut verformbar erst zwischen 100 und
-    // 150 °C. Darum hier "verformbar: false".
-    name: "Zink", formel: "Zn", klasse: "Metall", bild: "zink", seltenheit: "haeufig",
+    // 150 °C. Darum hier "verformbar: false" – und gegen Schlag die
+    // Ausnahme ×1 statt ×½, solange das Feld kälter als Wärme 50 ist.
+    // Seit Fassung 12 Wärmeleitung statt „Sulfid bilden“ (Zink leitet gut).
+    // Mit Funkenflug gewann Zink 83 % (doppelt mit Eisen und schneller),
+    // ohne speziellen Angriff 23 % (gegen Metalle wirkt Schlag nur halb).
+    name: "Zink", formel: "Zn", klasse: "Metall", gruppe: "nebengruppe", bild: "zink", seltenheit: "haeufig",
+    ausnahmen: { schlag: { faktor: 1, wort: "kalt spröde", merksatz: 1, bisWaerme: 50 } },
     beschreibung: "Bläulich-graues Metall. Kalt spröde, warm formbar. Als dünne Schicht schützt es Eisen vor Rost (verzinken).",
     stoff: { haerte: 2.5, dichte: 7.14, schmelz: 420 },
-    steckbrief: { farbe: "bläulich-grau", glanz: true, magnetisch: false, leitfaehig: true, verformbar: false },
+    steckbrief: { farbe: "bläulich-grau", glanz: true, magnetisch: false, leitfaehig: true, verformbar: false, brennt: false },
     warmVerformbar: true,
     form: "stueck",
-    reaktionen: ["wuchtstoss", "zinksulfid", "zinkschild"]
+    reaktionen: ["wuchtstoss", "waermeleitung", "zinkschild"]
   },
 
   schwefel: {
-    name: "Schwefel", formel: "S", klasse: "Nichtmetall", bild: "schwefel", seltenheit: "selten", brennbar: true,
+    name: "Schwefel", formel: "S", klasse: "Nichtmetall", gruppe: "hg6", bild: "schwefel", seltenheit: "selten", brennbar: true,
     beschreibung: "Gelbes Pulver, leitet keinen Strom. Schmilzt schon bei 115 °C und brennt mit blauer Flamme zu stechendem Schwefeldioxid.",
     stoff: { haerte: 2, dichte: 2.07, schmelz: 115 },
-    steckbrief: { farbe: "gelb", glanz: false, magnetisch: false, leitfaehig: false, verformbar: false },
+    steckbrief: { farbe: "gelb", glanz: false, magnetisch: false, leitfaehig: false, verformbar: false, brennt: true },
     form: "pulver",
-    reaktionen: ["blaue_flamme", "sulfidbildung", "leichtschlag"]
+    reaktionen: ["blaue_flamme", "sulfurierung", "leichtschlag"]
+  },
+
+  // Seit Fassung 13. Sieht aus wie Magnesium (silbrig, glänzt, leitet,
+  // biegsam) – erst die Flammprobe trennt beide: Magnesium brennt grell,
+  // Aluminiumblech nicht, weil eine dünne Oxidhaut es schützt. Dieselbe
+  // Oxidhaut macht es im Kampf feuerfest (Ausnahme Feuer ×1) – darum ist
+  // es der Konter gegen Schwefel: Schlag ×2, und Schwefels Flamme prallt ab.
+  aluminium: {
+    name: "Aluminium", formel: "Al", klasse: "Metall", gruppe: "hg3", bild: "aluminium", seltenheit: "selten",
+    ausnahmen: { feuer: { faktor: 1, wort: "Oxidhaut", merksatz: 2 }, reaktion: { faktor: 1, wort: "Oxidhaut", merksatz: 2 } },
+    beschreibung: "Leichtes, silberweißes Metall. Eine dünne Oxidhaut schützt es, darum rostet es nicht. Aus Aluminium sind Folie und Dosen.",
+    stoff: { haerte: 2.75, dichte: 2.70, schmelz: 660 },
+    steckbrief: { farbe: "silberweiß", glanz: true, magnetisch: false, leitfaehig: true, verformbar: true, brennt: false },
+    form: "stueck",
+    reaktionen: ["hammerschlag", "funkenflug", "anlaufen"]
+  },
+
+  // Seit Fassung 13. Halbmetall, hier bei den Nichtmetallen: glänzt
+  // schwarz wie ein Metall, leitet aber nicht und splittert – das
+  // Gegenstück zum Kohlenstoff, der nicht glänzt und doch leitet.
+  // Fast so hart wie Diamant (Mohs 9,3); die Härte zählt höchstens +20.
+  bor: {
+    name: "Bor", formel: "B", klasse: "Nichtmetall", gruppe: "hg3", bild: "bor", seltenheit: "selten",
+    beschreibung: "Schwarz glänzende, sehr harte Kristalle. Leitet kaum Strom. Bor färbt Flammen grün; Borsäure kommt aus heißen Quellen.",
+    stoff: { haerte: 9.3, dichte: 2.34, schmelz: 2076 },
+    steckbrief: { farbe: "schwarz", glanz: true, magnetisch: false, leitfaehig: false, verformbar: false, brennt: true },
+    form: "stueck",
+    reaktionen: ["leichtschlag", "gruene_flamme", "standfest"]
   }
+};
+
+// ------------------------------------------------------------
+//  Grundwerte je Gruppe (seit Fassung 12)
+//  Elemente einer Hauptgruppe kämpfen ähnlich; der Stoff gibt den
+//  Feinschliff (Härte → Verteidigung, Dichte → Tempo, Schmelzpunkt
+//  → LP; siehe KAMPF.grundwerte). Skala wie Basiswerte im Spiel der
+//  1. Generation. Faustregel: Die vier Werte ergeben zusammen etwa
+//  250–310; wer weniger hat, gleicht über Tempo oder LP aus.
+//  Die Gruppen der Elemente aus Kapitel 1 (hg2, hg3, hg4, hg6, nebengruppe)
+//  sind gemessen (27.10.2026, siehe LIESMICH.md), die übrigen vorläufig.
+// ------------------------------------------------------------
+var GRUPPEN = {
+  hg1:         { name: "1. Hauptgruppe",  kurz: "Alkalimetall",    angriff: 60, verteidigung: 35,  spAngriff: 110, spVerteidigung: 40 },
+  hg2:         { name: "2. Hauptgruppe",  kurz: "Erdalkalimetall", angriff: 80, verteidigung: 55,  spAngriff: 90,  spVerteidigung: 75 },
+  hg3:         { name: "3. Hauptgruppe",  kurz: "Borgruppe",       angriff: 65, verteidigung: 60,  spAngriff: 65,  spVerteidigung: 55 },
+  hg4:         { name: "4. Hauptgruppe",  kurz: "Kohlenstoffgr.",  angriff: 60, verteidigung: 70,  spAngriff: 70,  spVerteidigung: 60 },
+  hg5:         { name: "5. Hauptgruppe",  kurz: "Stickstoffgr.",   angriff: 50, verteidigung: 60,  spAngriff: 100, spVerteidigung: 70 },
+  hg6:         { name: "6. Hauptgruppe",  kurz: "Chalkogen",       angriff: 45, verteidigung: 55,  spAngriff: 85,  spVerteidigung: 80 },
+  hg7:         { name: "7. Hauptgruppe",  kurz: "Halogen",         angriff: 40, verteidigung: 50,  spAngriff: 110, spVerteidigung: 70 },
+  hg8:         { name: "8. Hauptgruppe",  kurz: "Edelgas",         angriff: 30, verteidigung: 110, spAngriff: 50,  spVerteidigung: 110 },
+  nebengruppe: { name: "Nebengruppe",     kurz: "Übergangsmetall", angriff: 85, verteidigung: 85,  spAngriff: 65,  spVerteidigung: 75 },
+  legierung:   { name: "Legierung",       kurz: "Legierung",       angriff: 95, verteidigung: 100, spAngriff: 45,  spVerteidigung: 60 },
+  oxid:        { name: "Oxid",            kurz: "Oxid",            angriff: 60, verteidigung: 100, spAngriff: 50,  spVerteidigung: 80 },
+  sulfid:      { name: "Sulfid",          kurz: "Sulfid",          angriff: 65, verteidigung: 80,  spAngriff: 60,  spVerteidigung: 75 },
+  salz:        { name: "Salz",            kurz: "Salz",            angriff: 55, verteidigung: 90,  spAngriff: 60,  spVerteidigung: 85 },
+  saeure:      { name: "Säure",           kurz: "Säure",           angriff: 40, verteidigung: 50,  spAngriff: 110, spVerteidigung: 70 },
+  lauge:       { name: "Lauge",           kurz: "Lauge",           angriff: 40, verteidigung: 55,  spAngriff: 105, spVerteidigung: 70 },
+  molekuel:    { name: "Molekülverbindung", kurz: "Molekül",       angriff: 55, verteidigung: 65,  spAngriff: 80,  spVerteidigung: 80 }
 };
 
 // ------------------------------------------------------------
 //  Reaktionen und Vorgänge
 //
-//  art     "wucht"     mechanisch; spröde Ziele leiden mehr, verformbare weniger
-//          "hitze"     Verbrennung; braucht Sauerstoff im Feld, gibt Wärme ab;
-//                      Ziele mit niedriger Schmelztemperatur leiden mehr
-//          "leitung"   nimmt die Wärme des Feldes und leitet sie ins Ziel
-//          "schutz"    kein Schaden, nur Wirkung auf sich selbst
-//          "reaktion"  Reaktion mit dem Ziel selbst; gegenMetall /
-//                      gegenNichtmetall, oder gegen: { art: Faktor }
-//  kraft   Grundschaden
+//  typ     Zeile der Typtabelle (daten\typen.js): "schlag" (physisch),
+//          "feuer", "reaktion", "waerme" (speziell) – oder "schutz":
+//          kein Schaden, nur Wirkung auf sich selbst.
+//          Feuer braucht Sauerstoff im Feld und gibt Wärme ab.
+//          Wärme nimmt die Wärme des Feldes: Stärke = Feldwärme.
+//  staerke Stärke, Skala bis 100 (seit Fassung 12; vorher kraft = staerke/5)
+//  genau   Trefferchance in % (fehlt = 100)
 //  ae      Aktivierungsenergie, die der Zug kostet
 //  o2      Sauerstoff, den der Zug verbraucht (und mindestens braucht)
 //  waerme  Wärme, die ins Feld abgegeben wird (exotherm)
-//  wirkung Zusatz, siehe kern\kampf.js
+//  wirkung beim Gegner, Chance in % nach einem Treffer:
+//            { blendung: 50 }    Trefferchance ×0,7 für 2 Angriffe
+//            { vergiftung: 30 }  −10 % der LP je Runde, 3 Runden
+//          auf sich selbst (immer): schutz, tarnung, abwehrPlus
 //  fuer    wer den Angriff ausführen und später lernen kann (seit
 //          25.10.2026, siehe kannAngriff unten):
 //            {}                         alle
@@ -113,75 +181,64 @@ var ARTEN = {
 // ------------------------------------------------------------
 var REAKTIONEN = {
 
-  hammerschlag: { name: "Schlag", art: "wucht", kraft: 10, ae: 1, fuer: {}, lernbar: true,
+  // Stärken seit Fassung 12 auf der Skala bis 100: die alte Kraft ×5
+  // (Schlag 10 → 50, Staubexplosion 20 → 100). Starke Schläge kosten
+  // Genauigkeit statt Energie. Danach gemessen (27.10.2026, LIESMICH.md):
+  // Wuchtstoß 80 → 70, Funkenflug 4 → 3 E, Blendung 50 → 30 %,
+  // Schutzschicht dämpft nur noch halb (vorher 0,2: Zink gewann 78 %).
+  hammerschlag: { name: "Schlag", typ: "schlag", staerke: 50, ae: 1, fuer: {}, lernbar: true,
     text: "Harter Schlag mit voller Wucht." },
-  leichtschlag: { name: "Rempler", art: "wucht", kraft: 7, ae: 0, fuer: {}, lernbar: true,
+  leichtschlag: { name: "Rempler", typ: "schlag", staerke: 35, ae: 0, fuer: {}, lernbar: true,
     text: "Schneller, leichter Stoß." },
-  // 12 → 13 am 25.10.2026 (Kupfer war mit 37 % am schwächsten). 14 wäre
-  // zu viel: Kupfer gewönne dann 92 % gegen Kohlenstoff.
-  blankhieb: { name: "Schwerer Schlag", art: "wucht", kraft: 13, ae: 1, fuer: { dichteAb: 5 },
+  blankhieb: { name: "Schwerer Schlag", typ: "schlag", staerke: 65, genau: 95, ae: 1, fuer: { dichteAb: 5 },
     text: "Wuchtiger Schlag – je dichter der Stoff, desto schwerer." },
-  // 13 → 16 am 25.10.2026: Zink ist als einziger Stoff gegen Hitze UND
-  // Wucht empfindlich (schmilzt bei 420 °C, kalt spröde) und gewann nur
-  // 7 % seiner Paarungen (mit korrigierter KI gemessen). Mit 16 und der
-  // Zinksulfid-Reaktion sind es 42 %; die Stoffwerte bleiben.
-  wuchtstoss: { name: "Wuchtstoß", art: "wucht", kraft: 16, ae: 1, fuer: { dichteAb: 5 },
+  wuchtstoss: { name: "Wuchtstoß", typ: "schlag", staerke: 70, genau: 90, ae: 1, fuer: { dichteAb: 5 },
     text: "Stoß mit dem ganzen Gewicht." },
 
-  funkenflug: { name: "Funkenflug", art: "hitze", kraft: 14, ae: 4, o2: 8, waerme: 10, fuer: { klasse: "Metall" },
+  funkenflug: { name: "Funkenflug", typ: "feuer", staerke: 70, ae: 3, o2: 8, waerme: 10, fuer: { klasse: "Metall" },
     text: "Fein verteiltes Metall verbrennt in sprühenden Funken zum Oxid." },
-  aufflammen: { name: "Aufflammen", art: "hitze", kraft: 13, ae: 5, o2: 10, waerme: 15, fuer: { nur: "magnesium" },
-    wirkung: { geblendet: 1 },
-    text: "Verbrennt mit grellem Licht zum Oxid. Blendet den Gegner einen Zug." },
-  glut: { name: "Glut", art: "hitze", kraft: 13, ae: 3, o2: 10, waerme: 12, fuer: { klasse: "Nichtmetall", brennbar: true },
+  aufflammen: { name: "Aufflammen", typ: "feuer", staerke: 65, ae: 4, o2: 10, waerme: 15, fuer: { nur: "magnesium" },
+    wirkung: { blendung: 30 },
+    text: "Verbrennt mit grellem Licht zum Oxid. Kann den Gegner blenden." },
+  glut: { name: "Glut", typ: "feuer", staerke: 65, ae: 3, o2: 10, waerme: 12, fuer: { klasse: "Nichtmetall", brennbar: true },
     text: "Der Stoff glüht und verbrennt." },
-  blaue_flamme: { name: "Blaue Flamme", art: "hitze", kraft: 12, ae: 2, o2: 8, waerme: 8, fuer: { nur: "schwefel" },
-    wirkung: { reizgas: 3, dauer: 2 },
-    text: "Brennt blau zu Schwefeldioxid. Das Gas schadet dem Gegner 2 Runden." },
-
-  kohlenstaub: { name: "Staubexplosion", art: "hitze", kraft: 20, ae: 6, o2: 15, waerme: 20, fuer: { klasse: "Nichtmetall", brennbar: true },
+  blaue_flamme: { name: "Blaue Flamme", typ: "feuer", staerke: 60, ae: 2, o2: 8, waerme: 8, fuer: { nur: "schwefel" },
+    wirkung: { vergiftung: 30 },
+    text: "Brennt blau zu giftigem Schwefeldioxid. Kann den Gegner vergiften." },
+  // Seit Fassung 13: Bor verbrennt mit grüner Flamme zu Boroxid.
+  gruene_flamme: { name: "Grüne Flamme", typ: "feuer", staerke: 65, ae: 3, o2: 10, waerme: 12, fuer: { nur: "bor" },
+    text: "Verbrennt mit grüner Flamme zu Boroxid." },
+  kohlenstaub: { name: "Staubexplosion", typ: "feuer", staerke: 100, genau: 85, ae: 6, o2: 15, waerme: 20, fuer: { klasse: "Nichtmetall", brennbar: true },
     text: "Feiner Staub verbrennt schlagartig." },
 
   // Keine Verbrennung, sondern die Reaktion mit dem Ziel selbst:
   // Schwefel bildet mit Metallen Sulfide (Fe + S → FeS, stark exotherm).
-  // Mit einem Nichtmetall passiert fast nichts.
-  // Je unedler das Metall, desto heftiger die Reaktion mit Schwefel:
-  // Magnesium 2,4 > Eisen und Zink 1,5 > Kupfer 1,1. Dazu Kohlenstoff
-  // 1,5: Schwefeldampf über glühender Holzkohle gibt Schwefelkohlenstoff
-  // (CS₂) – so wird er technisch hergestellt. Alle drei Ausnahmen seit
-  // 25.10.2026, gemessen gegen Einbahnstraßen (Siege für den Gegner):
-  //   Magnesium 2,0 → 78 %, 2,4 → 44 % (vorher 99 %)
-  //   Kohlenstoff 1,4 → 73 %, 1,5 → 57 %, 1,8 → 15 % (vorher 100 %)
-  //   Kupfer 1,1 mit Blankhieb 13 → 48 % (vorher 8 %)
-  sulfidbildung: { name: "Sulfidbildung", art: "reaktion", kraft: 13, ae: 4, waerme: 12, fuer: { nur: "schwefel" },
-    gegenMetall: 1.5, gegenNichtmetall: 0.4, gegen: { magnesium: 2.4, kohlenstoff: 1.5, kupfer: 1.1 },
+  // Mit einem Nichtmetall passiert fast nichts – das regelt die
+  // Typtabelle (Reaktion: Metall ×2, Nichtmetall ×½). Bis Fassung 11
+  // hieß der Angriff Sulfidbildung und hatte eigene Faktoren je Ziel;
+  // „Sulfid bilden“ (Zink gegen Schwefel) ist mit Fassung 12 entfallen.
+  sulfurierung: { name: "Sulfurierung", typ: "reaktion", staerke: 65, ae: 4, waerme: 12, fuer: { nur: "schwefel" },
     text: "Bildet mit dem Gegner ein Sulfid. Stark gegen Metalle." },
 
-  // Zink und Schwefel reagieren heftig und stark exotherm zu Zinksulfid
-  // (Zn + S → ZnS) – mit anderen Stoffen passiert dabei nichts. Ersetzt
-  // am 25.10.2026 die Zinkflamme, die die KI nie gewählt hat. Faktor 1,6
-  // gemessen: 1,4 → 16 %, 1,6 → 38 %, 2,0 → 98 % Siege gegen Schwefel –
-  // die Kurve ist steil, kleine Änderungen hier kippen die Paarung.
-  zinksulfid: { name: "Sulfid bilden", art: "reaktion", kraft: 14, ae: 3, waerme: 15, fuer: { klasse: "Metall" },
-    gegen: { schwefel: 1.6 }, gegenMetall: 0.3, gegenNichtmetall: 0.3,
-    text: "Das Metall reagiert mit Schwefel zum Sulfid. Gegen andere Stoffe fast wirkungslos." },
+  waermeleitung: { name: "Wärmeleitung", typ: "waerme", staerke: 0, ae: 2, fuer: { leitet: true },
+    text: "Leitet die Wärme des Feldes in den Gegner. Stärke = Wärme + 40." },
 
-  waermeleitung: { name: "Wärmeleitung", art: "leitung", kraft: 0, ae: 2, fuer: { leitet: true },
-    text: "Leitet die Wärme des Feldes in den Gegner. Je heißer das Feld, desto stärker." },
-
-  russwolke: { name: "Rußwolke", art: "schutz", kraft: 0, ae: 2, fuer: { nur: "kohlenstoff" },
+  russwolke: { name: "Rußwolke", typ: "schutz", ae: 2, fuer: { nur: "kohlenstoff" },
     wirkung: { tarnung: 1 },
     text: "Feiner Ruß verdeckt die Sicht. Der nächste Treffer wirkt nur halb." },
-  standfest: { name: "Standfest", art: "schutz", kraft: 0, ae: 1, fuer: {}, lernbar: true,
+  standfest: { name: "Standfest", typ: "schutz", ae: 1, fuer: {}, lernbar: true,
     wirkung: { schutz: 0.5 },
     text: "Abwehrhaltung: Der nächste Treffer wirkt nur halb." },
-  anlaufen: { name: "Oxidschicht", art: "schutz", kraft: 0, ae: 2, o2: 3, braucht: { waerme: 30 }, fuer: { klasse: "Metall" },
+  anlaufen: { name: "Oxidschicht", typ: "schutz", ae: 2, o2: 3, braucht: { waerme: 30 }, fuer: { klasse: "Metall" },
     wirkung: { abwehrPlus: 4 },
-    text: "Bildet eine Oxidschicht: Abwehr +4 bis Kampfende. Braucht Wärme ab 30." },
-  zinkschild: { name: "Schutzschicht", art: "schutz", kraft: 0, ae: 1, fuer: { klasse: "Metall" },
-    wirkung: { schutz: 0.2, abwehrPlus: 2 },
-    text: "Dichte Schutzschicht: Der nächste Treffer wird stark gedämpft, Abwehr +2." }
+    text: "Oxidschicht: Verteidigung +40 % bis Kampfende. Braucht Wärme ab 30." },
+  zinkschild: { name: "Schutzschicht", typ: "schutz", ae: 1, fuer: { klasse: "Metall" },
+    wirkung: { schutz: 0.5, abwehrPlus: 2 },
+    text: "Dichte Schicht: Der nächste Treffer wirkt nur halb, Verteidigung +20 %." }
 };
+
+// Alte Schlüssel aus Spielständen bis Fassung 11 (SPIELSTAND.pruefen)
+var ALTE_ANGRIFFE = { sulfidbildung: "sulfurierung", zinksulfid: "waermeleitung" };
 
 // Darf diese Art den Angriff ausführen (und später lernen)?
 function kannAngriff(artId, angriffId) {
@@ -207,6 +264,16 @@ function angriffFuerText(angriffId) {
   return t.length ? t.join(" ") : "alle";
 }
 
+// Genauigkeit unter 100 und Nebenwirkung in Worten, z. B.
+// ["Treffer 90 %", "Blendung 50 %"] – für Menü und Detailansicht.
+function angriffZusatz(angriffId) {
+  var r = REAKTIONEN[angriffId], w = r.wirkung || {}, t = [];
+  if (r.genau && r.genau < 100) t.push("Treffer " + r.genau + " %");
+  if (w.blendung) t.push("Blendung " + w.blendung + " %");
+  if (w.vergiftung) t.push("Vergiftung " + w.vergiftung + " %");
+  return t;
+}
+
 // ------------------------------------------------------------
 //  Untersuchungswerkzeuge (Erkennen im Kampf)
 // ------------------------------------------------------------
@@ -216,7 +283,8 @@ var WERKZEUGE = {
   stromkreis: { name: "Stromkreis", prueft: ["leitfaehig"] },
   hammer:     { name: "Hammer",     prueft: ["verformbar"] },
   // Gegenstände ohne Prüfung – stehen im Gepäck, nicht im Menü „Untersuchen“
-  gasbrenner:        { name: "Gasbrenner", prueft: [], text: "Liefert im Kampf einmal Aktivierungsenergie (+4) und heizt das Feld auf." },
+  // Seit Fassung 13 auch ein Prüfwerkzeug: die Flammprobe (Magnesium oder Aluminium?)
+  gasbrenner:        { name: "Gasbrenner", prueft: ["brennt"], text: "Flammprobe: Brennt der Stoff? Im Kampf einmal Energie (+4), heizt das Feld auf." },
   erlenmeyerkolben:  { name: "Erlenmeyerkolben", prueft: [], text: "Dein erstes eigenes Laborglas. Für Flüssigkeiten – später." },
   geraetepass:       { name: "Gerätepass des Kolbenwaldes", prueft: [], text: "Unterschrieben von Meisterin Vitra." }
 };
