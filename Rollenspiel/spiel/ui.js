@@ -16,6 +16,9 @@ var TIPPGESCHWINDIGKEIT = 45;   // Zeichen je Sekunde in der Dialogbox
 // Fehlt ein Name hier, zeigt das Spiel einen Rahmen mit dem Bildnamen.
 // Neue Bilder auch in sw.js (DATEIEN) eintragen.
 var SZENENBILDER = {
+  hadronenwolke: "grafik/szenen/hadronenwolke.jpg",
+  erwachen: "grafik/szenen/erwachen.jpg",
+  elementia: "grafik/szenen/elementia.jpg",
   starterwahl_eisen: "grafik/szenen/starterwahl_eisen.jpg",
   starterwahl_magnesium: "grafik/szenen/starterwahl_magnesium.jpg",
   reiter_ankunft: "grafik/szenen/reiter_ankunft.jpg",

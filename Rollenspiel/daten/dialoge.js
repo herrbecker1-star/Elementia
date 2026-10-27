@@ -104,8 +104,10 @@ var DIALOGE = {
   //  Stoffingen – Akt A: der Geburtstagsmorgen
   // ============================================================
   einstieg: [
-    { erzaehl: "Vor langer Zeit traf eine Hadronenwolke die Erde. Wo ihre Funken niedergingen, erwachten die Stoffe zum Leben: die Elementals." },
-    { erzaehl: "Erst hatten die Menschen Angst. Dann lernten sie, mit ihnen zu leben. Wer die Elementals wirklich versteht, heißt Stoffmeister." },
+    // Seit Fassung 14 mit drei Bildern: Hadronenwolke → Erwachen → Elementia.
+    { einblenden: "hadronenwolke", text: "Vor langer Zeit traf eine Hadronenwolke die Erde." },
+    { einblenden: "erwachen", text: "Wo ihre Funken niedergingen, erwachten die Stoffe zum Leben: die Elementals." },
+    { einblenden: "elementia", text: "Erst hatten die Menschen Angst. Dann lernten sie, in ganz Elementia mit ihnen zu leben. Wer sie versteht, heißt Stoffmeister." },
     { erzaehl: "Du lebst in Stoffingen, einem armen Dorf in den Feuerlanden. „Wer nichts hat, den lässt man in Ruhe“, sagt deine Mutter." },
     { erzaehl: "Heute ist dein 12. Geburtstag. Ab heute lernst du ein Handwerk: in Vaters Schmiede oder in Mutters Garten. Lumi wartet auf dem Dorfplatz." }
   ],
