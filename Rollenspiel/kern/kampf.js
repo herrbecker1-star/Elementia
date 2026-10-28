@@ -31,16 +31,21 @@ var KAMPF = (function () {
   var ABWEHR_PLUS_JE = 0.1;       // je Punkt +10 % Verteidigung und Sp.-Verteidigung
   // Stellschrauben, die der Prüfstand für Messreihen verstellen darf (KAMPF.REGEL):
   // stamm      Angriff aus der Grundausstattung der eigenen Art (Gen 2: STAB)
-  // lpFaktor   LP ×2 gegenüber Gen 2 (siehe grundwerte)
+  // lpFaktor   LP ×2,5 gegenüber Gen 2 (siehe grundwerte)
+  // lpSockel   wie sockel, nur für die LP
+  // lpGrund, lpTeiler  LP-Basis = lpGrund + Schmelzpunkt / lpTeiler
   // waermeGrund, leitungKuehlt  Wärmeleitung (siehe waermeStaerke)
   // sockel     dämpft den Stufenvorsprung: Werte aus (2·Stufe + sockel)
   // stufenfaktorGlatt  2·Stufe/5 + 2 ohne Abrunden
   // hitzeFeuer Feldwärme, ab der Feuer ×1,5 wirkt (Gen 2: Sonne); null = aus
   // haerteDeckel  höchstens so viel Verteidigung aus der Härte (Bor: Mohs 9,3)
-  // Gemessen 27.10.2026 (Fassung 13, LIESMICH.md): Sockel 0/10/30/50 →
-  // eine Stufe Vorsprung gewinnt 94/81/70–82/76 %; ohne Abrunden springt der
-  // Stufenfaktor nicht mehr von 3 (Stufe 4) auf 4 (Stufe 5).
-  var REGEL = { stamm: 1.5, lpFaktor: 2, waermeGrund: 40, leitungKuehlt: 10, sockel: 50, stufenfaktorGlatt: true, hitzeFeuer: 80, haerteDeckel: 10 };
+  // Fassung 13 hatte sockel und lpSockel 50, lpFaktor 2: Eine Stufe Vorsprung
+  // gewann nur 76 %, und Kohlenstoff auf Stufe 5 hatte mehr LP (126) als
+  // Schwefel auf Stufe 10 (124). Seit Fassung 15 (Leitlinie: „Mit Fleiß ist
+  // jeder Gegner leicht zu besiegen“) wieder Gen 2 ohne Sockel. Gemessen
+  // 28.10.2026 (LIESMICH.md), lpFaktor 1/1,5/2/2,5/3 → Kampfdauer im Median
+  // 2/2/3/4/4 Runden; ×2,5: +1 Stufe 92 %, +2 98 %, +3 100 %.
+  var REGEL = { stamm: 1.5, lpFaktor: 2.5, lpSockel: 0, lpGrund: 60, lpTeiler: 100, waermeGrund: 40, leitungKuehlt: 10, sockel: 0, stufenfaktorGlatt: true, hitzeFeuer: 80, haerteDeckel: 10 };
   var BLENDUNG_TREFFER = 0.7;     // Trefferchance geblendet
   var BLENDUNG_DAUER = 2;         // eigene Angriffe
   var GIFT_ANTEIL = 0.1, GIFT_RUNDEN = 3;
@@ -55,17 +60,18 @@ var KAMPF = (function () {
   //   Tempo          130 − 12 · Dichte, auf 5 gerundet, mindestens 20
   //   LP             60 + Schmelzpunkt / 100 (gedeckelt bei 2000 °C, sonst
   //                  wäre Kohlenstoff mit 3640 °C unverwundbar)
-  // Auf der Stufe (ohne DVs und EVs), mit Sockel (seit Fassung 13):
-  //   Wert = ⌊Basis · (2 · Stufe + 50) / 100⌋ + 5
-  //   LP   = 2 · (⌊Basis · (2 · Stufe + 50) / 100⌋ + Stufe + 10)
-  // Ohne Sockel (Gen 1/2 pur) sind die Werte auf Stufe 5 so klein (10–16),
-  // dass eine Stufe mehr 10 % mehr Angriff bedeutete: 94 % Siege.
+  // Auf der Stufe wie in Gen 2 (ohne DVs und EVs), seit Fassung 15:
+  //   Wert = ⌊Basis · Stufe / 50⌋ + 5
+  //   LP   = 2,5 · (⌊Basis · Stufe / 50⌋ + Stufe + 10)
+  // Die Stufe bestimmt die LP, der Schmelzpunkt nur den Feinschliff:
+  // Schwefel 40/53/80 auf Stufe 3/5/10, Kohlenstoff 43/58/90.
+  // Fassung 13/14 rechnete mit Sockel 50: ⌊Basis · (2 · Stufe + 50) / 100⌋.
   // Bis Fassung 11 gab es nur LP, eine Abwehr (Härte), Tempo und einen
   // Kraft-Faktor der Stufe; siehe LIESMICH.md.
   function basiswerte(artId) {
     var a = ARTEN[artId], s = a.stoff, g = GRUPPEN[a.gruppe];
     return {
-      lp: 60 + Math.min(s.schmelz, 2000) / 100,
+      lp: REGEL.lpGrund + Math.min(s.schmelz, 2000) / REGEL.lpTeiler,
       angriff: g.angriff,
       verteidigung: g.verteidigung + Math.min(REGEL.haerteDeckel, 5 * (s.haerte - 3)),
       spAngriff: g.spAngriff,
@@ -76,15 +82,14 @@ var KAMPF = (function () {
 
   function aufStufe(basis, stufe) { return Math.floor(basis * (2 * stufe + REGEL.sockel) / 100) + 5; }
 
-  // Abweichungen von Gen 2: Sockel (oben) und LP ×2 (REGEL.lpFaktor). Mit den
-  // LP der Vorlage dauerte ein Kampf im Median 2 Runden – ein sehr wirksamer
-  // Stamm-Treffer entschied fast allein, Energie und Feld spielten keine
-  // Rolle. Mit Sockel reicht ×2 (Fassung 12 ohne Sockel: ×3); ein Kampf
-  // dauert auf Stufe 5 etwa 6–7 Runden, auf Stufe 10 etwa 6.
+  // Abweichung von Gen 2: LP ×2,5 (REGEL.lpFaktor). Mit den LP der Vorlage
+  // dauerte ein Kampf im Median 2 Runden – ein sehr wirksamer Stamm-Treffer
+  // entschied fast allein, Energie und Feld spielten keine Rolle. Mit ×2,5
+  // dauert er auf Stufe 5 im Median 4 Runden.
   function grundwerte(artId, stufe) {
     var b = basiswerte(artId);
     return {
-      zhMax: REGEL.lpFaktor * (Math.floor(b.lp * (2 * stufe + REGEL.sockel) / 100) + stufe + 10),
+      zhMax: Math.round(REGEL.lpFaktor * (Math.floor(b.lp * (2 * stufe + REGEL.lpSockel) / 100) + stufe + 10)),
       angriff: aufStufe(b.angriff, stufe),
       verteidigung: aufStufe(b.verteidigung, stufe),
       spAngriff: aufStufe(b.spAngriff, stufe),
@@ -243,6 +248,30 @@ var KAMPF = (function () {
 
   function gegenueber(seite) { return seite === "spieler" ? "gegner" : "spieler"; }
 
+  // ----------------------------------------------------------
+  //  Protokoll mit Momentaufnahme (seit Fassung 15)
+  //  Der Kern rechnet die ganze Runde auf einmal; die Szene spielt sie
+  //  danach Eintrag für Eintrag ab. Zeichnete sie dabei den Stand von
+  //  k, sah man den Endstand der Runde: Das eigene Elemental verlor
+  //  schon LP, während es noch angriff, und ein Erschöpftes stand
+  //  bereits auf 0 – „besiegt und greift trotzdem an“. Darum trägt
+  //  jeder Eintrag die Lage im Augenblick der Meldung.
+  // ----------------------------------------------------------
+  function lage(k) {
+    var l = { seiten: {}, feld: Object.assign({}, k.feld), erkannt: k.erkannt, befunde: Object.assign({}, k.befunde) };
+    SEITEN.forEach(function (seite) {
+      var s = k.seiten[seite], el = s.gruppe[s.aktiv];
+      if (!el) return;
+      l.seiten[seite] = { nr: s.aktiv, art: el.art, name: name(k, seite), stufe: el.stufe, zh: el.zh, zhMax: werte(el).zhMax, ae: s.ae, status: Object.assign({}, s.status) };
+    });
+    return l;
+  }
+
+  function melde(k, eintrag) {
+    eintrag.lage = lage(k);
+    k.log.push(eintrag);
+  }
+
   // Wie das Elemental im Text heißt. Ein unerkanntes wildes Wesen
   // bleibt namenlos – erkennen ist Teil des Spiels.
   function name(k, seite) {
@@ -337,21 +366,21 @@ var KAMPF = (function () {
 
     var grund = hindernis(k, seite, reaktionId);
     if (grund) {
-      k.log.push({ seite: seite, handelt: true, text: wer + " versucht " + r.name + ". " + grund });
+      melde(k, { seite: seite, handelt: true, text: wer + " versucht " + r.name + ". " + grund });
       // Eine erstickte Flamme hat die Energie trotzdem verbraucht.
       if (r.o2 && k.feld.sauerstoff < r.o2) s.ae = Math.max(0, s.ae - r.ae);
       return;
     }
 
     s.ae -= r.ae;
-    k.log.push({ seite: seite, reaktion: reaktionId, text: wer + ": " + r.name + "!" });
+    melde(k, { seite: seite, reaktion: reaktionId, text: wer + ": " + r.name + "!" });
 
     var w = r.wirkung || {};
     if (r.typ !== "schutz") {
       var chance = trefferChance(k, seite, reaktionId);
       if (s.status.geblendet && --s.status.geblendet <= 0) delete s.status.geblendet;
       if (k.zufall() >= chance) {
-        k.log.push({ seite: seite, verfehlt: true, text: wer + " verfehlt!" });
+        melde(k, { seite: seite, verfehlt: true, text: wer + " verfehlt!" });
       } else {
         // Volltreffer und Zufall gehören in die App, nicht an den
         // Kartentisch – hier sind sie erlaubt und halten Paarungen offen.
@@ -359,19 +388,20 @@ var KAMPF = (function () {
         var betrag = schaden(k, seite, reaktionId, 217 + Math.floor(k.zufall() * 39), voll);
         if (r.typ === "waerme") k.feld.waerme = Math.max(0, k.feld.waerme - REGEL.leitungKuehlt);
         var ziel = aktiv(k, ander);
+        // Erst „Volltreffer!“, dann sinken die LP – so steht es auch im Protokoll.
+        if (voll) melde(k, { volltreffer: true, text: "Volltreffer!" });
         ziel.zh = Math.max(0, ziel.zh - betrag);
-        if (voll) k.log.push({ volltreffer: true, text: "Volltreffer!" });
-        k.log.push({ seite: ander, schaden: betrag, text: name(k, ander) + " verliert " + betrag + " LP." });
         delete z.status.schutz;
         delete z.status.tarnung;
+        melde(k, { seite: ander, schaden: betrag, text: name(k, ander) + " verliert " + betrag + " LP." });
         // Nebenwirkungen mit ihrer Chance in % – nur, wer noch steht.
         if (ziel.zh > 0 && w.blendung && k.zufall() * 100 < w.blendung) {
           z.status.geblendet = BLENDUNG_DAUER;
-          k.log.push({ text: name(k, ander) + " ist geblendet und trifft schlechter." });
+          melde(k, { text: name(k, ander) + " ist geblendet und trifft schlechter." });
         }
         if (ziel.zh > 0 && w.vergiftung && k.zufall() * 100 < w.vergiftung) {
           z.status.vergiftet = GIFT_RUNDEN;
-          k.log.push({ text: name(k, ander) + " ist vergiftet." });
+          melde(k, { text: name(k, ander) + " ist vergiftet." });
         }
       }
     }
@@ -477,7 +507,7 @@ var KAMPF = (function () {
 
   function gegnerSammelt(k) {
     k.seiten.gegner.ae = Math.min(AE_MAX, k.seiten.gegner.ae + 2);
-    k.log.push({ seite: "gegner", handelt: true, text: name(k, "gegner") + " sammelt Kraft." });
+    melde(k, { seite: "gegner", handelt: true, text: name(k, "gegner") + " sammelt Kraft." });
   }
 
   function zug(k, aktion, gegnerAktion) {
@@ -499,19 +529,19 @@ var KAMPF = (function () {
       case "wechseln":
         if (!sp.gruppe[aktion.nr] || sp.gruppe[aktion.nr].zh <= 0) throw new Error("Wechsel nicht möglich.");
         sp.aktiv = aktion.nr; sp.status = {};
-        k.log.push({ text: "Du rufst " + name(k, "spieler") + "." });
+        melde(k, { seite: "spieler", ruft: true, text: "Du rufst " + name(k, "spieler") + "." });
         break;
       case "fliehen": fliehen(k); break;
-      case "sammeln": sp.ae = Math.min(AE_MAX, sp.ae + 2); k.log.push({ seite: "spieler", handelt: true, text: name(k, "spieler") + " sammelt Kraft." }); break;
+      case "sammeln": sp.ae = Math.min(AE_MAX, sp.ae + 2); melde(k, { seite: "spieler", handelt: true, text: name(k, "spieler") + " sammelt Kraft." }); break;
       case "brenner":
         // Der Gasbrenner aus Brenner: einmal je Kampf Aktivierungsenergie
         // von außen – und seine Flamme heizt das Feld auf.
         if (k.werkzeuge.indexOf("gasbrenner") < 0) throw new Error("Kein Gasbrenner im Gepäck.");
-        if (k.brennerBenutzt) { k.log.push({ text: "Das Gas im Brenner ist für diesen Kampf verbraucht." }); break; }
+        if (k.brennerBenutzt) { melde(k, { text: "Das Gas im Brenner ist für diesen Kampf verbraucht." }); break; }
         k.brennerBenutzt = true;
         sp.ae = Math.min(AE_MAX, sp.ae + 4);
         k.feld.waerme = Math.min(100, k.feld.waerme + 10);
-        k.log.push({ text: "Du entzündest den Gasbrenner – rauschende Flamme, Luftzufuhr offen. Die Hitze liefert Aktivierungsenergie." });
+        melde(k, { text: "Du entzündest den Gasbrenner – rauschende Flamme, Luftzufuhr offen. Die Hitze liefert Aktivierungsenergie." });
         break;
       case "reaktion": break;
       default: throw new Error("Unbekannte Aktion: " + aktion.typ);
@@ -549,7 +579,7 @@ var KAMPF = (function () {
       if (s.status.vergiftet && el.zh > 0) {
         var gift = Math.max(1, Math.round(werte(el).zhMax * GIFT_ANTEIL));
         el.zh = Math.max(0, el.zh - gift);
-        k.log.push({ seite: seite, schaden: gift, text: name(k, seite) + " leidet unter dem Gift (−" + gift + " LP)." });
+        melde(k, { seite: seite, schaden: gift, text: name(k, seite) + " leidet unter dem Gift (−" + gift + " LP)." });
         if (--s.status.vergiftet <= 0) delete s.status.vergiftet;
       }
       s.ae = Math.min(AE_MAX, s.ae + AE_JE_RUNDE + Math.floor(k.feld.waerme / 30));
@@ -565,10 +595,11 @@ var KAMPF = (function () {
     var g = aktiv(k, "gegner");
     if (g.zh <= 0) {
       if (k.wild) {
-        k.log.push({ text: name(k, "gegner") + " ist erschöpft und zieht sich zurück." });
+        melde(k, { seite: "gegner", erschoepft: true, text: name(k, "gegner") + " ist erschöpft und zieht sich zurück." });
       } else {
+        melde(k, { seite: "gegner", erschoepft: true, text: name(k, "gegner") + " ist erschöpft." });
         var naechster = ersterFaehiger(k.seiten.gegner.gruppe);
-        if (naechster >= 0) { k.seiten.gegner.aktiv = naechster; k.seiten.gegner.status = {}; k.log.push({ text: "Der Gegner ruft " + name(k, "gegner") + "." }); return false; }
+        if (naechster >= 0) { k.seiten.gegner.aktiv = naechster; k.seiten.gegner.status = {}; melde(k, { seite: "gegner", ruft: true, text: "Der Gegner ruft " + name(k, "gegner") + "." }); return false; }
       }
       k.ende = "sieg";
       verteileErfahrung(k);
@@ -576,11 +607,11 @@ var KAMPF = (function () {
     }
     var sp = k.seiten.spieler;
     if (aktiv(k, "spieler").zh <= 0) {
-      k.log.push({ text: name(k, "spieler") + " ist erschöpft." });
+      melde(k, { seite: "spieler", erschoepft: true, text: name(k, "spieler") + " ist erschöpft." });
       var n = ersterFaehiger(sp.gruppe);
-      if (n < 0) { k.ende = "niederlage"; k.log.push({ text: "Keiner kann mehr. Zeit, ins Labor zurückzukehren." }); return true; }
+      if (n < 0) { k.ende = "niederlage"; melde(k, { text: "Keiner kann mehr. Zeit, ins Labor zurückzukehren." }); return true; }
       sp.aktiv = n; sp.status = {};
-      k.log.push({ text: "Du rufst " + name(k, "spieler") + "." });
+      melde(k, { seite: "spieler", ruft: true, text: "Du rufst " + name(k, "spieler") + "." });
     }
     return false;
   }
@@ -594,24 +625,24 @@ var KAMPF = (function () {
     var summe = Math.round(gegner.reduce(function (a, el) { return a + 12 * el.stufe; }, 0) * (anteil || 1));
     var sp = k.seiten.spieler, el = aktiv(k, "spieler");
     var stufen = erfahrung(el, summe);
-    k.log.push({ text: name(k, "spieler") + " gewinnt " + summe + " Erfahrung." });
-    stufen.forEach(function (st) { k.log.push({ text: name(k, "spieler") + " erreicht Stufe " + st + "!" }); });
+    melde(k, { text: name(k, "spieler") + " gewinnt " + summe + " Erfahrung." });
+    stufen.forEach(function (st) { melde(k, { text: name(k, "spieler") + " erreicht Stufe " + st + "!" }); });
     var rest = Math.round(summe * GRUPPE_LERNT);
     var andere = sp.gruppe.filter(function (g) { return g !== el; });
     if (!andere.length || !rest) return;
-    k.log.push({ text: "Die Gruppe lernt mit (+" + rest + " Erfahrung)." });
+    melde(k, { text: "Die Gruppe lernt mit (+" + rest + " Erfahrung)." });
     andere.forEach(function (g) {
-      erfahrung(g, rest).forEach(function (st) { k.log.push({ text: (g.spitzname || ARTEN[g.art].name) + " erreicht Stufe " + st + "!" }); });
+      erfahrung(g, rest).forEach(function (st) { melde(k, { text: (g.spitzname || ARTEN[g.art].name) + " erreicht Stufe " + st + "!" }); });
     });
   }
 
   function fliehen(k) {
-    if (!k.wild) { k.log.push({ text: "Vor einem Stoffmeister läuft man nicht davon." }); return; }
+    if (!k.wild) { melde(k, { text: "Vor einem Stoffmeister läuft man nicht davon." }); return; }
     var ts = werte(aktiv(k, "spieler")).tempo;
     var tg = werte(aktiv(k, "gegner")).tempo;
     var p = Math.max(0.3, Math.min(0.95, 0.6 + (ts - tg) / 20));
-    if (k.zufall() < p) { k.ende = "geflohen"; k.log.push({ text: "Du ziehst dich zurück." }); }
-    else k.log.push({ text: "Kein Durchkommen – das Elemental schneidet dir den Weg ab." });
+    if (k.zufall() < p) { k.ende = "geflohen"; melde(k, { text: "Du ziehst dich zurück." }); }
+    else melde(k, { text: "Kein Durchkommen – das Elemental schneidet dir den Weg ab." });
   }
 
   // ----------------------------------------------------------
@@ -629,10 +660,10 @@ var KAMPF = (function () {
   function untersuchen(k, werkzeug) {
     if (k.werkzeuge.indexOf(werkzeug) < 0) throw new Error("Werkzeug nicht im Gepäck: " + werkzeug);
     var art = ARTEN[aktiv(k, "gegner").art];
-    k.log.push({ text: "Du prüfst mit " + WERKZEUGE[werkzeug].name + "." });
+    melde(k, { text: "Du prüfst mit " + WERKZEUGE[werkzeug].name + "." });
     WERKZEUGE[werkzeug].prueft.forEach(function (eig) {
       k.befunde[eig] = art.steckbrief[eig];
-      k.log.push({ befund: eig, text: BEFUND_TEXT[eig](art.steckbrief[eig]) });
+      melde(k, { befund: eig, text: BEFUND_TEXT[eig](art.steckbrief[eig]) });
     });
   }
 
@@ -640,14 +671,14 @@ var KAMPF = (function () {
     var wahr = aktiv(k, "gegner").art;
     if (artId === wahr) {
       k.erkannt = true;
-      k.log.push({ erkannt: true, text: "Richtig – das ist " + ARTEN[wahr].name + " (" + ARTEN[wahr].formel + ")! Jetzt weißt du, womit du es zu tun hast." });
+      melde(k, { erkannt: true, text: "Richtig – das ist " + ARTEN[wahr].name + " (" + ARTEN[wahr].formel + ")! Jetzt weißt du, womit du es zu tun hast." });
       return;
     }
     // Ein Widerspruch zu den eigenen Befunden ist die beste Hilfe:
     // Er zeigt, WARUM die Vermutung nicht stimmt.
     var vermutet = ARTEN[artId];
     var widerspruch = Object.keys(k.befunde).filter(function (eig) { return vermutet.steckbrief[eig] !== k.befunde[eig]; })[0];
-    k.log.push({ erkannt: false, text: "Nein, " + vermutet.name + " ist es nicht." +
+    melde(k, { erkannt: false, text: "Nein, " + vermutet.name + " ist es nicht." +
       (widerspruch ? " " + vermutet.name + " würde sich anders verhalten: " + BEFUND_TEXT[widerspruch](vermutet.steckbrief[widerspruch]) : "") });
   }
 
@@ -656,6 +687,7 @@ var KAMPF = (function () {
     werte: werte,
     staerke: staerke,
     rundeBeginnen: rundeBeginnen,
+    melde: melde,
     angriffe: angriffe,
     lernVorschlaege: lernVorschlaege,
     kannLernen: kannLernen,

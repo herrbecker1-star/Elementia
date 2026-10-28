@@ -190,23 +190,36 @@ class KampfSzene extends Phaser.Scene {
     this.markiert = seite;
   }
 
-  zeichneInfo(c, seite) {
-    var k = this.k, el = KAMPF.aktiv(k, seite);
-    var w = KAMPF.werte(el);
+  // Was ein Kasten zeigt: aus der Momentaufnahme einer Meldung (lage,
+  // siehe KAMPF.melde) oder, ohne sie, aus dem Stand von jetzt.
+  ansicht(seite, lage) {
+    var k = this.k;
+    if (lage && lage.seiten[seite]) {
+      var l = lage.seiten[seite];
+      return { name: l.name, art: l.art, stufe: l.stufe, zh: l.zh, zhMax: l.zhMax, ae: l.ae, status: l.status, erkannt: lage.erkannt, befunde: lage.befunde, feld: lage.feld };
+    }
+    var el = KAMPF.aktiv(k, seite);
+    return { name: KAMPF.name(k, seite), art: el.art, stufe: el.stufe, zh: el.zh, zhMax: KAMPF.werte(el).zhMax, ae: k.seiten[seite].ae, status: k.seiten[seite].status, erkannt: k.erkannt, befunde: k.befunde, feld: k.feld };
+  }
+
+  zeichneInfo(c, seite, lage) {
+    var k = this.k, a = this.ansicht(seite, lage);
     // Der Gegnerkasten hat eine Zeile mehr: LP und darunter die Befunde.
     var b = MASS.px(220), h = MASS.px(seite === "gegner" ? 76 : 62);
     c.breite = b; c.hoehe = h;
     c.grund.clear().fillStyle(FARBE.papier, 0.93).fillRoundedRect(0, 0, b, h, MASS.px(10))
       .lineStyle(MASS.px(2), FARBE.papierRand, 1).strokeRoundedRect(0, 0, b, h, MASS.px(10));
-    c.name.setText(seite === "gegner" && k.wild && !k.erkannt ? "???" : KAMPF.name(k, seite)).setPosition(MASS.px(10), MASS.px(6));
+    c.name.setText(seite === "gegner" && k.wild && !a.erkannt ? "???" : a.name).setPosition(MASS.px(10), MASS.px(6));
     // Status neben der Stufe, damit man sieht, warum etwas schiefgeht.
-    var st = k.seiten[seite].status, zeichen = [];
+    var st = a.status, zeichen = [];
     if (st.vergiftet) zeichen.push("GIFT");
     if (st.geblendet) zeichen.push("GEBLENDET");
-    c.stufe.setText((zeichen.length ? zeichen.join(" ") + " · " : "") + "Stufe " + el.stufe).setPosition(b - MASS.px(10), MASS.px(8));
-    var ziel = el.zh / w.zhMax;
+    c.stufe.setText((zeichen.length ? zeichen.join(" ") + " · " : "") + "Stufe " + a.stufe).setPosition(b - MASS.px(10), MASS.px(8));
+    var ziel = a.zh / a.zhMax;
     // Der Balken läuft dem Wert nach – so sieht man, wie viel ein Treffer kostete.
-    this.tweens.addCounter({
+    // Seit Fassung 15 wird bei jeder Meldung neu gezeichnet: der alte Lauf muss weichen.
+    if (c.lauf) c.lauf.stop();
+    c.lauf = this.tweens.addCounter({
       from: c.anteil, to: ziel, duration: 450, onUpdate: function (t) {
         c.anteil = t.getValue();
         var bb = b - MASS.px(20), y = MASS.px(27);
@@ -216,16 +229,15 @@ class KampfSzene extends Phaser.Scene {
       }
     });
     if (seite === "spieler") {
-      var ae = k.seiten.spieler.ae;
-      c.zeile.setText("LP " + el.zh + "/" + w.zhMax + "  ·  Energie " + ae + "/" + KAMPF.AE_MAX);
+      c.zeile.setText("LP " + a.zh + "/" + a.zhMax + "  ·  Energie " + a.ae + "/" + KAMPF.AE_MAX);
     } else {
-      c.zeile.setText("LP " + el.zh + "/" + w.zhMax + "\n" + this.befundZeile());
+      c.zeile.setText("LP " + a.zh + "/" + a.zhMax + "\n" + this.befundZeile(a.befunde));
     }
     c.zeile.setPosition(MASS.px(10), MASS.px(40));
   }
 
-  befundZeile() {
-    var b = this.k.befunde, t = [];
+  befundZeile(befunde) {
+    var b = befunde || this.k.befunde, t = [];
     if (b.farbe !== undefined) t.push(b.farbe);
     if (b.glanz !== undefined) t.push(b.glanz ? "glänzt" : "matt");
     if (b.magnetisch !== undefined) t.push(b.magnetisch ? "magnetisch" : "nicht magnetisch");
@@ -235,8 +247,8 @@ class KampfSzene extends Phaser.Scene {
     return t.length ? t.join(" · ") : "noch nicht untersucht";
   }
 
-  zeichneFeld() {
-    var f = this.k.feld, g = this.feldAnzeige;
+  zeichneFeld(feld) {
+    var f = feld || this.k.feld, g = this.feldAnzeige;
     var b = MASS.px(100), zeile = MASS.px(18);
     var werte = [["Sauerstoff", f.sauerstoff, 0x6aa6e0], ["Wärme", f.waerme, 0xe0703a], ["Feuchte", f.feuchte, 0x4fb0a0]];
     g.clear().fillStyle(0x101418, 0.6).fillRoundedRect(0, 0, b + MASS.px(86), zeile * 3 + MASS.px(8), MASS.px(8));
@@ -260,12 +272,14 @@ class KampfSzene extends Phaser.Scene {
       (f.waerme >= KAMPF.REGEL.hitzeFeuer && f.feuchte <= 70 ? " Große Hitze: Feuer wirkt ×1,5." : ""));
   }
 
-  aktualisieren() {
-    this.zeichneInfo(this.infoGegner, "gegner");
-    this.zeichneInfo(this.infoSpieler, "spieler");
-    this.zeichneFeld();
-    this.bildSpieler.setTexture("el-" + KAMPF.aktiv(this.k, "spieler").art);
-    this.bildGegner.setTexture("el-" + KAMPF.aktiv(this.k, "gegner").art);
+  // lage: Momentaufnahme einer Meldung; ohne sie der Stand von jetzt.
+  aktualisieren(lage) {
+    this.letzteLage = lage || null;     // für anordnen() beim Drehen mitten in der Runde
+    this.zeichneInfo(this.infoGegner, "gegner", lage);
+    this.zeichneInfo(this.infoSpieler, "spieler", lage);
+    this.zeichneFeld(lage && lage.feld);
+    this.bildSpieler.setTexture("el-" + this.ansicht("spieler", lage).art);
+    this.bildGegner.setTexture("el-" + this.ansicht("gegner", lage).art);
   }
 
   zeigeText(t) { this.text.setText(t); }
@@ -404,8 +418,17 @@ class KampfSzene extends Phaser.Scene {
 
   spieleEintrag(e) {
     var szene = this;
-    if (window.PROBE_MELDEN) window.PROBE_MELDEN("› " + e.text);
     this.zeigeText(e.text);
+    // Die Anzeige zeigt den Augenblick dieser Meldung, nicht das Ende der Runde.
+    if (e.lage) this.aktualisieren(e.lage);
+    // Im Protokoll steht mit, was die Kästen gerade zeigen (kopflose Prüfung).
+    if (window.PROBE_MELDEN) window.PROBE_MELDEN("› " + e.text + "   [du: " + this.infoSpieler.name.text + " " + this.infoSpieler.zeile.text.split("  ·")[0] +
+      " · Gegner: " + this.infoGegner.name.text + " " + this.infoGegner.zeile.text.split("\n")[0] + "]");
+    if (e.erschoepft || e.ruft) {
+      var wesen = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
+      if (e.erschoepft) this.tweens.add({ targets: wesen, alpha: 0.15, duration: 450 });
+      else { wesen.alpha = 0; this.tweens.add({ targets: wesen, alpha: 1, duration: 350 }); }
+    }
     if (e.reaktion || e.handelt) this.markiere(e.seite);
     if (e.reaktion) {
       var bild = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
@@ -417,11 +440,8 @@ class KampfSzene extends Phaser.Scene {
     if (e.schaden) {
       var ziel = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
       this.tweens.add({ targets: ziel, x: ziel.x + MASS.px(8), duration: 70, yoyo: true, repeat: 3 });
-      this.aktualisieren();
     }
     if (e.volltreffer) this.cameras.main.shake(180, 0.006);
-    if (e.erkannt) this.aktualisieren();
-    if (e.befund !== undefined) this.aktualisieren();
     return new Promise(function (fertig) {
       szene.weiterWartet = fertig;
       // Jede Meldung steht mindestens 0,3 s – sonst blättert ein schneller
@@ -553,15 +573,15 @@ class KampfSzene extends Phaser.Scene {
     this.bildSpieler.grundSkala = this.bildSpieler.scaleY;
 
     this.infoGegner.setPosition(rand, rand);
-    this.zeichneInfo(this.infoGegner, "gegner");
-    this.zeichneInfo(this.infoSpieler, "spieler");
+    this.zeichneInfo(this.infoGegner, "gegner", this.letzteLage);
+    this.zeichneInfo(this.infoSpieler, "spieler", this.letzteLage);
     this.infoSpieler.setPosition(b - rand - this.infoSpieler.breite, raumH - this.infoSpieler.hoehe - MASS.px(8));
     var feldX = rand + this.infoGegner.breite + MASS.px(10);
     this.feldAnzeige.setPosition(feldX, rand);
     this.feldText.setPosition(feldX + MASS.px(8), rand + MASS.px(6));
     this.feldZone.setPosition(feldX, rand).setSize(MASS.px(186), MASS.px(62));
     if (this.feldZone.input) this.feldZone.input.hitArea.setSize(MASS.px(186), MASS.px(62));
-    this.zeichneFeld();
+    this.zeichneFeld(this.letzteLage && this.letzteLage.feld);
 
     // Untere Leiste: Text links, Knöpfe rechts
     var knopfB = Math.min(MASS.px(420), b * 0.52);

@@ -63,28 +63,28 @@ var FANGEN = (function () {
     var g = k.seiten.gegner;
     var el = g.gruppe[g.aktiv];
     var name = FANGGERAETE[geraet].name;
-    if (!k.wild) { k.log.push({ text: "Ein Elemental mit Stoffmeister fängt man nicht." }); return; }
-    if (!(k.vorrat[geraet] > 0)) { k.log.push({ text: "Kein " + name + " mehr im Gepäck." }); return; }
+    if (!k.wild) { KAMPF.melde(k, { text: "Ein Elemental mit Stoffmeister fängt man nicht." }); return; }
+    if (!(k.vorrat[geraet] > 0)) { KAMPF.melde(k, { text: "Kein " + name + " mehr im Gepäck." }); return; }
 
     var p = chance(k, geraet);
-    k.log.push({ text: "Du bietest den Bund an – mit " + name + "." });
+    KAMPF.melde(k, { text: "Du bietest den Bund an – mit " + name + "." });
     if (k.zufall() < p) {
       k.vorrat[geraet]--;
       k.ende = "gefangen";
       k.gefangen = el;
       el.heim = geraet;
-      k.log.push({ text: KAMPF.name(k, "gegner") + " nimmt den Bund an und zieht in " + (geraet === "tiegelzange" ? "den Tiegel" : "das Gefäß") + " ein." });
+      KAMPF.melde(k, { text: KAMPF.name(k, "gegner") + " nimmt den Bund an und zieht in " + (geraet === "tiegelzange" ? "den Tiegel" : "das Gefäß") + " ein." });
       return;
     }
 
     var e = eignung(geraet, el.art);
-    k.log.push({ text: e.faktor < 1 ? "Es entwischt! " + e.grund : "Es entwischt!" });
     var max = KAMPF.werte(el).zhMax;
     el.zh = Math.min(max, el.zh + Math.ceil(max * ERHOLUNG_BEI_FEHLSCHLAG));
+    KAMPF.melde(k, { text: e.faktor < 1 ? "Es entwischt! " + e.grund : "Es entwischt!" });
     k.fehlversuche++;
     if (k.fehlversuche >= FLUCHT_AB_VERSUCH && k.zufall() < FLUCHT_CHANCE) {
       k.ende = "entkommen";
-      k.log.push({ text: KAMPF.name(k, "gegner") + " hat genug und verschwindet im Gebüsch." });
+      KAMPF.melde(k, { text: KAMPF.name(k, "gegner") + " hat genug und verschwindet im Gebüsch." });
     }
   }
 
