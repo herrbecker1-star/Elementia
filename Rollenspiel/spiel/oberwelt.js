@@ -95,8 +95,7 @@ class OberweltSzene extends Phaser.Scene {
 
     // ---------- Kamera ----------
     var kamera = this.cameras.main;
-    kamera.setBounds(0, 0, karte.widthInPixels, karte.heightInPixels);
-    kamera.startFollow(this.held, true);
+    kamera.startFollow(this.held, true);   // Grenzen setzt zoomAnpassen
     kamera.setRoundPixels(true);
     this.zoomAnpassen();
     this.scale.on("resize", this.zoomAnpassen, this);
@@ -144,7 +143,14 @@ class OberweltSzene extends Phaser.Scene {
   }
 
   zoomAnpassen() {
-    this.cameras.main.setZoom(MASS.weltZoom(this.scale.width, this.scale.height));
+    var k = this.cameras.main;
+    k.setZoom(MASS.weltZoom(this.scale.width, this.scale.height));
+    // Seit Fassung 17 gibt es Räume (Labore), die kleiner sind als der
+    // Bildschirm. Dann wird die Grenze der Kamera um den Raum herum
+    // vergrößert – sonst klebt er in der linken oberen Ecke.
+    var w = this.karte.widthInPixels, h = this.karte.heightInPixels;
+    var sichtB = k.width / k.zoom, sichtH = k.height / k.zoom;
+    k.setBounds(w < sichtB ? (w - sichtB) / 2 : 0, h < sichtH ? (h - sichtH) / 2 : 0, Math.max(w, sichtB), Math.max(h, sichtH));
   }
 
   // Kleine Dinge auf der Karte, als Platzhalter gezeichnet.
@@ -169,6 +175,42 @@ class OberweltSzene extends Phaser.Scene {
       g.fillStyle(0x8a5a32).fillRect(5, 10, 22, 5);
       g.fillStyle(0xc9a66b).fillRect(14, 16, 4, 4);
       g.fillStyle(0xf4ead5).fillRect(8, 18, 5, 4);   // der Zettel
+    } else if (name === "glasbruch") {
+      // Scherben im Laub, mit einem Funkeln (seit Fassung 17)
+      g.fillStyle(0xcfeeff, 0.95).fillTriangle(6, 26, 12, 16, 15, 26).fillTriangle(16, 27, 22, 19, 26, 27);
+      g.fillStyle(0xa7d3f0, 0.95).fillTriangle(11, 29, 15, 23, 19, 29);
+      g.fillStyle(0xffffff).fillRect(12, 19, 1, 3).fillRect(21, 21, 1, 2);
+      g.fillStyle(0xffe08a).fillCircle(25, 12, 2);
+    } else if (name === "labortisch") {
+      // Kachelplatte auf Holz, darauf ein Kolben und ein Reagenzglas
+      g.fillStyle(0x6e4626).fillRect(3, 20, 3, 10).fillRect(26, 20, 3, 10);
+      g.fillStyle(0xe8e8e0).fillRect(1, 14, 30, 7);
+      g.fillStyle(0xbfbfb5).fillRect(1, 20, 30, 1);
+      g.fillStyle(0xcfeeff, 0.95).fillCircle(10, 10, 4).fillRect(9, 3, 2, 4);
+      g.fillStyle(0x7fd07f).fillCircle(10, 11, 2);
+      g.fillStyle(0xcfeeff, 0.95).fillRect(20, 4, 3, 10);
+      g.fillStyle(0xe27a9a).fillRect(20, 10, 3, 4);
+    } else if (name === "abzug") {
+      // Ein Schrank mit Glasscheibe und Abluftrohr
+      g.fillStyle(0x8c8c8c).fillRect(2, 6, 28, 24);
+      g.fillStyle(0x5f6366).fillRect(12, 0, 8, 6);
+      g.fillStyle(0xa7d3f0, 0.9).fillRect(5, 9, 22, 11);
+      g.fillStyle(0xffffff, 0.8).fillRect(7, 10, 2, 8);
+      g.fillStyle(0x6d655b).fillRect(4, 21, 24, 7);
+      g.fillStyle(0xffe08a).fillRect(14, 15, 4, 4);   // die Flamme dahinter
+    } else if (name === "regal") {
+      g.fillStyle(0x6e4626).fillRect(3, 2, 26, 28);
+      g.fillStyle(0x8a5a32).fillRect(5, 4, 22, 24);
+      g.fillStyle(0x6e4626).fillRect(5, 12, 22, 2).fillRect(5, 21, 22, 2);
+      [[7, 0xcfeeff], [12, 0xf5d547], [17, 0xcfeeff], [22, 0xe84a5f]].forEach(function (f) {
+        g.fillStyle(f[1], 0.95).fillRect(f[0], 6, 3, 6).fillRect(f[0] + 1, 15, 3, 6);
+      });
+    } else if (name === "marktstand") {
+      g.fillStyle(0x6e4626).fillRect(3, 14, 2, 16).fillRect(27, 14, 2, 16);
+      g.fillStyle(0xc9803a).fillRect(1, 6, 30, 8);
+      g.fillStyle(0xf4ead5).fillRect(5, 6, 4, 8).fillRect(13, 6, 4, 8).fillRect(21, 6, 4, 8);
+      g.fillStyle(0x8a5a32).fillRect(3, 20, 26, 6);
+      g.fillStyle(0xcfeeff, 0.95).fillRect(8, 15, 3, 5).fillRect(14, 15, 3, 5).fillRect(20, 15, 3, 5);
     } else {
       // Ein Laborgerät, das an einem Ast hängt: Pfahl mit Glaskörper
       g.fillStyle(0x6b4424).fillRect(15, 4, 2, 26);
@@ -184,9 +226,11 @@ class OberweltSzene extends Phaser.Scene {
 
   // Figuren mit nurWenn/nichtWenn erscheinen oder verschwinden je nach Flags.
   sichtbarkeitAnpassen() {
-    var flags = this.stand.flags;
+    var flags = this.stand.flags, stand = this.stand;
+    this.letzterTag = HANDEL.tag(stand);
     this.ansprechbar.forEach(function (e) {
-      var sichtbar = bedingungErfuellt(e.eig, flags);
+      // Eine geleerte Fundstelle (Glasbruch) ist bis zum nächsten Spieltag weg.
+      var sichtbar = bedingungErfuellt(e.eig, flags) && !(e.eig.fund && HANDEL.fundLeer(stand, e.eig.fund));
       e.aktiv = sichtbar;
       [e.figur, e.ding].forEach(function (spr) {
         if (!spr) return;
@@ -371,8 +415,11 @@ class OberweltSzene extends Phaser.Scene {
 
   // ---------- Labor ----------
   heilen() {
-    // Hierher kehrt man nach einer Niederlage zurück.
-    this.stand.labor = { karte: this.stand.karte, x: Math.round(this.held.x), y: Math.round(this.held.y) };
+    // Hierher kehrt man nach einer Niederlage zurück. Mama heilt vor dem
+    // Aufbruch auch im Garten – aufwachen tut man trotzdem in ihrer Werkstatt.
+    this.stand.labor = this.stand.karte.indexOf("labor_") === 0
+      ? { karte: this.stand.karte, x: Math.round(this.held.x), y: Math.round(this.held.y) }
+      : { karte: "labor_" + this.stand.karte, x: null, y: null };
     this.stand.gruppe.concat(this.stand.lager).forEach(function (el) {
       el.zh = KAMPF.werte(el).zhMax;
     });
@@ -524,7 +571,8 @@ class OberweltSzene extends Phaser.Scene {
           // Nach einer Niederlage wacht man im Labor auf, nicht auf dem Schlachtfeld.
           szene.speichern();
           if (ende === "niederlage") {
-            var l = szene.stand.labor || { karte: "stoffingen", x: szene.startpunkt.x, y: szene.startpunkt.y };
+            // Seit Fassung 17 ist das Labor ein Raum; x/y null = sein Startpunkt.
+            var l = szene.stand.labor || { karte: "labor_stoffingen", x: null, y: null };
             szene.stand.karte = l.karte; szene.stand.x = l.x; szene.stand.y = l.y;
             SPIELSTAND.speichern(szene.stand);
             // Der laufende Ablauf (etwa eine Prüfung) wird nicht fortgesetzt:
@@ -587,6 +635,7 @@ class OberweltSzene extends Phaser.Scene {
       // Die Zeit läuft nur, solange gespielt wird – nicht im Dialog, nicht im Menü.
       var aenderung = WELT.vorruecken(this.stand, delta / 1000, this.zufall);
       if (aenderung.phase || aenderung.wetter) this.ui.himmelZeichnen();
+      if (HANDEL.tag(this.stand) !== this.letzterTag) this.sichtbarkeitAnpassen();   // Fundstellen füllen sich
       this.schemenBewegen();
       this.schemenBeruehrt();
       if (this.ui.dialogAktiv) return;

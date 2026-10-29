@@ -12,7 +12,7 @@
 // ============================================================
 
 // Bei JEDER Veröffentlichung erhöhen – sonst holt kein Handy die neue Fassung.
-var FASSUNG = 16;
+var FASSUNG = 17;
 var SPEICHER = "elementia-abenteuer-" + FASSUNG;
 
 var DATEIEN = [
@@ -24,6 +24,7 @@ var DATEIEN = [
   "kern/spielstand.js",
   "kern/kampf.js",
   "kern/fangen.js",
+  "kern/handel.js",
   "kern/werkbank.js",
   "kern/welt.js",
   "kern/auftreten.js",
@@ -66,6 +67,8 @@ var DATEIEN = [
   "karten/stoffingen.json",
   "karten/kolbenwald.json",
   "karten/brenner.json",
+  "karten/labor_stoffingen.json",
+  "karten/labor_brenner.json",
   "icons/icon-192.png",
   "icons/icon-512.jpg"
 ];

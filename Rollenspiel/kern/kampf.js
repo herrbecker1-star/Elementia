@@ -224,6 +224,7 @@ var KAMPF = (function () {
       },
       wild: o.wild !== false,
       vorrat: o.vorrat || {},
+      material: o.material || {},          // Glasbruch aus zersprungenen Gefäßen
       werkzeuge: o.werkzeuge || [],
       befunde: {},
       fehlversuche: 0,
@@ -473,7 +474,8 @@ var KAMPF = (function () {
   // aktion des Spielers:
   //   { typ: "reaktion", id } | { typ: "sammeln" }
   //   { typ: "untersuchen", werkzeug } | { typ: "bestimmen", art }
-  //   { typ: "fangen", geraet } | { typ: "wechseln", nr } | { typ: "fliehen" }
+  //   { typ: "fangen", geraet } | { typ: "kuehlen" } | { typ: "wechseln", nr } | { typ: "fliehen" }
+  //   (geraet = Gefäß aus GEFAESSE; der Name stammt aus der Zeit der Fanggeräte)
   // gegnerAktion: optional (Prüfstand); sonst wählt die KI.
   // Liefert das Protokoll dieser Runde.
   // Handelt der Gegner vor dem Spieler? Der Schnellere zuerst, bei
@@ -526,6 +528,7 @@ var KAMPF = (function () {
         FANGEN.versuch(k, aktion.geraet);
         if (k.ende === "gefangen") verteileErfahrung(k, 0.5);
         break;
+      case "kuehlen": FANGEN.kuehlen(k); break;
       case "wechseln":
         if (!sp.gruppe[aktion.nr] || sp.gruppe[aktion.nr].zh <= 0) throw new Error("Wechsel nicht möglich.");
         sp.aktiv = aktion.nr; sp.status = {};

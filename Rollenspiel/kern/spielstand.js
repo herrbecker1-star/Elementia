@@ -28,9 +28,13 @@ var SPIELSTAND = (function () {
       flags: {},
       gruppe: [],         // Elementals, die mitkommen (höchstens GRUPPE_MAX)
       lager: [],          // weitere gefangene Elementals
-      vorrat: {},         // Fanggeräte – die ersten gibt es bei Mara und in der Nacht des Aufbruchs
-      werkzeuge: [],      // Lupe, Magnet, Stromkreis, Hammer leiht Mara aus (Quest 1)
+      vorrat: {},         // Fanggefäße und Kältemischung – die ersten Gläser gibt es in der Nacht des Aufbruchs
+      werkzeuge: [],      // Lupe, Magnet, Stromkreis, Hammer leiht Mara aus (Quest 1); Laborgeräte
       bekannt: [],        // erkannte Arten (Stoffbuch)
+      gesehen: [],        // Arten, gegen die man bei einem Stoffmeister gekämpft hat (seit Fassung 17)
+      geld: 0,            // Taler (seit Fassung 17)
+      material: {},       // Glasbruch, Quarz
+      funde: {},          // Fundstelle → Spieltag, an dem sie zuletzt geleert wurde
       gespeichert: null
     };
   }
@@ -66,9 +70,24 @@ var SPIELSTAND = (function () {
     // Felder, die mit M1 dazukamen: fehlen sie in einem älteren
     // Stand, gelten die Anfangswerte.
     var anfang = neu();
-    ["gruppe", "lager", "vorrat", "werkzeuge", "bekannt"].forEach(function (f) {
+    ["gruppe", "lager", "vorrat", "werkzeuge", "bekannt", "gesehen", "material", "funde"].forEach(function (f) {
       if (!stand[f] || typeof stand[f] !== "object") stand[f] = anfang[f];
     });
+    if (typeof stand.geld !== "number" || !(stand.geld >= 0)) stand.geld = 0;
+    // Seit Fassung 17 fängt man mit Gefäßen. Tiegelzange und Spatel aus
+    // älteren Ständen werden zu Reagenzgläsern; wer eine Tiegelzange hatte,
+    // behält sie als Laborgerät. Der Erlenmeyerkolben war ein Werkzeug und
+    // ist jetzt ein Gefäß.
+    var v = stand.vorrat;
+    if (v.tiegelzange > 0 && stand.werkzeuge.indexOf("tiegelzange") < 0) stand.werkzeuge.push("tiegelzange");
+    ["tiegelzange", "spatel"].forEach(function (alt) {
+      if (v[alt] > 0) v.reagenzglas = (v.reagenzglas || 0) + v[alt];
+      delete v[alt];
+    });
+    var ek = stand.werkzeuge.indexOf("erlenmeyerkolben");
+    if (ek >= 0) { stand.werkzeuge.splice(ek, 1); v.erlenmeyerkolben = (v.erlenmeyerkolben || 0) + 1; }
+    // Das Labor war bis Fassung 16 ein Punkt vor der Tür; jetzt ist es ein Raum.
+    if (stand.labor && (stand.labor.karte === "stoffingen" || stand.labor.karte === "brenner")) stand.labor = { karte: "labor_" + stand.labor.karte, x: null, y: null };
     // Seit Fassung 6 (25.10.2026) trägt der Starter eine Markierung. In
     // älteren Ständen bekommt sie das erste Elemental der gewählten Art.
     var alle = stand.gruppe.concat(stand.lager);

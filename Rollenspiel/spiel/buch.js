@@ -213,12 +213,15 @@ class BuchSzene extends Phaser.Scene {
     var gefangen = {};
     stand.gruppe.concat(stand.lager).forEach(function (el) { gefangen[el.art] = true; });
     // Wer mitkommt, ist bekannt – auch ohne Bestimmung im Kampf.
-    function kenntArt(a) { return stand.bekannt.indexOf(a) >= 0 || gefangen[a]; }
+    // Seit Fassung 17 auch, wen man bei einem Stoffmeister gesehen hat.
+    function kenntArt(a) { return stand.bekannt.indexOf(a) >= 0 || gefangen[a] || stand.gesehen.indexOf(a) >= 0; }
     var bekannt = arten.filter(kenntArt).length;
     this.text(f.x, f.y, "Großmutters Buch · " + bekannt + " von " + arten.length + " Stoffen bekannt", 13, "#5a4632");
 
-    var spalten = 3, luecke = MASS.px(10);
-    var zB = (f.b - (spalten - 1) * luecke) / spalten, zH = (f.h - MASS.px(24) - luecke) / 2;
+    // Ab 7 Arten vier Spalten: Bei acht Arten in drei Spalten ragte die
+    // dritte Reihe unten aus dem Buch (Fassung 13–16).
+    var spalten = arten.length > 6 ? 4 : 3, reihen = Math.ceil(arten.length / spalten), luecke = MASS.px(10);
+    var zB = (f.b - (spalten - 1) * luecke) / spalten, zH = (f.h - MASS.px(24) - (reihen - 1) * luecke) / reihen;
     arten.forEach(function (art, i) {
       var x = f.x + (i % spalten) * (zB + luecke), y = f.y + MASS.px(24) + Math.floor(i / spalten) * (zH + luecke);
       var kennt = kenntArt(art), a = ARTEN[art];
@@ -229,7 +232,8 @@ class BuchSzene extends Phaser.Scene {
       var bild = szene.bild(x + MASS.px(6), y + MASS.px(6), art, bh, !kennt);
       var tx = x + MASS.px(12) + bild.displayWidth;
       szene.text(tx, y + MASS.px(6), kennt ? a.name : "???", 14, null, "bold");
-      szene.text(tx, y + MASS.px(26), kennt ? a.formel + " · " + a.klasse + (gefangen[art] ? "\n✓ gefangen" : "") : (a.seltenheit !== "haeufig" ? "selten" : ""), 12, "#5a4632");
+      var marke = gefangen[art] ? "\n✓ gefangen" : a.fangbarAb && kennt ? "\ngesehen · fangbar später" : "";
+      szene.text(tx, y + MASS.px(26), kennt ? a.formel + " · " + a.klasse + marke : (a.seltenheit !== "haeufig" ? "selten" : ""), 12, "#5a4632");
       var hinweis = szene.text(x + MASS.px(6), y + bh + MASS.px(12), kennt ? FUNDHINWEISE[art].genau : FUNDHINWEISE[art].vage, 11, kennt ? FARBE.tinte : "#6b4a2b", kennt ? "" : "italic");
       hinweis.setWordWrapWidth(zB - MASS.px(12), true);
       // Einmal erkannt genügt: Werte und Angriffe stehen dann im Buch.
@@ -301,17 +305,29 @@ class BuchSzene extends Phaser.Scene {
     this.tabelle(x, y, [b * 0.2, b * 0.13, b * 0.12, b * 0.05, b * 0.5], zeilen, 10);
   }
 
+  // Seit Fassung 17 als Tabellen: Gefäße und Waren links, Geräte rechts.
   zeigeGepaeck(f) {
-    var stand = this.stand, y = f.y;
-    this.text(f.x, y, "Fanggeräte", 15, null, "bold"); y += MASS.px(24);
-    var geraete = Object.keys(FANGGERAETE).filter(function (g) { return stand.vorrat[g] > 0; });
-    if (!geraete.length) { this.text(f.x, y, "keine", 13, "#5a4632"); y += MASS.px(20); }
-    geraete.forEach(function (g) {
-      this.text(f.x, y, "• " + FANGGERAETE[g].name + "  ×" + stand.vorrat[g], 14); y += MASS.px(22);
-    }, this);
-    this.text(f.x, y + MASS.px(2), "Ein Gerät wird nur verbraucht, wenn der Bund gelingt.", 12, "#5a4632", "italic");
-    y += MASS.px(34);
-    this.text(f.x, y, "Werkzeuge zum Untersuchen", 15, null, "bold"); y += MASS.px(24);
-    this.text(f.x, y, stand.werkzeuge.map(function (w) { return WERKZEUGE[w].name; }).join(" · "), 14);
+    var stand = this.stand, y = f.y, halb = (f.b - MASS.px(12)) / 2;
+    this.text(f.x, y, "Geld: " + stand.geld + " " + HANDEL.WAEHRUNG, 15, null, "bold");
+    y += MASS.px(26);
+    var zeilen = [["Gefäß / Ware", "Anzahl", "Fangrate"]];
+    Object.keys(GEFAESSE).forEach(function (g) { if (stand.vorrat[g] > 0) zeilen.push([GEFAESSE[g].name, String(stand.vorrat[g]), GEFAESSE[g].rate]); });
+    Object.keys(WAREN).forEach(function (w) {
+      var n = WAREN[w].vorrat ? stand.vorrat[w] : stand.material[w];
+      if (n > 0) zeilen.push([WAREN[w].name, String(n), w === "kaeltemischung" ? "abkühlen ×2" : "–"]);
+    });
+    if (zeilen.length === 1) zeilen.push(["keine", "", ""]);
+    var h1 = this.tabelle(f.x, y, [halb * 0.5, halb * 0.2, halb * 0.3], zeilen, 11);
+    this.text(f.x, y + h1 + MASS.px(4), "Ein Gefäß wird nur verbraucht, wenn der Bund gelingt.", 11, "#5a4632", "italic")
+      .setWordWrapWidth(halb, true);
+
+    var x2 = f.x + halb + MASS.px(12);
+    var geraete = [["Werkzeug / Gerät", "wofür"]];
+    stand.werkzeuge.forEach(function (w) {
+      var wz = WERKZEUGE[w];
+      geraete.push([wz.name, wz.prueft.length ? "Untersuchen" : wz.labor ? "Labor" : "–"]);
+    });
+    if (geraete.length === 1) geraete.push(["keine", ""]);
+    this.tabelle(x2, y, [halb * 0.6, halb * 0.4], geraete, 11);
   }
 }

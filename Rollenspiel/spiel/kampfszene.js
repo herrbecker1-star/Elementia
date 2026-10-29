@@ -50,6 +50,7 @@ class KampfSzene extends Phaser.Scene {
       wild: daten.wild !== false,
       bekannt: this.stand.bekannt,
       vorrat: this.stand.vorrat,
+      material: this.stand.material,
       werkzeuge: this.stand.werkzeuge
     });
 
@@ -143,6 +144,7 @@ class KampfSzene extends Phaser.Scene {
       else if (teil[0] === "fangen") a = { typ: "fangen", geraet: teil[1] };
       else if (teil[0] === "fliehen") a = { typ: "fliehen" };
       else if (teil[0] === "brenner") a = { typ: "brenner" };
+      else if (teil[0] === "kuehlen") a = { typ: "kuehlen" };
       else a = { typ: "reaktion", id: teil[0] };
       var weiter = this.time.addEvent({ delay: 60, loop: true, callback: this.weiter, callbackScope: this });
       await this.ausfuehren(a);
@@ -214,6 +216,9 @@ class KampfSzene extends Phaser.Scene {
     var st = a.status, zeichen = [];
     if (st.vergiftet) zeichen.push("GIFT");
     if (st.geblendet) zeichen.push("GEBLENDET");
+    if (st.abgekuehlt) zeichen.push("ABGEKÜHLT");
+    if (st.inert) zeichen.push("INERT");
+    if (st.geloest) zeichen.push("GELÖST");
     c.stufe.setText((zeichen.length ? zeichen.join(" ") + " · " : "") + "Stufe " + a.stufe).setPosition(b - MASS.px(10), MASS.px(8));
     var ziel = a.zh / a.zhMax;
     // Der Balken läuft dem Wert nach – so sieht man, wie viel ein Treffer kostete.
@@ -374,12 +379,17 @@ class KampfSzene extends Phaser.Scene {
   }
 
   menueFangen() {
-    var szene = this, v = this.stand.vorrat;
-    var eintraege = Object.keys(FANGGERAETE).filter(function (g) { return v[g] > 0; }).map(function (g) {
-      return { text: FANGGERAETE[g].kurz + " ×" + v[g], beiKlick: function () { szene.ausfuehren({ typ: "fangen", geraet: g }); } };
+    var szene = this, v = this.stand.vorrat, k = this.k;
+    var eintraege = Object.keys(GEFAESSE).filter(function (g) { return v[g] > 0; }).map(function (g) {
+      return { text: GEFAESSE[g].kurz + " ×" + v[g] + "\nFangrate " + GEFAESSE[g].rate, beiKlick: function () { szene.ausfuehren({ typ: "fangen", geraet: g }); } };
     });
-    if (!eintraege.length) this.zeigeText("Du hast kein Fanggerät mehr dabei.");
-    else this.zeigeText("Welches Gerät passt zu diesem Stoff? Ein Gerät wird nur verbraucht, wenn der Bund gelingt.");
+    var gefaesse = eintraege.length;
+    if (v.kaeltemischung > 0) {
+      eintraege.push({ text: "Kältemischung ×" + v.kaeltemischung + "\nabkühlen: ×2", aktiv: !k.seiten.gegner.status.abgekuehlt, grund: "Es ist schon abgekühlt.",
+        beiKlick: function () { szene.ausfuehren({ typ: "kuehlen" }); } });
+    }
+    if (!gefaesse) this.zeigeText("Du hast kein Gefäß mehr dabei. Reagenzgläser gibt es auf dem Markt.");
+    else this.zeigeText("Welches Gefäß? Es wird nur verbraucht, wenn der Bund gelingt.");
     eintraege.push(this.zurueck());
     this.zeigeKnoepfe(eintraege);
   }
@@ -522,6 +532,11 @@ class KampfSzene extends Phaser.Scene {
 
   async beenden() {
     var k = this.k, stand = this.stand, ende = k.ende;
+    // Seit Fassung 17: Die Elementals der Stoffmeister gelten als gesehen –
+    // das Stoffbuch zeigt sie mit „fangbar später“.
+    if (!k.wild) k.seiten.gegner.gruppe.forEach(function (el) {
+      if (stand.gesehen.indexOf(el.art) < 0) stand.gesehen.push(el.art);
+    });
     if (ende === "gefangen") {
       var wohin = SPIELSTAND.aufnehmen(stand, k.gefangen);
       if (stand.bekannt.indexOf(k.gefangen.art) < 0) stand.bekannt.push(k.gefangen.art);
@@ -532,7 +547,7 @@ class KampfSzene extends Phaser.Scene {
     } else if (ende === "niederlage") {
       // Kein „Game Over“: zurück ins Labor, alle erholt.
       stand.gruppe.forEach(function (el) { el.zh = KAMPF.werte(el).zhMax; });
-      var imDorf = !stand.labor || stand.labor.karte === "stoffingen";
+      var imDorf = !stand.labor || /stoffingen/.test(stand.labor.karte);
       await this.wartenAufTipp(imDorf
         ? "Du wachst in Mutters Werkstatt auf. Es riecht nach Salbe. Deine Elementals haben sich erholt – und du bist klüger als vorhin."
         : "Du wachst im Labor der Gilde auf. Jemand hat deine Elementals versorgt. „Beim nächsten Mal erst denken, dann zünden“, brummt eine Stimme.");

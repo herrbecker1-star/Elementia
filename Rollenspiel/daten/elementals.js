@@ -16,7 +16,13 @@
 //  ausnahmen      Abweichung von der Typtabelle, mit Begründung
 //  steckbrief     was man mit Lupe, Magnet, Stromkreis und Hammer
 //                 herausfindet (Quest 1, Maras Stoffkisten)
-//  form           "stueck" | "pulver"  – entscheidet mit über das Fanggerät
+//  form           "stueck" | "pulver"
+//  fangbarAb      (seit Fassung 17) Region, ab der die Art wild vorkommt.
+//                 Bis dahin sieht man sie nur bei Stoffmeistern und Bossen.
+//  heftig         (seit Fassung 17) Satz, warum der Stoff heftig reagiert:
+//                 Entwischt er, zerspringen Reagenzglas und Erlenmeyerkolben
+//                 (kern\fangen.js). In Kapitel 1 trägt das noch keine Art –
+//                 Natrium und Kalium in Periodika werden die ersten.
 //
 //  Quellen: Tafelwerk / Blickpunkt Chemie 7/8, S. 16–17.
 // ============================================================
@@ -55,7 +61,9 @@ var ARTEN = {
   },
 
   kupfer: {
-    name: "Kupfer", formel: "Cu", klasse: "Metall", gruppe: "nebengruppe", bild: "kupfer", seltenheit: "selten",
+    // Seit Fassung 17: in den Feuerlanden nur bei Gildenmeisterin Ilka,
+    // fangbar erst in den Clans der Erzhügel (Elementals je Region).
+    name: "Kupfer", formel: "Cu", klasse: "Metall", gruppe: "nebengruppe", bild: "kupfer", seltenheit: "selten", fangbarAb: "Clans der Erzhügel",
     beschreibung: "Rötliches, weiches Metall. Leitet Strom und Wärme besser als fast alle Stoffe – darum sind Kabel aus Kupfer.",
     stoff: { haerte: 3, dichte: 8.96, schmelz: 1085 },
     steckbrief: { farbe: "rötlich", glanz: true, magnetisch: false, leitfaehig: true, verformbar: true, brennt: false },
@@ -95,7 +103,8 @@ var ARTEN = {
   // Oxidhaut macht es im Kampf feuerfest (Ausnahme Feuer ×1) – darum ist
   // es der Konter gegen Schwefel: Schlag ×2, und Schwefels Flamme prallt ab.
   aluminium: {
-    name: "Aluminium", formel: "Al", klasse: "Metall", gruppe: "hg3", bild: "aluminium", seltenheit: "selten",
+    // Seit Fassung 17 wie Kupfer: Ilkas Elemental, fangbar ab den Erzhügeln.
+    name: "Aluminium", formel: "Al", klasse: "Metall", gruppe: "hg3", bild: "aluminium", seltenheit: "selten", fangbarAb: "Clans der Erzhügel",
     ausnahmen: { feuer: { faktor: 1, wort: "Oxidhaut", merksatz: 2 }, reaktion: { faktor: 1, wort: "Oxidhaut", merksatz: 2 } },
     beschreibung: "Leichtes, silberweißes Metall. Eine dünne Oxidhaut schützt es, darum rostet es nicht. Aus Aluminium sind Folie und Dosen.",
     stoff: { haerte: 2.75, dichte: 2.70, schmelz: 660 },
@@ -284,16 +293,43 @@ var WERKZEUGE = {
   hammer:     { name: "Hammer",     prueft: ["verformbar"] },
   // Gegenstände ohne Prüfung – stehen im Gepäck, nicht im Menü „Untersuchen“
   // Seit Fassung 13 auch ein Prüfwerkzeug: die Flammprobe (Magnesium oder Aluminium?)
-  gasbrenner:        { name: "Gasbrenner", prueft: ["brennt"], text: "Flammprobe: Brennt der Stoff? Im Kampf einmal Energie (+4), heizt das Feld auf." },
-  erlenmeyerkolben:  { name: "Erlenmeyerkolben", prueft: [], text: "Dein erstes eigenes Laborglas. Für Flüssigkeiten – später." },
-  geraetepass:       { name: "Gerätepass des Kolbenwaldes", prueft: [], text: "Unterschrieben von Meisterin Vitra." }
+  // Die id „gasbrenner“ bleibt wegen der Spielstände; seit Fassung 17 heißt er Bunsenbrenner.
+  gasbrenner:        { name: "Bunsenbrenner", prueft: ["brennt"], labor: true, text: "Flammprobe: Brennt der Stoff? Im Kampf einmal Energie (+4), heizt das Feld auf." },
+  geraetepass:       { name: "Gerätepass des Kolbenwaldes", prueft: [], text: "Unterschrieben von Meisterin Vitra." },
+  // Laborgeräte für den Abzug (seit Fassung 17). Man bekommt sie in Quests;
+  // mit ihnen entstehen später Verbindungen.
+  tiegelzange:       { name: "Tiegelzange", prueft: [], labor: true, text: "Greift heiße Tiegel und Schalen. Vom Köhler." },
+  messzylinder:      { name: "Messzylinder", prueft: [], labor: true, text: "Misst Flüssigkeiten genau ab. Von Meisterin Vitra." }
 };
 
+// Die Geräte, die der Abzug kennt, in dieser Reihenfolge
+var LABORGERAETE = ["gasbrenner", "tiegelzange", "messzylinder"];
+
 // ------------------------------------------------------------
-//  Fanggeräte – Eignung siehe kern\fangen.js
+//  Fanggefäße der Grundstufe (seit Fassung 17) – siehe kern\fangen.js
+//  faktor  Fangrate      immer  fängt in jedem Fall
+//  haelt   zerspringt nicht, wenn ein heftig reagierender Stoff entwischt
+//  aus     herstellbar am Labortisch aus Material (braucht den Bunsenbrenner)
 // ------------------------------------------------------------
-var FANGGERAETE = {
-  reagenzglas: { name: "Reagenzglas",              kurz: "Reagenzglas" },
-  tiegelzange: { name: "Tiegelzange mit Tiegel",   kurz: "Tiegelzange" },
-  spatel:      { name: "Spatellöffel mit Uhrglas", kurz: "Spatel" }
+var GEFAESSE = {
+  reagenzglas:      { name: "Reagenzglas",      kurz: "Reagenzglas",  faktor: 1,   rate: "×1",
+                      text: "Das einfache Standardgefäß, billig und überall erhältlich." },
+  erlenmeyerkolben: { name: "Erlenmeyerkolben", kurz: "Erlenmeyer",   faktor: 1.5, rate: "×1,5", aus: { glasbruch: 4 },
+                      text: "Mehr Volumen, stabiler Stand, kippt nicht um." },
+  rundkolben:       { name: "Rundkolben",       kurz: "Rundkolben",   faktor: 2,   rate: "×2",   aus: { glasbruch: 8 }, haelt: true,
+                      text: "Hält Hitze und Druck aus." },
+  quarzampulle:     { name: "Quarzampulle",     kurz: "Quarzampulle", immer: true, rate: "sicher", aus: { quarz: 1 }, haelt: true,
+                      text: "Wird zugeschmolzen. Extrem selten." }
 };
+
+// Weitere Waren im Gepäck: Verbrauchsgüter (in stand.vorrat) und Material (stand.material)
+var WAREN = {
+  kaeltemischung: { name: "Kältemischung", vorrat: true, text: "Eis und Kochsalz kühlen bis −20 °C. Ein abgekühltes Elemental fängt man doppelt so leicht." },
+  glasbruch:      { name: "Glasbruch",     text: "Scherben aus dem Kolbenwald. Verkaufen oder am Labortisch zu neuen Gefäßen schmelzen." },
+  quarz:          { name: "Quarz",         text: "Reiner Quarzsand (Siliciumdioxid). Daraus entsteht die Quarzampulle." }
+};
+
+// Name einer Sache im Gepäck, egal welcher Sorte
+function sachName(id) {
+  return (GEFAESSE[id] || WAREN[id] || WERKZEUGE[id] || { name: id }).name;
+}

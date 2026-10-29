@@ -49,6 +49,14 @@
 //                                 Steuerung frei, wer fährt davon – immer
 //                                 etwas schneller als die Spielfigur
 //
+//  Seit Fassung 17 (Markt, Labor, Fundstellen – Logik in kern\handel.js):
+//    { geben: { geld: 60, material: { glasbruch: 2 } } }   auch Geld und Material
+//    { handel: "stoffingen" }     Marktstand: kaufen und verkaufen (HANDEL.MAERKTE)
+//    { herstellen: true }         Labortisch: Gefäße aus Glasbruch schmelzen
+//    { abzug: true }              Abzug: welche Laborgeräte man hat
+//    { fund: { id: "kw1", ware: "glasbruch", menge: 2 } }
+//                                 Fundstelle, einmal je Spieltag
+//
 //  Alles, was den Spielstand ändert (geben, welt, karte, heilen), geht
 //  über die Anzeige – so bleibt diese Datei ohne Spielstand-Wissen.
 //
@@ -110,6 +118,10 @@ var EREIGNISSE = (function () {
         return ausfuehren(flags[s.wennGleich[0]] === s.wennGleich[1] ? s.dann : s.sonst, flags, anzeige).then(weiter);
       }
       if (s.ablauf !== undefined) return ausfuehren(anzeige.ablauf(s.ablauf), flags, anzeige).then(weiter);
+      if (s.handel !== undefined) return rufe(anzeige, "handel", s.handel).then(weiter);
+      if (s.herstellen) return rufe(anzeige, "herstellen").then(weiter);
+      if (s.abzug) return rufe(anzeige, "abzug").then(weiter);
+      if (s.fund !== undefined) return rufe(anzeige, "fund", s.fund).then(weiter);
 
       // Gespielte Szenen. Eine Anzeige ohne diese Fähigkeiten (der
       // Prüfstand) überspringt die Bewegungen einfach.
@@ -175,6 +187,19 @@ var EREIGNISSE = (function () {
           arten.forEach(function (a) { if (!a || typeof ARTEN !== "undefined" && !ARTEN[a]) fehler.push(hier + ": Kampf gegen unbekannte Art " + a); });
         } else if (s.geben !== undefined) {
           if (s.geben.elemental && typeof ARTEN !== "undefined" && !ARTEN[s.geben.elemental.art]) fehler.push(hier + ": unbekannte Art " + s.geben.elemental.art);
+          if (s.geben.geld !== undefined && !(s.geben.geld > 0)) fehler.push(hier + ": Geld muss eine positive Zahl sein");
+          if (typeof GEFAESSE !== "undefined") {
+            Object.keys(s.geben.vorrat || {}).forEach(function (v) { if (!GEFAESSE[v] && !(WAREN[v] && WAREN[v].vorrat)) fehler.push(hier + ": unbekanntes Gefäß " + v); });
+            Object.keys(s.geben.material || {}).forEach(function (m) { if (!WAREN[m] || WAREN[m].vorrat) fehler.push(hier + ": unbekanntes Material " + m); });
+            [].concat(s.geben.werkzeug || []).forEach(function (w) { if (!WERKZEUGE[w]) fehler.push(hier + ": unbekanntes Werkzeug " + w); });
+          }
+        } else if (s.handel !== undefined) {
+          if (typeof HANDEL !== "undefined" && !HANDEL.MAERKTE[s.handel]) fehler.push(hier + ": unbekannter Markt " + s.handel);
+        } else if (s.fund !== undefined) {
+          if (!s.fund.id || !s.fund.ware) fehler.push(hier + ": fund braucht id und ware");
+          else if (typeof WAREN !== "undefined" && !WAREN[s.fund.ware] && !GEFAESSE[s.fund.ware]) fehler.push(hier + ": unbekannte Ware " + s.fund.ware);
+        } else if (s.herstellen || s.abzug) {
+          // nichts zu prüfen
         } else if (s.film !== undefined) {
           gehe(s.film, hier + ".film");
         } else if (s.gehen !== undefined || s.verfolgen !== undefined) {

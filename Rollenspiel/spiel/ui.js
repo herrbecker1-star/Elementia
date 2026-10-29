@@ -323,6 +323,14 @@ class UiSzene extends Phaser.Scene {
           szene.scene.bringToTop("werkbank");
         });
       },
+      // Markt und Labor (seit Fassung 17, Logik in kern\handel.js)
+      handel: function (markt) { return szene.handeln(markt); },
+      herstellen: function () { return szene.herstellen(); },
+      abzug: function () { return szene.abzugZeigen(); },
+      fund: function (f) {
+        var n = HANDEL.fund(szene.oberwelt.stand, f);
+        return szene.sprechblase(null, n ? "Du sammelst " + n + "× " + sachName(f.ware) + "." : "Hier liegt heute nichts mehr.");
+      },
       karte: function (k) { szene.oberwelt.wechsleKarte(k.ziel, k.punkt); },
       ablauf: function (name) { return DIALOGE[name] || []; },
       hatElemental: function (art) { return szene.oberwelt.stand.gruppe.some(function (el) { return el.art === art; }); }
@@ -350,16 +358,71 @@ class UiSzene extends Phaser.Scene {
       if (stand.bekannt.indexOf(el.art) < 0) stand.bekannt.push(el.art);
       teile.push(ARTEN[el.art].name + " (Stufe " + el.stufe + ") schließt sich dir an");
     }
-    Object.keys(g.vorrat || {}).forEach(function (geraet) {
-      stand.vorrat[geraet] = (stand.vorrat[geraet] || 0) + g.vorrat[geraet];
-      teile.push(g.vorrat[geraet] + "× " + FANGGERAETE[geraet].name);
+    Object.keys(g.vorrat || {}).forEach(function (id) {
+      stand.vorrat[id] = (stand.vorrat[id] || 0) + g.vorrat[id];
+      teile.push(g.vorrat[id] + "× " + sachName(id));
     });
+    Object.keys(g.material || {}).forEach(function (id) {
+      stand.material[id] = (stand.material[id] || 0) + g.material[id];
+      teile.push(g.material[id] + "× " + sachName(id));
+    });
+    if (g.geld) { stand.geld += g.geld; teile.push(g.geld + " " + HANDEL.WAEHRUNG); }
     [].concat(g.werkzeug || []).forEach(function (w) {
       if (stand.werkzeuge.indexOf(w) < 0) stand.werkzeuge.push(w);
       teile.push(WERKZEUGE[w].name);
     });
     if (!teile.length) return Promise.resolve();
     return this.sprechblase(null, (g.elemental ? "" : "Du erhältst: ") + teile.join(", ") + ".");
+  }
+
+  // ============================================================
+  //  Markt und Labor (seit Fassung 17)
+  //
+  //  Eine Auswahl, die offen bleibt, bis man „Fertig“ wählt. Jede Zeile
+  //  ist ein Tabelleneintrag: Ware · Preis · was man schon hat. Was der
+  //  letzte Griff ergab, steht oben in der Frage.
+  // ============================================================
+  async handeln(markt) {
+    var stand = this.oberwelt.stand, meldung = "", runden = 0;
+    for (;;) {
+      // Der Prüfschalter &weiter wählt immer die erste Zeile – nach drei Runden ist Schluss.
+      if (this.autoWeiter && ++runden > 3) return;
+      var waren = HANDEL.MAERKTE[markt];
+      var zeilen = waren.map(function (id) {
+        var p = HANDEL.PREISE[id], hat = HANDEL.besitz(stand, id);
+        return p.kauf ? sachName(id) + " kaufen · " + p.kauf + " " + HANDEL.WAEHRUNG + " · hast " + hat
+                      : sachName(id) + " verkaufen · je " + p.verkauf + " " + HANDEL.WAEHRUNG + " · hast " + hat;
+      });
+      var nr = await this.wahl((meldung ? meldung + " " : "") + "Du hast " + stand.geld + " " + HANDEL.WAEHRUNG + ".", zeilen.concat(["Fertig"]));
+      if (nr >= waren.length) return;
+      var id = waren[nr];
+      meldung = (HANDEL.PREISE[id].kauf ? HANDEL.kaufen(stand, id) : HANDEL.verkaufen(stand, id)).text;
+    }
+  }
+
+  async herstellen() {
+    var stand = this.oberwelt.stand, meldung = "", runden = 0;
+    var ids = Object.keys(GEFAESSE).filter(function (id) { return GEFAESSE[id].aus; });
+    for (;;) {
+      if (this.autoWeiter && ++runden > 3) return;
+      var zeilen = ids.map(function (id) {
+        return GEFAESSE[id].name + " · " + HANDEL.bedarf(GEFAESSE[id]) + " · hast " + HANDEL.besitz(stand, id);
+      });
+      var material = "Glasbruch: " + HANDEL.besitz(stand, "glasbruch") + (HANDEL.besitz(stand, "quarz") ? ", Quarz: " + HANDEL.besitz(stand, "quarz") : "");
+      var nr = await this.wahl((meldung ? meldung + " " : "") + "Welches Gefäß stellst du her? (" + material + ")", zeilen.concat(["Fertig"]));
+      if (nr >= ids.length) return;
+      meldung = HANDEL.herstellen(stand, ids[nr]).text;
+    }
+  }
+
+  abzugZeigen() {
+    var stand = this.oberwelt.stand;
+    var zeilen = LABORGERAETE.map(function (w) {
+      return WERKZEUGE[w].name + ": " + (stand.werkzeuge.indexOf(w) >= 0 ? "✓ vorhanden" : "– fehlt noch");
+    });
+    return this.sprechblase(null, "Der Abzug. " + zeilen.join(" · ") + ".").then(function () {
+      return this.sprechblase(null, "Hier stellst du später Verbindungen her. Die Geräte bekommst du unterwegs.");
+    }.bind(this));
   }
 
   benennen() {

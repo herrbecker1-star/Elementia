@@ -26,12 +26,21 @@
 //    markt_fertig     Maras Kisten (Quest 1) – öffnet den Weg nach Osten
 //    schemen_frei     ab jetzt erscheinen Schemen
 //    geraetepass      Vitras Prüfung (Quest 2)
-//    flammenschein    Ilkas Prüfung (Quest 2b)
+//    flammenschein    Ilkas Prüfung (Quest 2b) – danach auch Gefäße herstellen
+//    mutter_weiss     Mama hat nach dem Aufbruch in der Werkstatt gewartet
+//    besiegt_<id>     Stoffmeister am Weg (Kolja, Rieke) – zahlen nur einmal
 // ============================================================
 
 // ---------- Bausteine ----------
 
 var STOFFE_KAP1 = ["kohlenstoff", "kupfer", "zink", "schwefel", "eisen"];
+
+// Ilkas Gruppe (seit Fassung 17), Reihenfolge = Auftritt im Kampf.
+// Gemessen 29.10.2026 (200 Kämpfe je Zelle, Halle Wärme 30): Mit Aluminium
+// auf Stufe 4 gewann Eisen St. 6 + Zink St. 5 nur 44 %. Mit Stufe 3 gewinnt
+// der Starter auf Stufe 6 mit jedem Fang auf Stufe 5 zu 94–100 %, auf gleicher
+// Stufe 5 bleibt es offen (Eisen 44–83 %, Magnesium 96–100 %).
+var ILKAS_GRUPPE = [{ art: "kohlenstoff", stufe: 4 }, { art: "aluminium", stufe: 3 }, { art: "kupfer", stufe: 5 }];
 
 // Eine Rätselkiste: Befund zeigen, raten lassen. Beim ersten Fehler
 // nennt jemand den Widerspruch, beim zweiten die Lösung – ohne Schleife,
@@ -98,6 +107,41 @@ function labor(zeile) {
   return [{ heilen: true }, { speichern: true }, { erzaehl: zeile + " Deine Elementals sind wieder bei Kräften. (Gespeichert.)" }];
 }
 
+// Seit Fassung 17: Am Labortisch schmilzt man Glasbruch zu neuen Gefäßen –
+// sobald man von Ilka den Bunsenbrenner hat (Flag flammenschein).
+var GEFAESS_HERSTELLEN = [
+  { wenn: "flammenschein", dann: [
+    { wahl: "Gefäße aus Glasbruch herstellen?", optionen: [
+      { text: "Ja", dann: [{ herstellen: true }] },
+      { text: "Nein", dann: [] }
+    ] }
+  ] }
+];
+
+// Ein Stoffmeister am Wegrand: Man spricht ihn an, dann wird gekämpft.
+// Nach dem Sieg zahlt er einmal und hat danach nur noch eine Zeile.
+function stoffmeister(o) {
+  var flag = "besiegt_" + o.id;
+  return [
+    { wenn: flag, dann: [{ sag: o.name, text: o.danach }], sonst: [
+      { sag: o.name, text: o.gruss },
+      { kampf: { gegner: o.gegner, wild: false, name: o.name, ort: o.ort || "wald", feld: o.feld } },
+      { wennGleich: ["letzter_kampf", "sieg"], dann: [
+        { sag: o.name, text: o.sieg },
+        { geben: { geld: o.geld } },
+        { setze: flag }
+      ], sonst: [
+        { sag: o.name, text: "Komm wieder, wenn deine Elementals ausgeruht sind." }
+      ] }
+    ] }
+  ];
+}
+
+// Glasbruch-Fundstelle im Kolbenwald
+function glasbruch(id, menge) {
+  return [{ fund: { id: id, ware: "glasbruch", menge: menge } }];
+}
+
 var DIALOGE = {
 
   // ============================================================
@@ -136,8 +180,23 @@ var DIALOGE = {
         { text: "Ich schau mich noch um.", dann: [{ sag: "Mutter", text: "Lass dir Zeit. Die Kräuter laufen nicht weg." }] }
       ] }
     ], sonst: [
-      { sag: "Mutter", text: "Pass auf dich auf. Und komm zum Essen, wenn die Sonne sinkt." }
+      // Seit Fassung 17 heilt Mama die Elementals – vor dem Aufbruch im Garten.
+      { sag: "Mutter", text: "Zeig mal her. So, alle wieder bei Kräften. Und komm zum Essen, wenn die Sonne sinkt." },
+      { heilen: true }, { speichern: true }
     ] }
+  ],
+
+  // Nach dem heimlichen Aufbruch steht Mama in ihrer Werkstatt (Labor).
+  // Sie hält dich nicht auf, aber sie heilt (Vorschlag A, 29.10.2026).
+  mutter_werkstatt: [
+    { wennNicht: "mutter_weiss", dann: [
+      { sag: "Mutter", text: "Ich habe deinen Zettel gelesen. Ich halte dich nicht auf. Aber verletzt gehst du nicht." },
+      { setze: "mutter_weiss" }
+    ], sonst: [
+      { sag: "Mutter", text: "Halt still. So. Und pass auf Lumi auf, wenn du sie findest." }
+    ] },
+    { heilen: true }, { speichern: true },
+    { erzaehl: "Deine Elementals sind wieder bei Kräften. (Gespeichert.)" }
   ],
 
   lumi: [
@@ -270,13 +329,16 @@ var DIALOGE = {
         { sag: "Mara", text: "Hier: Lupe, Magnet, Lämpchen, Hammer. Damit erkennst du jeden Stoff an seinen Eigenschaften." },
         { geben: { werkzeug: ["lupe", "magnet", "stromkreis", "hammer"] } },
         { ablauf: "mara_kisten" },
-        { sag: "Mara", text: "Alle fünf! Behalt das Werkzeug." },
-        { geben: { vorrat: { reagenzglas: 2, spatel: 1 } } },
-        { sag: "Mara", text: "Draußen flackern jetzt Lichter: wilde Elementals. Erst prüfen, dann bestimmen. Zum Mitnehmen brauchst du das passende Gerät." },
+        { sag: "Mara", text: "Alle fünf! Behalt das Werkzeug. Und hier, dein Lohn." },
+        { geben: { vorrat: { reagenzglas: 3 }, geld: 30 } },
+        { sag: "Mara", text: "Draußen flackern jetzt Lichter: wilde Elementals. Erst prüfen, dann bestimmen. Mitnehmen kannst du sie im Reagenzglas." },
         { setze: "markt_fertig" },
         { setze: "schemen_frei" },
         { erzaehl: "Lumis Spur führt nach Osten, durch den Kolbenwald." }
       ], sonst: [
+        // Seit Fassung 17 Marktstand: Gläser und Kältemischung, Ankauf von Glasbruch
+        { sag: "Mara", text: "Reagenzgläser, Kältemischung – und Glasbruch kaufe ich dir ab. Der Kolbenwald ist voll davon." },
+        { handel: "stoffingen" },
         { sag: "Mara", text: "Nach Osten, durch den Kolbenwald. Und iss was unterwegs." }
       ] }
     ] }
@@ -306,7 +368,8 @@ var DIALOGE = {
           { erzaehl: "Dein Kohlenstoff-Elemental schwebt zum Meiler. Die Glut wacht auf." },
           { sag: "Köhler Brand", text: "Es kennt seinen Ort. Holzkohle entsteht, wenn Holz ohne Luft erhitzt wird. Hier, für dein Buch." },
           { erzaehl: "Buchseite „Verkohlung“: Holz ohne Luft erhitzt wird zu Holzkohle. Mit Luft verbrennt es zu Asche." },
-          { geben: { vorrat: { tiegelzange: 1 } } },
+          { sag: "Köhler Brand", text: "Und nimm meine alte Tiegelzange. Im Labor wirst du sie brauchen." },
+          { geben: { werkzeug: ["tiegelzange"] } },
           { setze: "koehler_fertig" }
         ], sonst: [
           { sag: "Köhler Brand", text: "Nachts kommen manchmal schwarze Lichter aus dem Meiler. Bring mir eins." }
@@ -315,9 +378,16 @@ var DIALOGE = {
     ] }
   ],
 
-  labor_stoffingen: [
-    { wennNicht: "aufgebrochen", dann: labor("Mutters Werkstatt. Es riecht nach Salbe."),
-      sonst: labor("Leise nimmst du etwas von Mutters Salbe.") }
+  // ---------- Das Labor von Stoffingen: Mutters Werkstatt (seit Fassung 17 ein Raum) ----------
+  // Heilen tut hier Mama (mutter / mutter_werkstatt). Der Tisch dient dem Glas.
+  labortisch_stoffingen: [
+    { erzaehl: "Mutters Labortisch. Es riecht nach Salbe. Heilen tut hier Mama." }
+  ].concat(GEFAESS_HERSTELLEN),
+
+  abzug: [{ abzug: true }],
+
+  regal: [
+    { erzaehl: "Ein Regal voller Gläser, jedes beschriftet. Ordnung ist die halbe Chemie." }
   ],
 
   schild_ost: [
@@ -343,13 +413,35 @@ var DIALOGE = {
     { erzaehl: "Der Kolbenwald: Gläserne Kolben hängen wie Früchte in den Bäumen. Weiter östlich wacht Meisterin Vitra." }
   ],
 
+  // Seit Fassung 17: zwei Stoffmeister am Weg und vier Stellen mit Glasbruch
+  kolja: stoffmeister({ id: "kolja", name: "Geselle Kolja",
+    gruss: "Ich bin Geselle bei der Gerätemacher-Gilde. Zeig mal, was deine Elementals können!",
+    gegner: [{ art: "zink", stufe: 3 }, { art: "kohlenstoff", stufe: 4 }],
+    feld: { sauerstoff: 100, waerme: 16, feuchte: 60 },
+    sieg: "Nicht schlecht. Hier, dein Preisgeld.",
+    danach: "Glasbruch liegt hier überall. Mara in Stoffingen kauft ihn dir ab.",
+    geld: 60 }),
+
+  rieke: stoffmeister({ id: "rieke", name: "Sammlerin Rieke",
+    gruss: "Ich sammle, was an der warmen Quelle wächst. Mal sehen, ob du mithältst!",
+    gegner: [{ art: "schwefel", stufe: 4 }, { art: "bor", stufe: 5 }],
+    feld: { sauerstoff: 100, waerme: 35, feuchte: 75 },
+    sieg: "Du hast Fleiß. Das hier hast du dir verdient.",
+    danach: "An der Quelle riecht es nach faulen Eiern. Das ist Schwefelwasserstoff.",
+    geld: 80 }),
+
+  glasbruch_1: glasbruch("kw1", 2),
+  glasbruch_2: glasbruch("kw2", 1),
+  glasbruch_3: glasbruch("kw3", 2),
+  glasbruch_4: glasbruch("kw4", 1),
+
   vitra: [
     { wenn: "geraetepass", dann: [
       { sag: "Meisterin Vitra", text: "Der Wagen nahm die Straße nach Brenner. Geh. Und zerbrich nichts." }
     ], sonst: alleFlags(["g_messzylinder", "g_tiegelzange", "g_reagenzglashalter", "g_reibeschale"], [
       { sag: "Meisterin Vitra", text: "Alle vier! Du kennst deine Werkzeuge." },
-      { geben: { werkzeug: ["geraetepass", "erlenmeyerkolben"], vorrat: { tiegelzange: 2 } } },
-      { sag: "Meisterin Vitra", text: "Die Tiegelzange ist für Metalle. Heißes greift man nie mit der Hand – auch kein Elemental." },
+      { geben: { werkzeug: ["geraetepass", "messzylinder"], vorrat: { erlenmeyerkolben: 2 } } },
+      { sag: "Meisterin Vitra", text: "Ein Erlenmeyerkolben steht fest und fängt besser als ein Reagenzglas. Den Messzylinder brauchst du im Labor." },
       { setze: "geraetepass" },
       { sag: "Meisterin Vitra", text: "Der Wagen der Reiter fuhr nach Brenner. Mit einem leuchtenden Kolben an Bord." }
     ], [
@@ -381,7 +473,7 @@ var DIALOGE = {
         { text: "Schwefel", dann: [
           { erzaehl: "Klick! Brennender Schwefel bildet stechendes Schwefeldioxid." },
           { erzaehl: "In der Kiste: eine Kinderzeichnung mit einem kleinen „L“. Und ein Befehl: „Kommandant Bonardt verlangt: alle Kinder nach Osten.“" },
-          { geben: { vorrat: { spatel: 2 } } },
+          { geben: { geld: 50 } },
           { setze: "kiste_offen" }, { setze: "bonardt_bekannt" }
         ] },
         { text: "Eisen", dann: [{ erzaehl: "Das Schloss bleibt zu. Eisen glüht nur." }] }
@@ -417,15 +509,20 @@ var DIALOGE = {
         { wahl: "Teil zwei: Welche Flamme nimmt man zum Arbeiten?", optionen: [
           { text: "Die leuchtende – sie ist heller.", dann: [{ sag: "Gildenmeisterin Ilka", text: "Hell heißt nicht heiß. Die leuchtende ist die Sparflamme: Luft zu, gelb, rußig. Komm wieder." }] },
           { text: "Die rauschende – Luftzufuhr offen.", dann: [
-            { sag: "Gildenmeisterin Ilka", text: "Richtig. Mehr Luft, mehr Sauerstoff, heißere Flamme. Teil drei: ein Kampf gegen mein Kupfer." },
-            { kampf: { gegner: [{ art: "kupfer", stufe: 5 }], wild: false, name: "Gildenmeisterin Ilka", ort: "dorf",
+            { sag: "Gildenmeisterin Ilka", text: "Richtig. Mehr Luft, mehr Sauerstoff, heißere Flamme. Teil drei: ein Kampf gegen meine drei." },
+            // Seit Fassung 17 drei Elementals (Vorgabe des Autors): Kohlenstoff
+            // heizt das Feld, Aluminium hält Feuer aus, Kupfer kommt zuletzt.
+            // Kupfer und Aluminium sieht man hier zum ersten Mal – fangen kann
+            // man sie erst in den Clans der Erzhügel. Stufen gemessen, siehe LIESMICH.
+            { kampf: { gegner: ILKAS_GRUPPE, wild: false, name: "Gildenmeisterin Ilka", ort: "dorf",
                        // Wärme 30 statt 45 seit 25.10.2026: Bei 45 gewann ein
-                       // Magnesium-Starter auf Stufe 5 nur 37 % (jetzt 55 %, Eisen 80 %).
+                       // Magnesium-Starter auf Stufe 5 nur 37 %.
                        feld: { sauerstoff: 100, waerme: 30, feuchte: 20 } } },
             { wennGleich: ["letzter_kampf", "sieg"], dann: [
               { sag: "Gildenmeisterin Ilka", text: "Bestanden. Kupfer leitet Wärme – wer mein Feld noch heißer macht, hilft ihm nur." },
-              { geben: { werkzeug: ["gasbrenner"] } },
-              { sag: "Gildenmeisterin Ilka", text: "Der Gasbrenner gibt deinem Elemental einmal pro Kampf Energie zum Zünden. Der Wagen fuhr durchs Osttor, Richtung Teilchin." },
+              { geben: { werkzeug: ["gasbrenner"], geld: 150 } },
+              { sag: "Gildenmeisterin Ilka", text: "Der Bunsenbrenner gibt deinem Elemental einmal pro Kampf Energie. Im Labor schmilzt du damit Glas." },
+              { sag: "Gildenmeisterin Ilka", text: "Der Wagen fuhr durchs Osttor, Richtung Teilchin." },
               { setze: "flammenschein" }
             ], sonst: [
               { sag: "Gildenmeisterin Ilka", text: "Nicht bestanden. Ruh dich aus und komm wieder." }
@@ -468,7 +565,14 @@ var DIALOGE = {
     ] }
   ],
 
-  labor_brenner: labor("Das Labor der Gilde."),
+  // Seit Fassung 17 ein Raum mit Labortisch und Abzug
+  labortisch_brenner: labor("Der Labortisch der Gilde.").concat(GEFAESS_HERSTELLEN),
+
+  // Der Händler auf dem Marktplatz von Brenner
+  funke: [
+    { sag: "Händler Funke", text: "Gläser für Stoffmeister! Und wer Scherben hat, bekommt bei mir Geld dafür." },
+    { handel: "brenner" }
+  ],
 
   kind: [
     { wenn: "knopf_zurueck", dann: [
@@ -477,7 +581,7 @@ var DIALOGE = {
       { wenn: "knopf_gefunden", dann: [
         { sag: "Kind", text: "KNOPF! Da bist du ja!" },
         { sag: "Kind", text: "Danke. Mein Bruder ist auch weg – die grauen Reiter. Hier, das brauchst du mehr als ich." },
-        { geben: { vorrat: { tiegelzange: 1 } } },
+        { geben: { vorrat: { rundkolben: 1 } } },
         { setze: "knopf_zurueck" }
       ], sonst: [
         { sag: "Kind", text: "Hast du Knopf gesehen? Mein Elemental. Klein, bläulich, ein bisschen feige. Er ist zum Brunnen gelaufen." },

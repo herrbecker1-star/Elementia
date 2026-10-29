@@ -2,6 +2,12 @@
 //  LADEN UND TITEL
 // ============================================================
 
+// Alle Karten (werkzeug\platzhalter-bauen.ps1). Seit Fassung 17 mit den
+// begehbaren Laboren. Neue Karten auch in sw.js (DATEIEN) eintragen.
+var KARTEN_NAMEN = ["stoffingen", "kolbenwald", "brenner", "labor_stoffingen", "labor_brenner"];
+// Zeilen im Figurenbogen (seit Fassung 17: Kolja, Rieke, Händler Funke)
+var FIGUREN_ZEILEN = 14;
+
 class LadeSzene extends Phaser.Scene {
   constructor() { super("laden"); }
 
@@ -24,7 +30,7 @@ class LadeSzene extends Phaser.Scene {
 
     this.load.image("kacheln", "grafik/platzhalter-kacheln.png");
     this.load.spritesheet("figuren", "grafik/platzhalter-figuren.png", { frameWidth: 32, frameHeight: 32 });
-    ["stoffingen", "kolbenwald", "brenner"].forEach(function (k) { this.load.tilemapTiledJSON(k, "karten/" + k + ".json"); }, this);
+    KARTEN_NAMEN.forEach(function (k) { this.load.tilemapTiledJSON(k, "karten/" + k + ".json"); }, this);
     // Die Kampfbilder gleich mit: Der erste Kampf soll sofort da sein,
     // nicht erst nach einem Nachladen mitten im Spiel.
     var lader = this.load;
@@ -61,7 +67,7 @@ class LadeSzene extends Phaser.Scene {
 
     // Laufbilder je Figur: Zeile r, Spalten unten/links/rechts/oben × 2.
     var anims = this.anims;
-    for (var r = 0; r < 11; r++) {
+    for (var r = 0; r < FIGUREN_ZEILEN; r++) {
       ["unten", "links", "rechts", "oben"].forEach(function (richtung, i) {
         anims.create({
           key: "gehen-" + r + "-" + richtung,
@@ -91,8 +97,10 @@ class LadeSzene extends Phaser.Scene {
           stand.gruppe.push(KAMPF.neuesElemental("zink", 3), KAMPF.neuesElemental("kohlenstoff", 4));
           stand.lager = [KAMPF.neuesElemental("kupfer", 4), KAMPF.neuesElemental("schwefel", 5)];
         }
-        stand.vorrat = { reagenzglas: 3, tiegelzange: 2, spatel: 2 };
-        stand.werkzeuge = ["lupe", "magnet", "stromkreis", "hammer", "gasbrenner"];
+        stand.vorrat = { reagenzglas: 3, erlenmeyerkolben: 2, rundkolben: 1, kaeltemischung: 1 };
+        stand.material = { glasbruch: 6 };
+        stand.geld = 100;
+        stand.werkzeuge = ["lupe", "magnet", "stromkreis", "hammer", "gasbrenner", "tiegelzange"];
         stand.bekannt = ["eisen", "magnesium"];
         stand.flags.schemen_frei = true;
         stand.flags.starter = "eisen";
