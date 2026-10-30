@@ -16,7 +16,8 @@
 //     „heftig“ an der Art) sprengt Reagenzglas und Erlenmeyerkolben
 //     beim Fehlschlag. Die Scherben gibt es als Glasbruch zurück.
 //   · Wer das Wesen vorher richtig erkannt hat, fängt leichter.
-//   · Zustände des Gegners helfen: abgekühlt ×2, inert oder gelöst ×1,5.
+//   · Zustände des Gegners helfen: abgekühlt, gefroren, inert ×2,
+//     andere Statusprobleme ×1,5 (seit Fassung 20).
 // ============================================================
 
 var FANGEN = (function () {
@@ -32,17 +33,22 @@ var FANGEN = (function () {
   var FLUCHT_AB_VERSUCH = 4;
   var FLUCHT_CHANCE = 0.25;
 
-  // Zustände, die das Fangen erleichtern (k.seiten.gegner.status)
+  // Zustände, die das Fangen erleichtern (k.seiten.gegner.status).
+  // Seit Fassung 20 wie in Gen 2: Statusprobleme helfen – gefroren und
+  // inert ×2, alle anderen ×1,5. Die Kältemischung kühlt ab (×2).
   var ZUSTAND = {
     abgekuehlt: { faktor: 2,   name: "abgekühlt" },
-    inert:      { faktor: 1.5, name: "inert" },
-    geloest:    { faktor: 1.5, name: "gelöst" }
+    gefroren:   { faktor: 2,   name: "gefroren" },
+    inert:      { faktor: 2,   name: "inert" },
+    sonst:      { faktor: 1.5, name: "verbrannt, geladen, korrodiert" }
   };
 
   // Der stärkste Zustand zählt, sie multiplizieren sich nicht.
   function zustandFaktor(status) {
     var f = 1;
-    Object.keys(ZUSTAND).forEach(function (z) { if (status && status[z]) f = Math.max(f, ZUSTAND[z].faktor); });
+    if (!status) return f;
+    if (status.abgekuehlt) f = ZUSTAND.abgekuehlt.faktor;
+    if (status.haupt) f = Math.max(f, (ZUSTAND[status.haupt] || ZUSTAND.sonst).faktor);
     return f;
   }
 

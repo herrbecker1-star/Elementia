@@ -262,11 +262,11 @@ class BuchSzene extends Phaser.Scene {
     });
   }
 
-  // Stoffkunde: vier Seiten zum Blättern, alles aus den Regeln abgeleitet
-  // (daten\typen.js, kern\kampf.js) – was hier steht, rechnet der Kampf.
+  // Stoffkunde: vier Seiten zum Blättern. Seit Fassung 20 aus der Tabelle
+  // des Nutzers (daten\kreaturen.js) – was hier steht, rechnet der Kampf.
   zeigeStoffkunde(f, kopfX, kopfY) {
     var szene = this, stand = this.stand;
-    var seiten = ["Merksätze", "Was wirkt gegen was", "Kampffeld und Energie", "Deine Angriffe und ihre Chemie"];
+    var seiten = ["Die Typen", "Typentabelle", "Status und Energie", "Deine Attacken"];
     var nr = this.kundeSeite || 0;
     [["‹", -1], ["›", 1]].forEach(function (p) {
       var ziel = nr + p[1], geht = ziel >= 0 && ziel < seiten.length;
@@ -276,62 +276,65 @@ class BuchSzene extends Phaser.Scene {
       szene.inhalt.push(k);
     });
     this.text(kopfX + MASS.px(6), kopfY + MASS.px(5), (nr + 1) + "/" + seiten.length + "  " + seiten[nr], 15, null, "bold");
-
-    // Nur die Typen und Stoffklassen, die es im Spiel schon gibt
-    var typen = Object.keys(TYPEN).filter(function (t) {
-      return Object.keys(REAKTIONEN).some(function (id) { return REAKTIONEN[id].typ === t; });
-    });
-    var klassen = STOFFKLASSEN.filter(function (kl) {
-      return Object.keys(ARTEN).some(function (a) { return ARTEN[a].klasse === kl; });
-    });
-    var bruch = function (z) { return z === 0.5 ? "×½" : "×" + z; };
+    var typen = Object.keys(KTYPEN);
 
     if (nr === 0) {
-      var zeilen = [["Nr.", "Merksatz"]];
-      Object.keys(MERKSAETZE).forEach(function (n) { zeilen.push([n, MERKSAETZE[n]]); });
-      this.tabelle(f.x, f.y, [f.b * 0.06, f.b * 0.94], zeilen, 12);
+      var zeilen = [["Typ", "Gruppe im Periodensystem", "Art", "Idee"]];
+      typen.forEach(function (t) {
+        var x = KTYPEN[t];
+        zeilen.push(["● " + x.name, x.gruppe, x.physisch ? "physisch" : "speziell", x.idee]);
+      });
+      this.tabelle(f.x, f.y, [f.b * 0.13, f.b * 0.32, f.b * 0.09, f.b * 0.46], zeilen, 9);
     } else if (nr === 1) {
-      var kopf = ["Angriff ↓  gegen →"].concat(klassen);
-      var rumpf = typen.map(function (t) {
-        return [TYPEN[t].name].concat(klassen.map(function (kl) {
-          var e = TYPEN[t].gegen[kl];
-          return e ? bruch(e[0]) + " " + e[2] + " (" + e[1] + ")" : "×1";
-        }));
-      });
-      var sp = (f.b * 0.75) / klassen.length;
-      var h = this.tabelle(f.x, f.y, [f.b * 0.25].concat(klassen.map(function () { return sp; })), [kopf].concat(rumpf), 12);
-      var ausn = Object.keys(ARTEN).filter(function (a) { return ARTEN[a].ausnahmen; }).map(function (a) {
-        return ARTEN[a].name + ": " + Object.keys(ARTEN[a].ausnahmen).map(function (t) {
-          var x = ARTEN[a].ausnahmen[t];
-          return TYPEN[t].name + " " + bruch(x.faktor) + " " + x.wort + (x.bisWaerme ? " (bis Wärme " + x.bisWaerme + ")" : "");
-        }).join(", ");
-      });
-      this.text(f.x, f.y + h + MASS.px(8), "In Klammern die Nummer des Merksatzes. Ausnahmen – " + ausn.join(" · "), 12, "#5a4632")
-        .setWordWrapWidth(f.b, true);
+      this.typentabelle(f);
     } else if (nr === 2) {
-      var R = KAMPF.REGEL;
-      this.tabelle(f.x, f.y, [f.b * 0.2, f.b * 0.8], [
-        ["", "Wirkung im Kampf"],
-        ["Sauerstoff", "Feuer braucht und verbraucht ihn. Fehlt er, erstickt die Flamme."],
-        ["Wärme", "Je 30 Wärme +1 E je Runde für beide. Ab 50 ist Zink formbar. Ab " + R.hitzeFeuer + " (und trocken) wirkt Feuer ×1,5."],
-        ["Feuchte", "Über 70 wirkt Feuer nur halb."],
-        ["Energie (E)", "Jede Runde +3, höchstens " + KAMPF.AE_MAX + ". Kraft sammeln +2, Gasbrenner +4 (einmal je Kampf)."],
-        ["Schutz", "Ein Schutz schwächt den nächsten Treffer."]
-      ], 12);
+      var z3 = [["Status", "Wirkung", "kommt von"]];
+      KSTATUS.forEach(function (s) { z3.push([s.name, s.wirkung, s.quelle]); });
+      z3.push(["Energie (E)", "Jede Runde +" + KAMPF.AE_JE_RUNDE + ", höchstens " + KAMPF.AE_MAX + ". Kraft sammeln +2, Bunsenbrenner +4 (einmal je Kampf).", ""]);
+      z3.push(["Kosten", "Stärke bis 40: 0 E · 50–75: 1 E · 80–100: 2 E · ab 120: 3 E · Status-Attacken 1 E", ""]);
+      z3.push(["Gleicher Typ", "Eine Attacke vom eigenen Typ trifft ×1,5.", ""]);
+      this.tabelle(f.x, f.y, [f.b * 0.17, f.b * 0.6, f.b * 0.23], z3, 11);
     } else {
       var ids = [];
       stand.gruppe.concat(stand.lager).forEach(function (el) {
         KAMPF.angriffe(el).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
       });
-      if (!ids.length) { this.text(f.x, f.y, "Noch kennt keines deiner Elementals einen Angriff.", 13); return; }
-      var z4 = [["Angriff", "Typ", "Treffer", "Was geschieht"]];
+      if (!ids.length) { this.text(f.x, f.y, "Noch kennt keines deiner Elementals eine Attacke.", 13); return; }
+      var z4 = [["Attacke", "Typ", "Stärke", "Treffer", "E", "Effekt", "Erklärung"]];
       ids.forEach(function (id) {
-        var r = REAKTIONEN[id];
-        var typ = r.typ === "schutz" ? "Schutz" : r.typ === "stoer" ? "Störung" : TYPEN[r.typ].name;
-        z4.push([r.name, typ, (r.genau || 100) + " %", [r.chemie || r.text].concat(angriffZusatz(id).filter(function (z) { return z.indexOf("Treffer") !== 0; })).join(" ")]);
+        var a = ATTACKEN[id], st = KAMPF.staerke(null, id);
+        z4.push([a.name, KTYPEN[a.typ].name, st === null ? "–" : String(st), a.genau === null ? "immer" : a.genau + " %", a.ae, a.effekt || "–", a.text]);
       });
-      this.tabelle(f.x, f.y, [f.b * 0.17, f.b * 0.1, f.b * 0.08, f.b * 0.65], z4, 11);
+      this.tabelle(f.x, f.y, [f.b * 0.14, f.b * 0.1, f.b * 0.07, f.b * 0.08, f.b * 0.04, f.b * 0.26, f.b * 0.31], z4, 10);
     }
+  }
+
+  // Die Typentabelle als farbiges Raster: Zeile = Attacken-Typ, Spalte =
+  // Typ des Verteidigers. Grün ×2, orange ×½, grau ×0, leer ×1.
+  typentabelle(f) {
+    var g = this.add.graphics(), szene = this;
+    this.inhalt.push(g);
+    var zeilen = Object.keys(TYPENTABELLE), spalten = Object.keys(TYPENTABELLE[zeilen[0]]);
+    var kopfB = f.b * 0.13, zb = (f.b - kopfB) / spalten.length;
+    var zh = Math.min(MASS.px(20), (f.h - MASS.px(34)) / (zeilen.length + 1));
+    var farbe = { 2: 0x6fbf73, 0.5: 0xe8a35a, 0: 0x9a9a9a };
+    spalten.forEach(function (v, i) {
+      szene.text(f.x + kopfB + i * zb + MASS.px(2), f.y, KTYPEN[v].name.slice(0, 5), 9, "#2b2b2b", "bold");
+    });
+    zeilen.forEach(function (an, j) {
+      var y = f.y + (j + 1) * zh;
+      g.fillStyle(TYPFARBE[an], 1).fillCircle(f.x + MASS.px(5), y + zh / 2, MASS.px(4));
+      szene.text(f.x + MASS.px(12), y + MASS.px(2), KTYPEN[an].name, 9, "#2b2b2b", "bold");
+      spalten.forEach(function (v, i) {
+        var w = TYPENTABELLE[an][v], x = f.x + kopfB + i * zb;
+        if (w !== 1) {
+          g.fillStyle(farbe[w], 0.85).fillRect(x + 1, y + 1, zb - 2, zh - 2);
+          szene.text(x + zb / 2, y + MASS.px(2), w === 0.5 ? "½" : String(w), 10, "#1a1a1a", "bold").setOrigin(0.5, 0);
+        }
+        g.lineStyle(MASS.px(1), 0x2f5d62, 0.25).strokeRect(x, y, zb, zh);
+      });
+    });
+    this.text(f.x, f.y + (zeilen.length + 1) * zh + MASS.px(6), "Zeile: Attacke · Spalte: Typ des Ziels · Grün ×2, orange ×½, grau keine Wirkung. Normal trifft auch kein Gas.", 10, "#5a4632");
   }
 
   // ============================================================
@@ -349,7 +352,8 @@ class BuchSzene extends Phaser.Scene {
     // und Beschreibung. Erst die Texte setzen, dann bekommt das Bild den Rest.
     var linksB = f.b / 3 - MASS.px(8);
     var name = this.text(f.x, 0, (el && el.spitzname) || a.name, 16, null, "bold");
-    var info = this.text(f.x, 0, a.formel + " · " + a.klasse + " · " + (el ? "Stufe " + el.stufe + (el.starter ? " · Starter" : "") : "Werte auf Stufe 5"), 11, "#5a4632");
+    var typName = KTYPEN[a.typ1].name + (a.typ2 ? "/" + KTYPEN[a.typ2].name : "");
+    var info = this.text(f.x, 0, a.formel + " · " + a.klasse + " · Typ " + typName + " · " + (el ? "Stufe " + el.stufe + (el.starter ? " · Starter" : "") : "Werte auf Stufe 5"), 11, "#5a4632");
     info.setWordWrapWidth(linksB, true);
     var beschr = this.text(f.x, 0, a.beschreibung || "", 11, "#3a2a1c");
     beschr.setWordWrapWidth(linksB, true);
@@ -360,7 +364,7 @@ class BuchSzene extends Phaser.Scene {
     var ty = f.y + o.displayHeight + MASS.px(4);
     name.setY(ty); info.setY(ty + name.height); beschr.setY(ty + name.height + info.height + MASS.px(4));
 
-    // Rechte zwei Drittel: zwei Tabellen nebeneinander, darunter die Angriffe
+    // Rechte zwei Drittel: zwei Tabellen nebeneinander, darunter die Attacken
     var x = f.x + linksB + MASS.px(16), b = f.b - linksB - MASS.px(16), y = f.y;
 
     var bonus = probe.starter ? " (+" + Math.round(KAMPF.STARTER_BONUS * 100) + " %)" : "";
@@ -377,31 +381,26 @@ class BuchSzene extends Phaser.Scene {
       ["Sp.-Verteid.", w.spVerteidigung, g.name],
       ["Tempo", w.tempo, "Dichte " + komma(s.dichte) + " g/cm³"]
     ], 10);
-    // Die Spalte der Typtabelle (daten\typen.js) für diesen Stoff – nur die
-    // Typen, die es im Spiel schon als Angriff gibt.
-    var typen = Object.keys(TYPEN).filter(function (t) {
-      return Object.keys(REAKTIONEN).some(function (id) { return REAKTIONEN[id].typ === t; });
-    });
-    var bruch = function (f) { return f === 0.5 ? "×½" : "×" + f; };
-    var h2 = this.tabelle(x + bWerte + MASS.px(6), y, [bTrifft * 0.38, bTrifft * 0.62], [["So stark trifft es", a.klasse]].concat(typen.map(function (t) {
-      var wk = typWirkung(t, art, 20);
-      return [TYPEN[t].name, bruch(wk.faktor) + (wk.wort ? " " + wk.wort : "")];
+    // Was gegen diese Art besonders gut oder schlecht wirkt (Typentabelle)
+    var bruch = function (z) { return z === 0.5 ? "×½" : z === 0.25 ? "×¼" : "×" + z; };
+    var wirkt = Object.keys(KTYPEN).map(function (t) { return [t, KAMPF.typFaktor(t, art)]; })
+      .filter(function (p) { return p[1] !== 1; }).sort(function (p, q) { return q[1] - p[1]; });
+    var h2 = this.tabelle(x + bWerte + MASS.px(6), y, [bTrifft * 0.55, bTrifft * 0.45], [["Attacken-Typ", "gegen " + typName]].concat(wirkt.map(function (p) {
+      return [KTYPEN[p[0]].name, bruch(p[1])];
     })), 10);
     y += Math.max(h1, h2) + MASS.px(6);
 
-    // Eigenes Elemental: seine Angriffe. Sonst (Stoffbuch, seit Fassung 18)
-    // das Lernset der Art mit der Stufe davor.
+    // Eigenes Elemental: seine Attacken. Sonst (Stoffbuch) das Lernset
+    // der Art mit dem Level davor.
     var stufeVon = {};
     Object.keys(a.lernset).forEach(function (st) { a.lernset[st].forEach(function (id) { if (!stufeVon[id]) stufeVon[id] = st; }); });
-    var liste = el ? KAMPF.angriffe(el) : KAMPF.lernsetBis(art, 50);
-    var zeilen = [[el ? "Angriff" : "Stufe · Angriff", "Typ", "Stärke", "E", "Wirkung"]];
+    var liste = el ? KAMPF.angriffe(el) : KAMPF.lernsetBis(art, 100);
+    var zeilen = [[el ? "Attacke" : "Level · Attacke", "Typ", "Stärke", "E", "Wirkung"]];
     liste.forEach(function (id) {
-      var r = REAKTIONEN[id];
-      var st = r.typ === "waerme" ? "Wärme + " + (r.waermeGrund || KAMPF.REGEL.waermeGrund) : r.typ === "schutz" || r.typ === "stoer" ? "–" : String(KAMPF.staerke(probe, id));
-      var typ = r.typ === "schutz" ? "Schutz" : r.typ === "stoer" ? "Störung" : TYPEN[r.typ].name;
-      zeilen.push([el ? r.name : stufeVon[id] + " · " + r.name, typ, st, r.ae, [r.text].concat(angriffZusatz(id)).join(" ")]);
+      var r = ATTACKEN[id], st = KAMPF.staerke(probe, id);
+      zeilen.push([el ? r.name : stufeVon[id] + " · " + r.name, KTYPEN[r.typ].name, st === null ? "–" : String(st), r.ae, angriffZusatz(id).join(" · ") || "–"]);
     });
-    this.tabelle(x, y, [b * 0.2, b * 0.13, b * 0.12, b * 0.05, b * 0.5], zeilen, el ? 10 : 8);
+    this.tabelle(x, y, [b * 0.24, b * 0.15, b * 0.1, b * 0.05, b * 0.46], zeilen, el ? 10 : 8);
   }
 
   // Seit Fassung 17 als Tabellen: Gefäße und Waren links, Geräte rechts.

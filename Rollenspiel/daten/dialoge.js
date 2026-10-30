@@ -143,7 +143,7 @@ function stoffmeister(o) {
   return [
     { wenn: flag, dann: [{ sag: o.name, text: o.danach }], sonst: [
       { sag: o.name, text: o.gruss },
-      { kampf: { gegner: o.gegner, wild: false, name: o.name, ort: o.ort || "wald", feld: o.feld } },
+      { kampf: { gegner: o.gegner, wild: false, name: o.name, ort: o.ort || "wald" } },
       { wennGleich: ["letzter_kampf", "sieg"], dann: [
         { sag: o.name, text: o.sieg },
         { geben: { geld: o.geld } },
@@ -232,9 +232,9 @@ var DIALOGE = {
         // ohne Starterbonus (Wunsch des Nutzers, Fassung 19). Bis Fassung 18
         // Stufe 1; Messung siehe Prüfstand 2d.
         { wennGleich: ["starter", "eisen"], dann: [
-          { kampf: { gegner: [{ art: "magnesium", stufe: 3 }], wild: false, name: "Lumi", ort: "dorf", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } }
+          { kampf: { gegner: [{ art: "magnesium", stufe: 3 }], wild: false, name: "Lumi", ort: "dorf" } }
         ], sonst: [
-          { kampf: { gegner: [{ art: "eisen", stufe: 3 }], wild: false, name: "Lumi", ort: "dorf", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } }
+          { kampf: { gegner: [{ art: "eisen", stufe: 3 }], wild: false, name: "Lumi", ort: "dorf" } }
         ] },
         { wennGleich: ["letzter_kampf", "sieg"], dann: [
           { sag: "Lumi", text: "Gut! Funzel flackert vor Freude." }
@@ -437,7 +437,6 @@ var DIALOGE = {
   kolja: stoffmeister({ id: "kolja", name: "Geselle Kolja",
     gruss: "Ich bin Geselle bei der Gerätemacher-Gilde. Zeig mal, was deine Elementals können!",
     gegner: [{ art: "zink", stufe: 3 }, { art: "kohlenstoff", stufe: 4 }],
-    feld: { sauerstoff: 100, waerme: 16, feuchte: 60 },
     sieg: "Nicht schlecht. Hier, dein Preisgeld.",
     danach: "Glasbruch liegt hier überall. Mara in Stoffingen kauft ihn dir ab.",
     geld: 60 }),
@@ -445,7 +444,6 @@ var DIALOGE = {
   rieke: stoffmeister({ id: "rieke", name: "Sammlerin Rieke",
     gruss: "Ich sammle, was an der warmen Quelle wächst. Mal sehen, ob du mithältst!",
     gegner: [{ art: "schwefel", stufe: 4 }, { art: "bor", stufe: 5 }],
-    feld: { sauerstoff: 100, waerme: 35, feuchte: 75 },
     sieg: "Du hast Fleiß. Das hier hast du dir verdient.",
     danach: "An der Quelle riecht es nach faulen Eiern. Das ist Schwefelwasserstoff.",
     geld: 80 }),
@@ -531,15 +529,12 @@ var DIALOGE = {
           { text: "Die rauschende – Luftzufuhr offen.", dann: [
             { sag: "Gildenmeisterin Ilka", text: "Richtig. Mehr Luft, mehr Sauerstoff, heißere Flamme. Teil drei: ein Kampf gegen meine drei." },
             // Seit Fassung 17 drei Elementals (Vorgabe des Autors): Kohlenstoff
-            // heizt das Feld, Aluminium hält Feuer aus, Kupfer kommt zuletzt.
+            // (Kristall), Aluminium (Leichtmetall), Kupfer (Stahl) zuletzt.
             // Kupfer und Aluminium sieht man hier zum ersten Mal – fangen kann
             // man sie erst in den Clans der Erzhügel. Stufen gemessen, siehe LIESMICH.
-            { kampf: { gegner: ILKAS_GRUPPE, wild: false, name: "Gildenmeisterin Ilka", ort: "dorf",
-                       // Wärme 30 statt 45 seit 25.10.2026: Bei 45 gewann ein
-                       // Magnesium-Starter auf Stufe 5 nur 37 %.
-                       feld: { sauerstoff: 100, waerme: 30, feuchte: 20 } } },
+            { kampf: { gegner: ILKAS_GRUPPE, wild: false, name: "Gildenmeisterin Ilka", ort: "dorf" } },
             { wennGleich: ["letzter_kampf", "sieg"], dann: [
-              { sag: "Gildenmeisterin Ilka", text: "Bestanden. Kupfer leitet Wärme – wer mein Feld noch heißer macht, hilft ihm nur." },
+              { sag: "Gildenmeisterin Ilka", text: "Bestanden. Kristall, Leichtmetall, Stahl – du hast alle drei bezwungen." },
               { geben: { werkzeug: ["gasbrenner"], geld: 150 } },
               { sag: "Gildenmeisterin Ilka", text: "Der Bunsenbrenner gibt deinem Elemental einmal pro Kampf Energie. Im Labor schmilzt du damit Glas." },
               { sag: "Gildenmeisterin Ilka", text: "Der Wagen fuhr durchs Osttor, Richtung Teilchin." },

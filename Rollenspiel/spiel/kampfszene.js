@@ -7,7 +7,7 @@
 //
 //  Aufbau (Querformat):
 //    oben links   Gegner: Name (oder „unbekannt“), Stufe, Zusammenhalt, Befunde
-//    oben rechts  Feld: Sauerstoff, Wärme, Feuchte
+//    oben Mitte   Kampfwetter, solange eines wirkt (seit Fassung 20)
 //    Mitte        die beiden Elementals – der Gegner rechts hinten, das eigene links vorn
 //    unten        Textleiste links, Aktionen rechts
 // ============================================================
@@ -17,7 +17,7 @@ var KAMPF_HINTERGRUND = { dorf: "grafik/kampf/dorf.jpg", wald: "grafik/kampf/wal
 class KampfSzene extends Phaser.Scene {
   constructor() { super("kampf"); }
 
-  // daten: { stand, gegner: { art, stufe }, feld, ort, wild, beiEnde(ende) }
+  // daten: { stand, gegner: { art, stufe }, ort, wild, beiEnde(ende) }
   preload() {
     var szene = this;
     Object.keys(ARTEN).forEach(function (art) {
@@ -46,7 +46,6 @@ class KampfSzene extends Phaser.Scene {
         if (daten.gegnerName) el.spitzname = daten.gegnerName.split(" ").pop() + "s " + ARTEN[g.art].name;
         return el;
       }),
-      feld: daten.feld,
       wild: daten.wild !== false,
       bekannt: this.stand.bekannt,
       vorrat: this.stand.vorrat,
@@ -61,11 +60,11 @@ class KampfSzene extends Phaser.Scene {
 
     this.infoGegner = this.baueInfo();
     this.infoSpieler = this.baueInfo();
-    this.feldAnzeige = this.add.graphics();
-    this.feldText = this.add.text(0, 0, "", { fontFamily: SCHRIFT.familie, fontSize: MASS.px(12) + "px", color: "#f4ead5", lineSpacing: MASS.px(4) });
-    // Antippen der drei Balken erklärt, was das Feld gerade bewirkt.
-    this.feldZone = this.add.zone(0, 0, 10, 10).setOrigin(0, 0).setInteractive();
-    this.feldZone.on("pointerdown", function () { szene.feldErklaeren(); });
+    // Kampfwetter (seit Fassung 20, statt der drei Feld-Balken): Symbol
+    // und Runden, nur solange Sauerstoffschub oder Kalkstaubsturm wirkt.
+    this.wetterGrund = this.add.graphics();
+    this.wetterSymbol = this.add.image(0, 0, symbolTextur(this, "sauerstoff")).setOrigin(0, 0.5).setVisible(false);
+    this.wetterText = this.add.text(0, 0, "", { fontFamily: SCHRIFT.familie, fontSize: MASS.px(13) + "px", color: "#f4ead5" }).setOrigin(0, 0.5);
 
     this.leiste = this.add.graphics();
     this.text = this.add.text(0, 0, "", {
@@ -131,10 +130,9 @@ class KampfSzene extends Phaser.Scene {
     if (window.PROBE_MELDEN) window.PROBE_MELDEN("Runde " + this.k.runde + " bereit");
     this.zeigeText(einleitung && !log.length ? einleitung : "Was tust du?");
     this.zeigeHauptmenue();
-    // Prüfschalter &menue=mehr / feld / bestimmen / fangen: gleich offen (für Fotos)
+    // Prüfschalter &menue=mehr / bestimmen / fangen: gleich offen (für Fotos)
     if (/[?&]menue=mehr\b/.test(location.search)) this.menueMehr();
     if (/[?&]menue=fangen\b/.test(location.search)) this.menueFangen();
-    if (/[?&]menue=feld\b/.test(location.search)) this.feldErklaeren();
     if (/[?&]menue=bestimmen\b/.test(location.search)) this.menueBestimmen();
   }
 
@@ -204,10 +202,10 @@ class KampfSzene extends Phaser.Scene {
     var k = this.k;
     if (lage && lage.seiten[seite]) {
       var l = lage.seiten[seite];
-      return { name: l.name, art: l.art, stufe: l.stufe, zh: l.zh, zhMax: l.zhMax, ae: l.ae, status: l.status, erkannt: lage.erkannt, befunde: lage.befunde, feld: lage.feld };
+      return { name: l.name, art: l.art, stufe: l.stufe, zh: l.zh, zhMax: l.zhMax, ae: l.ae, status: l.status, erkannt: lage.erkannt, befunde: lage.befunde };
     }
     var el = KAMPF.aktiv(k, seite);
-    return { name: KAMPF.name(k, seite), art: el.art, stufe: el.stufe, zh: el.zh, zhMax: KAMPF.werte(el).zhMax, ae: k.seiten[seite].ae, status: k.seiten[seite].status, erkannt: k.erkannt, befunde: k.befunde, feld: k.feld };
+    return { name: KAMPF.name(k, seite), art: el.art, stufe: el.stufe, zh: el.zh, zhMax: KAMPF.werte(el).zhMax, ae: k.seiten[seite].ae, status: k.seiten[seite].status, erkannt: k.erkannt, befunde: k.befunde };
   }
 
   zeichneInfo(c, seite, lage) {
@@ -219,14 +217,17 @@ class KampfSzene extends Phaser.Scene {
       .lineStyle(MASS.px(2), FARBE.papierRand, 1).strokeRoundedRect(0, 0, b, h, MASS.px(10));
     c.name.setText(seite === "gegner" && k.wild && !a.erkannt ? "???" : a.name).setPosition(MASS.px(10), MASS.px(6));
     // Status neben der Stufe, damit man sieht, warum etwas schiefgeht.
+    // Seit Fassung 20: Statusprobleme der Tabelle als Kürzel.
     var st = a.status, zeichen = [];
-    if (st.vergiftet) zeichen.push("GIFT");
-    if (st.brennt) zeichen.push("BRAND");
-    if (st.geblendet) zeichen.push("GEBLENDET");
-    if (st.abgekuehlt) zeichen.push("ABGEKÜHLT");
-    if (st.inert) zeichen.push("INERT");
-    if (st.geloest) zeichen.push("GELÖST");
+    if (st.haupt) zeichen.push(KAMPF.STATUS_KURZ[st.haupt]);
+    if (st.verstrahlt) zeichen.push("VERSTR");
+    if (st.festgehalten) zeichen.push("FEST");
+    if (st.abgekuehlt) zeichen.push("KALT");
     c.stufe.setText((zeichen.length ? zeichen.join(" ") + " · " : "") + "Stufe " + a.stufe).setPosition(b - MASS.px(10), MASS.px(8));
+    // Statuswert-Stufen als ▲▼ hinter dem Namen, z. B. „Vert ▲2“
+    var kurz = { ang: "Ang", vert: "Vert", spAng: "SpA", spVert: "SpV", init: "Init", genau: "Gen" };
+    var stufen = Object.keys(st.stufen || {}).filter(function (w) { return st.stufen[w]; })
+      .map(function (w) { var n = st.stufen[w]; return kurz[w] + " " + (n > 0 ? "▲" : "▼") + Math.abs(n); });
     var ziel = a.zh / a.zhMax;
     // Der Balken läuft dem Wert nach – so sieht man, wie viel ein Treffer kostete.
     // Seit Fassung 15 wird bei jeder Meldung neu gezeichnet: der alte Lauf muss weichen.
@@ -240,10 +241,11 @@ class KampfSzene extends Phaser.Scene {
           .fillStyle(farbe, 1).fillRoundedRect(MASS.px(10), y, Math.max(0, bb * c.anteil), MASS.px(9), MASS.px(4));
       }
     });
+    var plus = stufen.length ? "  ·  " + stufen.join(" ") : "";
     if (seite === "spieler") {
-      c.zeile.setText("LP " + a.zh + "/" + a.zhMax + "  ·  Energie " + a.ae + "/" + KAMPF.AE_MAX);
+      c.zeile.setText("LP " + a.zh + "/" + a.zhMax + "  ·  Energie " + a.ae + "/" + KAMPF.AE_MAX + plus);
     } else {
-      c.zeile.setText("LP " + a.zh + "/" + a.zhMax + "\n" + this.befundZeile(a.befunde));
+      c.zeile.setText("LP " + a.zh + "/" + a.zhMax + plus + "\n" + this.befundZeile(a.befunde));
     }
     c.zeile.setPosition(MASS.px(10), MASS.px(40));
   }
@@ -259,29 +261,17 @@ class KampfSzene extends Phaser.Scene {
     return t.length ? t.join(" · ") : "noch nicht untersucht";
   }
 
-  zeichneFeld(feld) {
-    var f = feld || this.k.feld, g = this.feldAnzeige;
-    var b = MASS.px(100), zeile = MASS.px(18);
-    var werte = [["Sauerstoff", f.sauerstoff, 0x6aa6e0], ["Wärme", f.waerme, 0xe0703a], ["Feuchte", f.feuchte, 0x4fb0a0]];
-    g.clear().fillStyle(0x101418, 0.6).fillRoundedRect(0, 0, b + MASS.px(86), zeile * 3 + MASS.px(8), MASS.px(8));
-    werte.forEach(function (w, i) {
-      var y = MASS.px(6) + i * zeile + MASS.px(5);
-      g.fillStyle(0xffffff, 0.15).fillRect(MASS.px(78), y, b, MASS.px(7));
-      g.fillStyle(w[2], 1).fillRect(MASS.px(78), y, b * Math.max(0, Math.min(100, w[1])) / 100, MASS.px(7));
-    });
-    this.feldText.setText(werte.map(function (w) { return w[0]; }).join("\n"));
-  }
-
-  // Kurzfassung des Blatts „Energie und Kampffeld“ mit den Werten von jetzt
-  feldErklaeren() {
-    if (this.beschaeftigt) return;
-    var f = this.k.feld, plus = Math.floor(f.waerme / 30);
-    this.zeigeText(
-      "Sauerstoff " + Math.round(f.sauerstoff) + ": Feuer braucht und verbraucht ihn." +
-      " Wärme " + Math.round(f.waerme) + ": " + (plus ? "+" + plus + " E je Runde für beide" : "noch kein Energie-Bonus (ab 30)") +
-      (f.waerme >= 50 ? ", Zink ist formbar" : "") + "." +
-      " Feuchte " + Math.round(f.feuchte) + ": " + (f.feuchte > 70 ? "Feuer wirkt nur halb." : "Feuer brennt normal (halb erst über 70).") +
-      (f.waerme >= KAMPF.REGEL.hitzeFeuer && f.feuchte <= 70 ? " Große Hitze: Feuer wirkt ×1,5." : ""));
+  // Kampfwetter (seit Fassung 20): Symbol und verbleibende Runden. Ohne
+  // Kampfwetter bleibt die Stelle leer.
+  zeichneWetter(wetter) {
+    var w = wetter !== undefined ? wetter : this.k.wetter, g = this.wetterGrund;
+    g.clear();
+    this.wetterSymbol.setVisible(!!w);
+    if (!w) { this.wetterText.setText(""); return; }
+    this.wetterSymbol.setTexture(symbolTextur(this, w.art));
+    this.wetterText.setText((w.art === "sauerstoff" ? "Sauerstoff · Feuer ×1,5" : "Kalkstaub") + " · noch " + w.runden);
+    var x = this.wetterSymbol.x - MASS.px(6), y = this.wetterSymbol.y - MASS.px(14);
+    g.fillStyle(0x101418, 0.6).fillRoundedRect(x, y, this.wetterSymbol.width + this.wetterText.width + MASS.px(20), MASS.px(28), MASS.px(8));
   }
 
   // lage: Momentaufnahme einer Meldung; ohne sie der Stand von jetzt.
@@ -289,7 +279,7 @@ class KampfSzene extends Phaser.Scene {
     this.letzteLage = lage || null;     // für anordnen() beim Drehen mitten in der Runde
     this.zeichneInfo(this.infoGegner, "gegner", lage);
     this.zeichneInfo(this.infoSpieler, "spieler", lage);
-    this.zeichneFeld(lage && lage.feld);
+    this.zeichneWetter(lage ? lage.wetter : undefined);
     this.bildSpieler.setTexture("el-" + this.ansicht("spieler", lage).art);
     this.bildGegner.setTexture("el-" + this.ansicht("gegner", lage).art);
   }
@@ -317,7 +307,7 @@ class KampfSzene extends Phaser.Scene {
         e.beiKlick();
       }, { hoehe: haupt ? (e.platz === "mehr" ? 90 : 42) : eintraege.length > 6 ? 30 : 38,
            schrift: haupt ? 13 : eintraege.length > 6 ? 12 : 13, mindestbreite: haupt ? 20 : 60,
-           unten: e.unten, symbol: e.symbol });
+           unten: e.unten, symbol: e.symbol, punkt: e.punkt });
       if (e.aktiv === false) k.setAlpha(0.45);
       k.platz = e.platz;
       return k;
@@ -335,11 +325,16 @@ class KampfSzene extends Phaser.Scene {
   zeigeHauptmenue() {
     var szene = this, k = this.k, el = KAMPF.aktiv(k, "spieler");
     var eintraege = KAMPF.angriffe(el).slice(0, 4).map(function (id, i) {
-      var r = REAKTIONEN[id], grund = KAMPF.hindernis(k, "spieler", id);
-      var schutz = r.typ === "schutz", stoer = r.typ === "stoer";
-      var st = schutz || stoer ? "" : r.typ === "waerme" ? KAMPF.waermeStaerke(k, r) : KAMPF.staerke(el, id);
-      return { text: r.name, unten: String(st), symbol: schutz ? "schild" : stoer ? "blitz" : "schwert",
-        aktiv: !grund, grund: grund, platz: [i % 2, Math.floor(i / 2)],
+      // Seit Fassung 20: Status-Attacken bekommen Schild (stärkt einen
+      // selbst) oder Blitz (schwächt den Gegner), der Punkt zeigt den Typ.
+      var r = ATTACKEN[id], grund = KAMPF.hindernis(k, "spieler", id);
+      var status = r.kategorie === "status", selbst = status && angriffHilftSelbst(id);
+      var st = status ? "" : KAMPF.staerke(el, id);
+      // Eine aufgeladene Attacke wird zu Ende geführt – die anderen ruhen.
+      var gesperrt = k.seiten.spieler.status.laedt && k.seiten.spieler.status.laedt.id !== id;
+      return { text: r.name, unten: st === null ? "" : String(st), symbol: status ? (selbst ? "schild" : "blitz") : "schwert",
+        punkt: TYPFARBE[r.typ], aktiv: !grund && !gesperrt, grund: gesperrt ? "Erst die angefangene Attacke zu Ende bringen." : grund,
+        platz: [i % 2, Math.floor(i / 2)],
         beiKlick: function () { szene.ausfuehren({ typ: "reaktion", id: id }); } };
     });
     eintraege.push(
@@ -454,8 +449,9 @@ class KampfSzene extends Phaser.Scene {
       var bild = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
       var richtung = e.seite === "spieler" ? 1 : -1;
       this.tweens.add({ targets: bild, x: bild.x + richtung * MASS.px(36), duration: 160, yoyo: true, ease: "Quad.easeOut" });
-      var typ = REAKTIONEN[e.reaktion].typ;
-      if (typ === "feuer" || typ === "reaktion" || typ === "waerme") this.aufblitzen(e.seite === "spieler" ? this.bildGegner : this.bildSpieler, 0xff8a3a);
+      // Spezielle Attacken blitzen in der Farbe ihres Typs auf (seit Fassung 20).
+      var att = ATTACKEN[e.reaktion];
+      if (att.kategorie === "speziell") this.aufblitzen(e.seite === "spieler" ? this.bildGegner : this.bildSpieler, TYPFARBE[att.typ] || 0xff8a3a);
     }
     if (e.schaden) {
       var ziel = e.seite === "spieler" ? this.bildSpieler : this.bildGegner;
@@ -509,20 +505,20 @@ class KampfSzene extends Phaser.Scene {
   }
 
   angriffKurz(id, el) {
-    var r = REAKTIONEN[id], typ = r.typ === "schutz" ? "Schutz" : r.typ === "stoer" ? "Störung" : TYPEN[r.typ].name;
-    var st = KAMPF.staerke(el, id);
-    return r.name + "\n" + typ + (st ? " " + st : "") + " · " + r.ae + " E";
+    var r = ATTACKEN[id], st = KAMPF.staerke(el, id);
+    return r.name + "\n" + KTYPEN[r.typ].name + (st !== null ? " " + st : "");
   }
 
   // Seit Fassung 18 nach dem Lernset: Ist ein Platz frei, lernt das
-  // Elemental den Angriff sofort. Bei vier Angriffen wählt man, welcher
-  // ersetzt wird – oder lernt ihn nicht. Dazu der Satz Chemie.
+  // Elemental die Attacke sofort. Bei vier Attacken wählt man, welche
+  // ersetzt wird – oder lernt sie nicht. Dazu die Erklärung für Kinder
+  // aus der Tabelle (seit Fassung 20); alles Weitere steht im Menü.
   async lernDialog(el, neu) {
     var name = el.spitzname || ARTEN[el.art].name;
     if (!neu) neu = KAMPF.lernsetBis(el.art, el.stufe).filter(function (id) { return KAMPF.angriffe(el).indexOf(id) < 0; }).pop();
     if (!neu || KAMPF.angriffe(el).indexOf(neu) >= 0) return;
-    var szene = this, r = REAKTIONEN[neu], liste = KAMPF.angriffe(el);
-    var info = [r.text].concat(angriffZusatz(neu).length ? [angriffZusatz(neu).join(", ") + "."] : []).join(" ") + (r.chemie ? "\n" + r.chemie : "");
+    var szene = this, r = ATTACKEN[neu], liste = KAMPF.angriffe(el);
+    var info = r.text ? r.text.charAt(0).toUpperCase() + r.text.slice(1) + "." : "";
     if (liste.length < KAMPF.ANGRIFFE_MAX) {
       KAMPF.lernen(el, neu);
       await this.wartenAufTipp(name + " lernt " + r.name + "!\n" + info);
@@ -597,12 +593,11 @@ class KampfSzene extends Phaser.Scene {
     this.zeichneInfo(this.infoGegner, "gegner", this.letzteLage);
     this.zeichneInfo(this.infoSpieler, "spieler", this.letzteLage);
     this.infoSpieler.setPosition(b - rand - this.infoSpieler.breite, raumH - this.infoSpieler.hoehe - MASS.px(8));
-    var feldX = rand + this.infoGegner.breite + MASS.px(10);
-    this.feldAnzeige.setPosition(feldX, rand);
-    this.feldText.setPosition(feldX + MASS.px(8), rand + MASS.px(6));
-    this.feldZone.setPosition(feldX, rand).setSize(MASS.px(186), MASS.px(62));
-    if (this.feldZone.input) this.feldZone.input.hitArea.setSize(MASS.px(186), MASS.px(62));
-    this.zeichneFeld(this.letzteLage && this.letzteLage.feld);
+    // Kampfwetter rechts neben dem Gegnerkasten
+    var wetterX = rand + this.infoGegner.breite + MASS.px(16);
+    this.wetterSymbol.setPosition(wetterX, rand + MASS.px(14));
+    this.wetterText.setPosition(wetterX + this.wetterSymbol.width + MASS.px(6), rand + MASS.px(14));
+    this.zeichneWetter(this.letzteLage ? this.letzteLage.wetter : undefined);
 
     // Untere Leiste (seit Fassung 19): links der Kampftext auf einer
     // Schriftrolle, rechts das Menüband in einem Rahmen.

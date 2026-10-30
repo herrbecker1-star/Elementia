@@ -93,13 +93,14 @@ var SPIELSTAND = (function () {
     var alle = stand.gruppe.concat(stand.lager);
     // Seit Fassung 8: eigene Angriffsliste je Elemental (Angriffe lernen)
     alle.forEach(function (el) {
-      if (!Array.isArray(el.angriffe) && typeof ARTEN !== "undefined" && ARTEN[el.art]) el.angriffe = ARTEN[el.art].reaktionen.slice();
-      // Seit Fassung 12: Sulfidbildung heißt Sulfurierung, „Sulfid bilden“
-      // ist entfallen (Zink bekommt Funkenflug). Doppelte fallen weg.
-      if (Array.isArray(el.angriffe) && typeof ALTE_ANGRIFFE !== "undefined") {
-        el.angriffe = el.angriffe.map(function (id) { return ALTE_ANGRIFFE[id] || id; })
-          .filter(function (id, i, liste) { return liste.indexOf(id) === i; });
+      // Seit Fassung 20 gelten die Attacken aus der Tabelle des Nutzers:
+      // Was es nicht mehr gibt, fällt weg; die freien Plätze füllt unten
+      // das Lernset. Doppelte fallen weg.
+      if (Array.isArray(el.angriffe) && typeof ATTACKEN !== "undefined") {
+        el.angriffe = el.angriffe.filter(function (id, i, liste) { return ATTACKEN[id] && liste.indexOf(id) === i; });
+        if (Array.isArray(el.lernen)) el.lernen = el.lernen.filter(function (id) { return ATTACKEN[id]; });
       }
+      if (!Array.isArray(el.angriffe)) el.angriffe = [];
       // Seit Fassung 18: Lernsets. Das alte Lernrecht (eine Zahl) entfällt;
       // freie Plätze füllen die fälligen Angriffe des Lernsets, die neuesten
       // zuerst. Was das Elemental schon kann, bleibt.

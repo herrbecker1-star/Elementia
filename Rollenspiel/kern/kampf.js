@@ -1,57 +1,54 @@
 // ============================================================
-//  KAMPF – der Reaktionskampf
+//  KAMPF – der Elementalkampf
 //
 //  Reine Logik ohne Phaser. Die Kampfszene zeigt nur an, was hier
 //  entschieden wird; der Prüfstand lässt tausende Kämpfe ohne
 //  Bildschirm laufen.
 //
-//  Grundgedanke (seit Fassung 12): Schadensformel wie im Spiel der
-//  1. Generation, Typtabelle aus der Chemie (daten\typen.js).
-//   · Werte kommen aus Gruppe und Stoffeigenschaften (grundwerte).
-//   · Das FELD hat Sauerstoff, Wärme und Feuchte. Verbrennungen
-//     verbrauchen Sauerstoff und heizen das Feld auf. Wärme gibt
-//     beiden Seiten mehr Aktivierungsenergie – wer Feuer macht,
-//     hilft auch dem Gegner.
-//   · Aktivierungsenergie (AE) ist die Zugressource.
+//  Seit Fassung 20 (30.10.2026) nach der Tabelle des Nutzers
+//  (drehbuch\Chemie-Kreaturensammler.xlsx → daten\kreaturen.js):
+//   · 14 Typen nach dem Periodensystem, Typentabelle mit ×2/×½/×0.
+//     Jede Art hat Typ 1 und Typ 2; Normal trifft kein Gas und keinen Geist.
+//   · 100 Attacken nach Vorbildern aus Gen 2 mit Effekten (e) und
+//     Statusproblemen: verbrannt, gefroren, geladen, korrodiert,
+//     inert, verstrahlt. Statuswert-Stufen −6 bis +6 wie in Gen 2.
+//   · Werte weiter aus Gruppe und Stoff, Schadensformel Gen 2.
+//   · Aktivierungsenergie (AE) bleibt die Zugressource (Wunsch des
+//     Nutzers); die Kosten folgen der Stärke (Import-Skript).
+//   · Das Kampffeld (Sauerstoff, Wärme, Feuchte) ist entfallen. Dafür
+//     gibt es Kampfwetter aus Attacken (Sauerstoffschub, Kalkstaubsturm).
 //   · Wer erschöpft ist, zieht sich zurück. Niemand stirbt.
-//
-//  Alle Zahlen sind vorläufig und werden im Prüfstand gemessen.
 // ============================================================
 
 var KAMPF = (function () {
   "use strict";
 
-  // Bei 2 AE je Runde lohnte sich nur Wucht (1 AE), Feuer (3–5 AE)
-  // kam zu selten – wer schlug, gewann. Gemessen 24.09.2026.
   var AE_START = 3, AE_MAX = 10, AE_JE_RUNDE = 3;
-  var WAERME_ABKUEHLUNG = 4;
-  var LUFTZUFUHR = 3;             // Sauerstoff je Runde im Freien
-  var VOLLTREFFER = 1 / 16;       // verdoppelt den Schaden vor dem „+2“ (wie Gen 2)
-  var ABWEHR_PLUS_MAX = 5;        // Schutzschichten stapeln sich nicht endlos (bis Fassung 17: 4;
-                                  // seit 18 gibt es Schutz +50 %: Hartstoff, Feuerverzinken, Eloxieren)
-  var ABWEHR_PLUS_JE = 0.1;       // je Punkt +10 % Verteidigung und Sp.-Verteidigung
+  var VOLLTREFFER = 1 / 16, VOLLTREFFER_HOCH = 1 / 4;   // Gen 2: hohe Volltrefferchance
   // Stellschrauben, die der Prüfstand für Messreihen verstellen darf (KAMPF.REGEL):
-  // stamm      Angriff aus der Grundausstattung der eigenen Art (Gen 2: STAB)
+  // stamm      Attacke vom eigenen Typ (Gen 2: STAB)
   // lpFaktor   LP ×2,5 gegenüber Gen 2 (siehe grundwerte)
   // lpSockel   wie sockel, nur für die LP
   // lpGrund, lpTeiler  LP-Basis = lpGrund + Schmelzpunkt / lpTeiler
-  // waermeGrund, leitungKuehlt  Wärmeleitung (siehe waermeStaerke)
   // sockel     dämpft den Stufenvorsprung: Werte aus (2·Stufe + sockel)
   // stufenfaktorGlatt  2·Stufe/5 + 2 ohne Abrunden
-  // hitzeFeuer Feldwärme, ab der Feuer ×1,5 wirkt (Gen 2: Sonne); null = aus
   // haerteDeckel  höchstens so viel Verteidigung aus der Härte (Bor: Mohs 9,3)
-  // Fassung 13 hatte sockel und lpSockel 50, lpFaktor 2: Eine Stufe Vorsprung
-  // gewann nur 76 %, und Kohlenstoff auf Stufe 5 hatte mehr LP (126) als
-  // Schwefel auf Stufe 10 (124). Seit Fassung 15 (Leitlinie: „Mit Fleiß ist
-  // jeder Gegner leicht zu besiegen“) wieder Gen 2 ohne Sockel. Gemessen
-  // 28.10.2026 (LIESMICH.md), lpFaktor 1/1,5/2/2,5/3 → Kampfdauer im Median
-  // 2/2/3/4/4 Runden; ×2,5: +1 Stufe 92 %, +2 98 %, +3 100 %.
-  var REGEL = { stamm: 1.5, lpFaktor: 2.5, lpSockel: 0, lpGrund: 60, lpTeiler: 100, waermeGrund: 40, leitungKuehlt: 10, sockel: 0, stufenfaktorGlatt: true, hitzeFeuer: 80, haerteDeckel: 10 };
-  var BLENDUNG_TREFFER = 0.7;     // Trefferchance geblendet
-  var BLENDUNG_DAUER = 2;         // eigene Angriffe
-  var GIFT_ANTEIL = 0.1, GIFT_RUNDEN = 3;
-  // Brennen (seit Fassung 18): kürzer, dafür heftiger als Gift.
-  var BRAND_ANTEIL = 0.12, BRAND_RUNDEN = 2;
+  // tempoGrund, tempoJeDichte  Tempo = tempoGrund − tempoJeDichte · Dichte
+  // Seit Fassung 15 Gen 2 ohne Sockel. lpFaktor seit Fassung 20 wieder 1
+  // (wie Gen 2): Mit den Attacken der Tabelle dauerte ein Kampf bei 2,5
+  // im Median 13 Runden, bei 1,5 acht, bei 1 fünf (gemessen 30.10.2026).
+  // Ebenfalls seit Fassung 20 angeglichen (Messung f20b-D2): Schmelzpunkt,
+  // Härte und Dichte geben nur noch Feinschliff – lpTeiler 300 statt 100,
+  // haerteDeckel 5 statt 10, Tempo 110 − 8 · Dichte statt 130 − 12 · Dichte.
+  var REGEL = { stamm: 1.5, lpFaktor: 1, lpSockel: 0, lpGrund: 60, lpTeiler: 300, sockel: 0, stufenfaktorGlatt: true, haerteDeckel: 5, tempoGrund: 110, tempoJeDichte: 8 };
+  // Statusprobleme (Gen 2): Dauerschaden je Rundenende als Anteil der LP
+  var VERBRANNT_ANTEIL = 1 / 8, KORRODIERT_ANTEIL = 1 / 8, FESTHALTEN_ANTEIL = 1 / 16, STAUB_ANTEIL = 1 / 16;
+  var AUFTAUEN = 0.1, GELADEN_AUSSETZEN = 0.25, VERSTRAHLT_SELBST = 0.5;
+  var KAMPFWETTER_RUNDEN = 5, WAND_RUNDEN = 5;
+  var STAUBFEST = ["erde", "kristall", "stahl", "hartmetall"];
+  var HAUPTSTATUS = ["verbrannt", "gefroren", "geladen", "korrodiert", "schwer_korrodiert", "inert"];
+  var STATUS_KURZ = { verbrannt: "VERBR", gefroren: "GEFR", geladen: "GELADEN", korrodiert: "KORR", schwer_korrodiert: "KORR+", inert: "INERT" };
+  var WERT_NAME = { ang: "Angriff", vert: "Verteidigung", spAng: "Spezial-Angriff", spVert: "Spezial-Verteidigung", init: "Initiative", genau: "Genauigkeit" };
   var SEITEN = ["spieler", "gegner"];
 
   // ----------------------------------------------------------
@@ -60,8 +57,8 @@ var KAMPF = (function () {
   // Basiswerte wie im Spiel der 1. und 2. Generation:
   //   Angriff, Sp.-Angriff, Sp.-Verteidigung  aus der Gruppe (GRUPPEN)
   //   Verteidigung   Gruppe + 5 · (Mohshärte − 3), höchstens + REGEL.haerteDeckel
-  //   Tempo          130 − 12 · Dichte, auf 5 gerundet, mindestens 20
-  //   LP             60 + Schmelzpunkt / 100 (gedeckelt bei 2000 °C, sonst
+  //   Tempo          110 − 8 · Dichte (REGEL), auf 5 gerundet, mindestens 20
+  //   LP             60 + Schmelzpunkt / 300 (REGEL; gedeckelt bei 2000 °C, sonst
   //                  wäre Kohlenstoff mit 3640 °C unverwundbar)
   // Auf der Stufe wie in Gen 2 (ohne DVs und EVs), seit Fassung 15:
   //   Wert = ⌊Basis · Stufe / 50⌋ + 5
@@ -79,7 +76,7 @@ var KAMPF = (function () {
       verteidigung: g.verteidigung + Math.min(REGEL.haerteDeckel, 5 * (s.haerte - 3)),
       spAngriff: g.spAngriff,
       spVerteidigung: g.spVerteidigung,
-      tempo: Math.max(20, Math.round((130 - 12 * s.dichte) / 5) * 5)
+      tempo: Math.max(20, Math.round((REGEL.tempoGrund - REGEL.tempoJeDichte * s.dichte) / 5) * 5)
     };
   }
 
@@ -118,12 +115,36 @@ var KAMPF = (function () {
     return w;
   }
 
-  // Stärke eines Angriffs für die Anzeige: die feste Zahl auf der Skala
-  // bis 100. Schutz, Störung und Wärme (hängt am Feld) haben keine: null.
+  // Stärke einer Attacke für die Anzeige. Status-Attacken haben keine
+  // (null); fester Schaden und „wie Level“ zeigen ihre Zahl, Sofort-K.o.
+  // das Wort.
   function staerke(el, id) {
-    var r = REAKTIONEN[id];
-    if (r.typ === "schutz" || r.typ === "stoer" || r.typ === "waerme") return null;
-    return r.staerke;
+    var a = ATTACKEN[id], e = a.e;
+    if (a.kategorie === "status") return null;
+    if (e.fest) return e.fest;
+    if (e.festLevel) return el ? el.stufe : null;
+    if (e.ohko) return "K.O.";
+    if (e.konter) return "×2";
+    return a.staerke;
+  }
+
+  // Typwirkung einer Attacke vom Typ atyp gegen die Art artId:
+  // Typ 1 × Typ 2 aus der Tabelle; Normal geht durch Gas einfach hindurch.
+  function typFaktor(atyp, artId) {
+    var a = ARTEN[artId], zeile = TYPENTABELLE[atyp];
+    if (!zeile) return 1;
+    if (atyp === "normal" && a.zustand === "gasförmig") return 0;
+    var f = zeile[a.typ1] !== undefined ? zeile[a.typ1] : 1;
+    if (a.typ2) f *= zeile[a.typ2] !== undefined ? zeile[a.typ2] : 1;
+    return f;
+  }
+
+  // Statuswert-Stufen wie in Gen 2: +1 = ×1,5, +2 = ×2 … −1 = ×⅔ …;
+  // Genauigkeit in Dritteln.
+  function stufenMult(n, genau) {
+    var b = genau ? 3 : 2;
+    n = Math.max(-6, Math.min(6, n || 0));
+    return n >= 0 ? (b + n) / b : b / (b - n);
   }
 
   // ----------------------------------------------------------
@@ -198,24 +219,21 @@ var KAMPF = (function () {
   // ----------------------------------------------------------
   //  Kampf anlegen
   // ----------------------------------------------------------
-  // optionen: gruppe (Liste Elementals), gegner (Liste), feld
-  //   { sauerstoff, waerme, feuchte, offen }, wild, bekannt (Liste
-  //   der schon erkannten Arten), vorrat { geraet: anzahl },
-  //   werkzeuge (Liste), startwert
+  // optionen: gruppe (Liste Elementals), gegner (Liste), wild, bekannt
+  //   (Liste der schon erkannten Arten), vorrat { gefaess: anzahl },
+  //   material, werkzeuge (Liste), startwert. Ein „feld“ (bis Fassung 19)
+  //   wird nicht mehr gebraucht.
+  function neueSeite(gruppe, aktivNr) {
+    return { gruppe: gruppe, aktiv: aktivNr, ae: AE_START, status: {} };
+  }
+
   function neu(o) {
-    var feld = o.feld || {};
     var k = {
       runde: 1,
-      feld: {
-        sauerstoff: feld.sauerstoff !== undefined ? feld.sauerstoff : 100,
-        waerme: feld.waerme !== undefined ? feld.waerme : 20,
-        feuchte: feld.feuchte !== undefined ? feld.feuchte : 30,
-        offen: feld.offen !== false,
-        grundwaerme: feld.waerme !== undefined ? feld.waerme : 20
-      },
+      wetter: null,                        // Kampfwetter: { art: "sauerstoff" | "staub", runden }
       seiten: {
-        spieler: { gruppe: o.gruppe, aktiv: ersterFaehiger(o.gruppe), ae: AE_START, status: {} },
-        gegner:  { gruppe: o.gegner, aktiv: 0, ae: AE_START, status: {} }
+        spieler: neueSeite(o.gruppe, ersterFaehiger(o.gruppe)),
+        gegner:  neueSeite(o.gegner, 0)
       },
       wild: o.wild !== false,
       vorrat: o.vorrat || {},
@@ -227,7 +245,6 @@ var KAMPF = (function () {
       log: [],
       zufall: ZUFALL(o.startwert)
     };
-    k.feld.maxSauerstoff = k.feld.sauerstoff;
     k.erkannt = (o.bekannt || []).indexOf(o.gegner[0].art) >= 0;
     return k;
   }
@@ -247,18 +264,16 @@ var KAMPF = (function () {
   // ----------------------------------------------------------
   //  Protokoll mit Momentaufnahme (seit Fassung 15)
   //  Der Kern rechnet die ganze Runde auf einmal; die Szene spielt sie
-  //  danach Eintrag für Eintrag ab. Zeichnete sie dabei den Stand von
-  //  k, sah man den Endstand der Runde: Das eigene Elemental verlor
-  //  schon LP, während es noch angriff, und ein Erschöpftes stand
-  //  bereits auf 0 – „besiegt und greift trotzdem an“. Darum trägt
-  //  jeder Eintrag die Lage im Augenblick der Meldung.
+  //  danach Eintrag für Eintrag ab. Darum trägt jeder Eintrag die Lage
+  //  im Augenblick der Meldung.
   // ----------------------------------------------------------
   function lage(k) {
-    var l = { seiten: {}, feld: Object.assign({}, k.feld), erkannt: k.erkannt, befunde: Object.assign({}, k.befunde) };
+    var l = { seiten: {}, wetter: k.wetter ? Object.assign({}, k.wetter) : null, erkannt: k.erkannt, befunde: Object.assign({}, k.befunde) };
     SEITEN.forEach(function (seite) {
       var s = k.seiten[seite], el = s.gruppe[s.aktiv];
       if (!el) return;
-      l.seiten[seite] = { nr: s.aktiv, art: el.art, name: name(k, seite), stufe: el.stufe, zh: el.zh, zhMax: werte(el).zhMax, ae: s.ae, status: Object.assign({}, s.status) };
+      l.seiten[seite] = { nr: s.aktiv, art: el.art, name: name(k, seite), stufe: el.stufe, zh: el.zh, zhMax: werte(el).zhMax, ae: s.ae,
+        status: JSON.parse(JSON.stringify(s.status)) };
     });
     return l;
   }
@@ -279,22 +294,20 @@ var KAMPF = (function () {
   // ----------------------------------------------------------
   //  Können und Schaden
   // ----------------------------------------------------------
-  // Liefert null, wenn der Zug geht, sonst den Grund.
-  function hindernis(k, seite, reaktionId) {
-    var r = REAKTIONEN[reaktionId];
-    if (k.seiten[seite].ae < r.ae) return "Zu wenig Aktivierungsenergie (" + r.ae + " nötig).";
-    if (r.o2 && k.feld.sauerstoff < r.o2) return "Zu wenig Sauerstoff – die Flamme erstickt.";
-    if (r.braucht && r.braucht.waerme && k.feld.waerme < r.braucht.waerme) return "Das Feld ist zu kalt dafür (Wärme " + r.braucht.waerme + " nötig).";
-    if (r.braucht && r.braucht.feuchte && k.feld.feuchte < r.braucht.feuchte) return "Das Feld ist zu trocken dafür (Feuchte " + r.braucht.feuchte + " nötig).";
+  // Liefert null, wenn der Zug geht, sonst den Grund. Eine aufgeladene
+  // zweirundige Attacke kostet in der zweiten Runde nichts mehr.
+  function hindernis(k, seite, id) {
+    var a = ATTACKEN[id], s = k.seiten[seite];
+    if (s.status.laedt && s.status.laedt.id === id) return null;
+    if (s.ae < a.ae) return "Zu wenig Aktivierungsenergie (" + a.ae + " nötig).";
     return null;
   }
 
   // Die Schadensformel der 2. Generation (seit Fassung 13), nach jedem
   // Schritt abgerundet:
   //   Schaden = (⌊⌊(⌊2·Stufe/5⌋ + 2) · Stärke · A / V⌋ / 50⌋ · Volltreffer + 2) · Faktoren · Zufall
-  // faktoren: Stamm (×1,5), Typ (×2, ×1, ×½), Feld (Gen 2: Wetter), einzeln abgerundet.
+  // faktoren: Stamm (×1,5), Typ (×2, ×1, ×½, ×0), Kampfwetter, einzeln abgerundet.
   // zufall: 217 bis 255, geteilt durch 255 (85–100 %).
-  // voll: Volltreffer verdoppeln den Schaden vor dem „+2“ (Gen 1: die Stufe).
   // Beispiel aus der Vorlage: Stufe 50, Stärke 80, A = V = 100, Stamm,
   // sehr wirksam → 93 bis 110, Volltreffer 183 bis 216 (Prüfstand).
   function formel(stufe, st, A, V, faktoren, zufall, voll) {
@@ -304,211 +317,320 @@ var KAMPF = (function () {
     return Math.floor(s * zufall / 255);
   }
 
-  // Wärmeleitung: Stärke = Wärme des Feldes + 40 (Fassung 12: +45), höchstens 100; danach ist
-  // das Feld um 10 kühler. Nur die Feldwärme (Plan) gab bei Wärme 20 Stärke
-  // 20 – Kupfer gewann 8 %. Messreihen 27.10.2026 (Kupfer, Stufe 5): +40 →
-  // 25 %, +45 → 42 %, +50 → 51 %, aber dann schlägt Kupfer Eisen 98 %.
-  // Seit Fassung 18 kann ein Angriff einen eigenen Grundwert haben
-  // (Kurzschluss +50, Lichtbogen +70); die Obergrenze steigt mit.
-  function waermeStaerke(k, r) {
-    var grund = r && r.waermeGrund || REGEL.waermeGrund;
-    return Math.min(60 + grund, Math.round(k.feld.waerme) + grund);
+  function stufe(s, wert) { return (s.status.stufen && s.status.stufen[wert]) || 0; }
+
+  // Initiative mit Stufen; geladen viertelt sie (Gen 2: Paralyse).
+  function initiative(k, seite) {
+    var s = k.seiten[seite], t = werte(aktiv(k, seite)).tempo * stufenMult(stufe(s, "init"));
+    return s.status.haupt === "geladen" ? t / 4 : t;
   }
 
-  // Das Feld als Wetter (Gen 2: Regen und Sonne): Feuchte über 70 dämpft
-  // Feuer auf die Hälfte, große Hitze (REGEL.hitzeFeuer) facht es an (×1,5).
-  // Bis Fassung 12: Feuchte ×0,7, keine Hitze-Regel.
-  function feldFaktor(k, r) {
-    if (r.typ !== "feuer") return 1;
-    if (k.feld.feuchte > 70) return 0.5;
-    if (REGEL.hitzeFeuer !== null && k.feld.waerme >= REGEL.hitzeFeuer) return 1.5;
-    return 1;
-  }
-
-  // Trefferchance (0–1): Genauigkeit des Angriffs, geblendet ×0,7.
-  function trefferChance(k, seite, reaktionId) {
-    var r = REAKTIONEN[reaktionId];
-    return (r.genau || 100) / 100 * (k.seiten[seite].status.geblendet ? BLENDUNG_TREFFER : 1);
+  // Trefferchance (0–1): Genauigkeit der Attacke mal Genauigkeits-Stufe.
+  // „trifft immer“ (genau null) und „Zielen“ treffen sicher. Wer
+  // verschwunden ist (Ausfällung, Heliumballon), wird nicht getroffen.
+  function trefferChance(k, seite, id) {
+    var a = ATTACKEN[id], s = k.seiten[seite], z = k.seiten[gegenueber(seite)];
+    if (z.status.weg) return 0;
+    if (a.genau === null || a.kategorie === "status" && !a.e.gegner && !a.e.status) return 1;
+    if (s.status.zielen) return 1;
+    return Math.min(1, a.genau / 100 * stufenMult(stufe(s, "genau"), true));
   }
 
   // Mittlerer Schaden eines Treffers (Zufall 236/255 ≈ 92,5 %, ohne
-  // Volltreffer) – für die KI und für die Anzeige „≈ x % LP“.
-  // ohneSchutz: so, als stünde beim Ziel kein Schild – für die Anzeige
-  // im Angriffsmenü. Ein Schild dämpft nur den nächsten Treffer; mit ihm
-  // gerechnet sähe jeder Angriff wertlos aus.
+  // Volltreffer) – für die KI. Mehrfach-Attacken mit 3 Treffern im Mittel.
   var ZUFALL_MITTEL = 236;
-  function schaetzeSchaden(k, seite, reaktionId, ohneSchutz) {
-    if (ohneSchutz) return ohneSchild(k, gegenueber(seite), function () { return schaden(k, seite, reaktionId, ZUFALL_MITTEL); });
-    return schaden(k, seite, reaktionId, ZUFALL_MITTEL);
+  function schaetzeSchaden(k, seite, id) {
+    var a = ATTACKEN[id], e = a.e;
+    if (a.kategorie === "status") return 0;
+    if (e.konter) {
+      var letzter = k.seiten[seite].status.erlitten;
+      return letzter && letzter.kategorie === e.konter ? letzter.betrag * 2 : 0;
+    }
+    var s = schaden(k, seite, id, ZUFALL_MITTEL);
+    if (e.mehrfach) s *= e.mehrfach[0] === e.mehrfach[1] ? e.mehrfach[0] : 3;
+    if (e.ohko) s = aktiv(k, gegenueber(seite)).zh;
+    return s;
   }
 
-  function schaden(k, seite, reaktionId, zufall, voll) {
-    var r = REAKTIONEN[reaktionId];
-    if (r.typ === "schutz" || r.typ === "stoer") return 0;
+  function schaden(k, seite, id, zufall, voll) {
+    var a = ATTACKEN[id], e = a.e;
+    if (a.kategorie === "status") return 0;
     var an = aktiv(k, seite), ziel = aktiv(k, gegenueber(seite));
-    var zs = k.seiten[gegenueber(seite)].status;
-    var wa = werte(an), wz = werte(ziel);
-    // Physisch oder speziell hängt nur am Typ (wie in Gen 1).
-    var physisch = TYPEN[r.typ].physisch;
-    var A = physisch ? wa.angriff : wa.spAngriff;
-    var V = (physisch ? wz.verteidigung : wz.spVerteidigung) * (1 + ABWEHR_PLUS_JE * (zs.abwehrPlus || 0));
-    var st = r.typ === "waerme" ? waermeStaerke(k, r) : r.staerke;
-    var stamm = ARTEN[an.art].reaktionen.indexOf(reaktionId) >= 0 ? REGEL.stamm : 1;
-    var s = formel(an.stufe, st, A, V, [stamm, typWirkung(r.typ, ziel.art, k.feld.waerme).faktor, feldFaktor(k, r)], zufall, voll);
-    if (zs.schutz) s *= zs.schutz;
-    if (zs.tarnung) s *= 0.5;
-    return Math.max(1, Math.floor(s));
+    var s = k.seiten[seite], z = k.seiten[gegenueber(seite)];
+    var typ = typFaktor(a.typ, ziel.art);
+    if (typ === 0) return 0;
+    if (e.fest) return e.fest;
+    if (e.festLevel) return an.stufe;
+    var wa = werte(an), wz = werte(ziel), physisch = a.kategorie === "physisch";
+    var A = (physisch ? wa.angriff : wa.spAngriff) * stufenMult(stufe(s, physisch ? "ang" : "spAng"));
+    var V = (physisch ? wz.verteidigung : wz.spVerteidigung) * stufenMult(stufe(z, physisch ? "vert" : "spVert"));
+    if (physisch && s.status.haupt === "verbrannt") A /= 2;           // Gen 2: Verbrennung halbiert Angriff
+    var art = ARTEN[an.art];
+    var stamm = a.typ === art.typ1 || a.typ === art.typ2 ? REGEL.stamm : 1;
+    var wetter = k.wetter && k.wetter.art === "sauerstoff" && a.typ === "feuer" ? 1.5 : 1;
+    var wand = z.status.wand && z.status.wand[a.kategorie] ? 0.5 : 1;
+    var betrag = formel(an.stufe, a.staerke, A, V, [stamm, typ, wetter, wand], zufall, voll);
+    return Math.max(1, betrag);
   }
 
-  // Nebenwirkungen beim Gegner mit ihrer Chance in % (100 = sicher) –
-  // nur, wer noch steht. Ein neuer Treffer startet die Dauer neu.
-  function nebenwirkungen(k, ander, w) {
-    var z = k.seiten[ander], ziel = aktiv(k, ander);
-    if (ziel.zh <= 0) return;
-    var trifft = function (chance) { return chance >= 100 || k.zufall() * 100 < chance; };
-    if (w.blendung && trifft(w.blendung)) {
-      z.status.geblendet = BLENDUNG_DAUER;
-      melde(k, { text: name(k, ander) + " ist geblendet und trifft schlechter." });
-    }
-    if (w.vergiftung && trifft(w.vergiftung)) {
-      z.status.vergiftet = GIFT_RUNDEN;
-      melde(k, { text: name(k, ander) + " ist vergiftet." });
-    }
-    if (w.brennen && trifft(w.brennen)) {
-      z.status.brennt = BRAND_RUNDEN;
-      melde(k, { text: name(k, ander) + " brennt." });
-    }
-    if (w.abwehrMinus) {
-      z.status.abwehrPlus = Math.max(-ABWEHR_PLUS_MAX, (z.status.abwehrPlus || 0) - w.abwehrMinus);
-      melde(k, { text: "Die Verteidigung von " + name(k, ander) + " sinkt." });
-    }
+  function wirkungsText(f) {
+    return f === 0 ? "Es hat keine Wirkung …" : f >= 2 ? "Das ist sehr effektiv!" : f <= 0.5 ? "Das ist nicht sehr effektiv." : "";
   }
 
-  function fuehreAus(k, seite, reaktionId) {
-    var r = REAKTIONEN[reaktionId];
-    var s = k.seiten[seite], ander = gegenueber(seite);
-    var z = k.seiten[ander];
-    var wer = name(k, seite);
+  // Ein Statusproblem setzen – nur, wenn noch keins da ist. Wer vom Typ
+  // Feuer ist, verbrennt nicht; Frost friert nicht ein.
+  function setzeStatus(k, seite, st) {
+    var s = k.seiten[seite], el = aktiv(k, seite), a = ARTEN[el.art];
+    if (el.zh <= 0) return;
+    if (st === "verstrahlt") {
+      if (s.status.verstrahlt) return;
+      s.status.verstrahlt = 2 + Math.floor(k.zufall() * 4);
+      melde(k, { text: name(k, seite) + " ist verstrahlt und verwirrt!" });
+      return;
+    }
+    if (s.status.haupt) return;
+    if (st === "verbrannt" && (a.typ1 === "feuer" || a.typ2 === "feuer")) return;
+    if (st === "gefroren" && (a.typ1 === "frost" || a.typ2 === "frost")) return;
+    s.status.haupt = st;
+    if (st === "inert") s.status.schlaf = 1 + Math.floor(k.zufall() * 3);
+    if (st === "schwer_korrodiert") s.status.korrZaehler = 1;
+    melde(k, { text: name(k, seite) + {
+      verbrannt: " ist verbrannt!", gefroren: " ist eingefroren!", geladen: " ist geladen und kann sich kaum rühren!",
+      korrodiert: " ist korrodiert!", schwer_korrodiert: " ist schwer korrodiert!", inert: " wird inert und rührt sich nicht."
+    }[st] });
+  }
 
-    var grund = hindernis(k, seite, reaktionId);
-    if (grund) {
-      melde(k, { seite: seite, handelt: true, text: wer + " versucht " + r.name + ". " + grund });
-      // Eine erstickte Flamme hat die Energie trotzdem verbraucht.
-      if (r.o2 && k.feld.sauerstoff < r.o2) s.ae = Math.max(0, s.ae - r.ae);
+  // Statuswert-Stufen ändern; „Stickstoffnebel“ schützt vor Senkungen.
+  function aendereStufen(k, seite, aenderung) {
+    var s = k.seiten[seite];
+    s.status.stufen = s.status.stufen || {};
+    Object.keys(aenderung).forEach(function (w) {
+      var n = aenderung[w];
+      if (n < 0 && s.status.nebel) { melde(k, { text: "Der Nebel schützt " + name(k, seite).replace(/^Das /, "das ") + "." }); return; }
+      var alt = s.status.stufen[w] || 0, neuWert = Math.max(-6, Math.min(6, alt + n));
+      if (neuWert === alt) { melde(k, { text: WERT_NAME[w] + " von " + name(k, seite).replace(/^Das /, "dem ").replace(/^dem unbekannte /, "dem unbekannten ") + " geht nicht weiter " + (n > 0 ? "hoch." : "runter.") }); return; }
+      s.status.stufen[w] = neuWert;
+      melde(k, { text: WERT_NAME[w] + " von " + name(k, seite).replace(/^Das unbekannte /, "dem unbekannten ") + (n > 0 ? " steigt" : " sinkt") + (Math.abs(n) > 1 ? " stark." : ".") });
+    });
+  }
+
+  // Kann das Elemental in diesem Zug überhaupt handeln? Liefert false
+  // (und meldet, warum), wenn nicht.
+  function kannHandeln(k, seite) {
+    var s = k.seiten[seite], el = aktiv(k, seite), wer = name(k, seite);
+    if (s.status.aussetzen) { delete s.status.aussetzen; melde(k, { seite: seite, handelt: true, text: wer + " muss sich erholen." }); return false; }
+    if (s.status.haupt === "gefroren") {
+      if (k.zufall() < AUFTAUEN) { delete s.status.haupt; melde(k, { text: wer + " taut auf!" }); }
+      else { melde(k, { seite: seite, handelt: true, text: wer + " ist eingefroren." }); return false; }
+    }
+    if (s.status.haupt === "inert") {
+      if (--s.status.schlaf <= 0) { delete s.status.haupt; delete s.status.schlaf; melde(k, { text: wer + " wird wieder aktiv." }); }
+      else { melde(k, { seite: seite, handelt: true, text: wer + " ist inert und rührt sich nicht." }); return false; }
+    }
+    if (s.status.schreck) { melde(k, { seite: seite, handelt: true, text: wer + " schreckt zurück!" }); return false; }
+    if (s.status.haupt === "geladen" && k.zufall() < GELADEN_AUSSETZEN) { melde(k, { seite: seite, handelt: true, text: wer + " ist geladen und kann sich nicht rühren!" }); return false; }
+    if (s.status.verstrahlt) {
+      if (--s.status.verstrahlt <= 0) { delete s.status.verstrahlt; melde(k, { text: wer + " ist nicht mehr verstrahlt." }); }
+      else if (k.zufall() < VERSTRAHLT_SELBST) {
+        // Gen 2: Verwirrung trifft sich selbst mit Stärke 40, ohne Typ
+        var w = werte(el), betrag = Math.max(1, formel(el.stufe, 40, w.angriff, w.verteidigung, [], 217 + Math.floor(k.zufall() * 39)));
+        el.zh = Math.max(0, el.zh - betrag);
+        melde(k, { seite: seite, handelt: true, schaden: betrag, text: wer + " ist verstrahlt und trifft sich selbst (−" + betrag + " LP)." });
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function fuehreAus(k, seite, id) {
+    var a = ATTACKEN[id], e = a.e;
+    var s = k.seiten[seite], ander = gegenueber(seite), z = k.seiten[ander];
+    var wer = name(k, seite), an = aktiv(k, seite);
+
+    if (!kannHandeln(k, seite)) { delete s.status.laedt; delete s.status.weg; return; }
+
+    var zweiteRunde = s.status.laedt && s.status.laedt.id === id;
+    var grund = hindernis(k, seite, id);
+    if (grund) { melde(k, { seite: seite, handelt: true, text: wer + " versucht " + a.name + ". " + grund }); return; }
+    if (!zweiteRunde) s.ae -= a.ae;
+
+    // Zweirundige Attacken: erst laden oder verschwinden, dann zuschlagen.
+    if (e.zweirundig && !zweiteRunde) {
+      s.status.laedt = { id: id };
+      if (e.zweirundig === "weg") s.status.weg = true;
+      melde(k, { seite: seite, reaktion: id, text: wer + ": " + a.name + "! " + (e.zweirundig === "weg" ? "Es ist nicht mehr zu sehen." : "Es lädt auf.") });
+      if (e.selbst) aendereStufen(k, seite, e.selbst);
+      return;
+    }
+    delete s.status.laedt; delete s.status.weg;
+
+    melde(k, { seite: seite, reaktion: id, text: wer + ": " + a.name + "!" });
+
+    if (a.kategorie === "status") { statusAttacke(k, seite, id); return; }
+
+    // Konter (Federstahl): doppelt zurück, was in dieser Runde ankam
+    if (e.konter) {
+      var erlitten = s.status.erlitten;
+      if (!erlitten || erlitten.kategorie !== e.konter) { melde(k, { seite: seite, verfehlt: true, text: "Es schlägt fehl!" }); return; }
+      triff(k, seite, erlitten.betrag * 2, a);
       return;
     }
 
-    s.ae -= r.ae;
-    melde(k, { seite: seite, reaktion: reaktionId, text: wer + ": " + r.name + "!" });
-
-    var w = r.wirkung || {};
-    if (r.typ === "stoer") {
-      // Störangriff (seit Fassung 18): kein Schaden, kein Trefferwurf –
-      // die Wirkung tritt sicher ein.
-      nebenwirkungen(k, ander, w);
-    } else if (r.typ !== "schutz") {
-      var chance = trefferChance(k, seite, reaktionId);
-      if (s.status.geblendet && --s.status.geblendet <= 0) delete s.status.geblendet;
-      if (k.zufall() >= chance) {
-        melde(k, { seite: seite, verfehlt: true, text: wer + " verfehlt!" });
-      } else {
-        // Volltreffer und Zufall gehören in die App, nicht an den
-        // Kartentisch – hier sind sie erlaubt und halten Paarungen offen.
-        var voll = k.zufall() < VOLLTREFFER;
-        var betrag = schaden(k, seite, reaktionId, 217 + Math.floor(k.zufall() * 39), voll);
-        if (r.typ === "waerme") k.feld.waerme = Math.max(0, k.feld.waerme - REGEL.leitungKuehlt);
-        var ziel = aktiv(k, ander);
-        // Erst „Volltreffer!“, dann sinken die LP – so steht es auch im Protokoll.
-        if (voll) melde(k, { volltreffer: true, text: "Volltreffer!" });
-        ziel.zh = Math.max(0, ziel.zh - betrag);
-        delete z.status.schutz;
-        delete z.status.tarnung;
-        melde(k, { seite: ander, schaden: betrag, text: name(k, ander) + " verliert " + betrag + " LP." });
-        nebenwirkungen(k, ander, w);
-      }
+    var trefferAnzahl = 1;
+    if (e.mehrfach) {
+      var r = k.zufall();
+      trefferAnzahl = e.mehrfach[0] === e.mehrfach[1] ? e.mehrfach[0] : r < 0.375 ? 2 : r < 0.75 ? 3 : r < 0.875 ? 4 : 5;
     }
-
-    if (r.o2) k.feld.sauerstoff = Math.max(0, k.feld.sauerstoff - r.o2);
-    if (r.waerme) k.feld.waerme = Math.min(100, k.feld.waerme + r.waerme);
-
-    if (w.entgiften && s.status.vergiftet) {
-      delete s.status.vergiftet;
-      melde(k, { text: wer + " ist nicht mehr vergiftet." });
+    if (k.zufall() >= trefferChance(k, seite, id)) {
+      delete s.status.zielen;
+      melde(k, { seite: seite, verfehlt: true, text: wer + " verfehlt!" });
+      return;
     }
-    if (w.schutz) s.status.schutz = w.schutz;
-    if (w.tarnung) s.status.tarnung = true;
-    if (w.abwehrPlus) s.status.abwehrPlus = Math.min(ABWEHR_PLUS_MAX, (s.status.abwehrPlus || 0) + w.abwehrPlus);
+    delete s.status.zielen;
+    var f = typFaktor(a.typ, aktiv(k, ander).art);
+    if (f === 0) { melde(k, { text: wirkungsText(0) }); return; }
+    if (e.ohko) {
+      if (aktiv(k, ander).stufe > an.stufe) { melde(k, { text: "Es schlägt fehl!" }); return; }
+      melde(k, { text: "Ein Treffer mit einem Schlag!" });
+      triff(k, seite, aktiv(k, ander).zh, a);
+      return;
+    }
+    var gesamt = 0, n;
+    for (n = 0; n < trefferAnzahl && aktiv(k, ander).zh > 0; n++) {
+      var voll = !e.fest && !e.festLevel && k.zufall() < (e.volltreffer ? VOLLTREFFER_HOCH : VOLLTREFFER);
+      var betrag = schaden(k, seite, id, 217 + Math.floor(k.zufall() * 39), voll);
+      if (voll) melde(k, { volltreffer: true, text: "Volltreffer!" });
+      gesamt += triff(k, seite, betrag, a);
+    }
+    if (trefferAnzahl > 1) melde(k, { text: n + " Treffer!" });
+    if (wirkungsText(f) && !e.fest && !e.festLevel) melde(k, { text: wirkungsText(f) });
+
+    // Folgen für den Angreifer
+    if (e.rueckstoss && gesamt > 0) {
+      var rs = Math.max(1, Math.floor(gesamt * e.rueckstoss));
+      an.zh = Math.max(0, an.zh - rs);
+      melde(k, { seite: seite, schaden: rs, text: wer + " erleidet Rückstoß (−" + rs + " LP)." });
+    }
+    if (e.selbstKO) { an.zh = 0; melde(k, { seite: seite, schaden: 0, text: wer + " ist danach erschöpft." }); }
+    if (e.aussetzen) s.status.aussetzen = true;
+
+    // Nebenwirkungen beim Ziel
+    if (aktiv(k, ander).zh <= 0) return;
+    var trifft = function () { return !e.chance || e.chance >= 100 || k.zufall() * 100 < e.chance; };
+    if (e.status && trifft()) setzeStatus(k, ander, e.status);
+    if (e.schreck && k.zufall() * 100 < e.schreck && !k.hatGehandelt[ander]) z.status.schreck = true;
+    if (e.gegner && trifft()) aendereStufen(k, ander, e.gegner);
+    if (e.selbst && trifft()) aendereStufen(k, seite, e.selbst);
+    if (e.festhalten && !z.status.festgehalten) {
+      z.status.festgehalten = 2 + Math.floor(k.zufall() * 4);
+      melde(k, { text: name(k, ander) + " wird festgehalten." });
+    }
+  }
+
+  // Schaden anrichten (mit Schutz und Ausdauer) – liefert den Betrag.
+  function triff(k, seite, betrag, a) {
+    var ander = gegenueber(seite), z = k.seiten[ander], ziel = aktiv(k, ander);
+    if (z.status.schutzRunde) { melde(k, { text: name(k, ander) + " ist geschützt." }); return 0; }
+    if (z.status.ausdauer && betrag >= ziel.zh) { betrag = ziel.zh - 1; melde(k, { text: name(k, ander) + " hält durch!" }); }
+    ziel.zh = Math.max(0, ziel.zh - betrag);
+    z.status.erlitten = { betrag: betrag, kategorie: a.kategorie };
+    melde(k, { seite: ander, schaden: betrag, text: name(k, ander) + " verliert " + betrag + " LP." });
+    return betrag;
+  }
+
+  // Status-Attacken: wirken auf sich selbst, auf den Gegner oder auf den Kampf.
+  function statusAttacke(k, seite, id) {
+    var a = ATTACKEN[id], e = a.e, s = k.seiten[seite], ander = gegenueber(seite), an = aktiv(k, seite);
+    var aufGegner = e.gegner || e.status;
+    if (aufGegner && k.zufall() >= trefferChance(k, seite, id)) { melde(k, { seite: seite, verfehlt: true, text: "Es schlägt fehl!" }); return; }
+    if (e.selbst) aendereStufen(k, seite, e.selbst);
+    if (e.gegner) aendereStufen(k, ander, e.gegner);
+    if (e.status) setzeStatus(k, ander, e.status);
+    if (e.neutral) {
+      SEITEN.forEach(function (sd) { delete k.seiten[sd].status.stufen; });
+      melde(k, { text: "Alle Statuswerte sind wieder normal." });
+    }
+    if (e.kampfwetter) {
+      k.wetter = { art: e.kampfwetter, runden: KAMPFWETTER_RUNDEN };
+      melde(k, { text: e.kampfwetter === "sauerstoff" ? "Viel Sauerstoff! Feuer-Attacken sind 5 Runden stärker." : "Kalkstaub weht über den Kampfplatz." });
+    }
+    if (e.wand) {
+      s.status.wand = s.status.wand || {};
+      s.status.wand[e.wand] = WAND_RUNDEN;
+      melde(k, { text: (e.wand === "physisch" ? "Physischer" : "Spezieller") + " Schaden wird 5 Runden halbiert." });
+    }
+    if (e.zielen) { s.status.zielen = true; melde(k, { text: name(k, seite) + " zielt genau." }); }
+    if (e.nebel) { s.status.nebel = e.nebel; melde(k, { text: "Nebel schützt vor Statuswert-Senkung." }); }
+    if (e.heilen || e.erholung) {
+      var max = werte(an).zhMax, plus = Math.min(max - an.zh, e.erholung ? max : Math.round(max * e.heilen));
+      an.zh += plus;
+      melde(k, { seite: seite, text: name(k, seite) + " erholt sich (+" + plus + " LP)." });
+      if (e.erholung) { s.status.haupt = "inert"; s.status.schlaf = 3; melde(k, { text: name(k, seite) + " ruht sich aus und wird inert." }); }
+    }
+    if (e.schutzRunde) {
+      if (k.hatGehandelt[ander]) melde(k, { text: "Es schlägt fehl!" });
+      else { s.status.schutzRunde = true; melde(k, { text: name(k, seite) + " schützt sich." }); }
+    }
+    if (e.ausdauer) { s.status.ausdauer = true; melde(k, { text: name(k, seite) + " macht sich bereit." }); }
+    if (e.heilStatus) { delete s.status.haupt; delete s.status.verstrahlt; melde(k, { text: "Alle Statusprobleme sind geheilt." }); }
   }
 
   // ----------------------------------------------------------
   //  Die KI des Gegners (und im Prüfstand beider Seiten)
   // ----------------------------------------------------------
-  // Rechnet etwas, als stünde auf dieser Seite kein Schild.
-  function ohneSchild(k, seite, rechne) {
-    var st = k.seiten[seite].status, schutz = st.schutz, tarnung = st.tarnung;
-    delete st.schutz; delete st.tarnung;
-    var wert = rechne();
-    if (schutz !== undefined) st.schutz = schutz;
-    if (tarnung !== undefined) st.tarnung = tarnung;
-    return wert;
-  }
-
-  // Was eine Nebenwirkung der KI wert ist (seit Fassung 18), in LP:
-  // Gift und Brand der erwartete Dauerschaden, Blendung ein Teil der
-  // Drohung, weniger Verteidigung wie ein Schutz für die eigene Seite.
-  // Nur, was beim Gegner noch nicht wirkt. p = Trefferchance.
-  function nebenWert(k, seite, w, p, drohung) {
-    var ander = gegenueber(seite), zs = k.seiten[ander].status, ziel = aktiv(k, ander);
-    var lp = werte(ziel).zhMax, wert = 0;
-    // Mehr als die verbleibenden LP lassen sich nicht abziehen.
-    var rest = function (x) { return Math.min(x, ziel.zh); };
-    if (w.vergiftung && !zs.vergiftet) wert += rest(lp * GIFT_ANTEIL * GIFT_RUNDEN) * Math.min(100, w.vergiftung) / 100;
-    if (w.brennen && !zs.brennt) wert += rest(lp * BRAND_ANTEIL * BRAND_RUNDEN) * Math.min(100, w.brennen) / 100;
-    if (w.blendung && !zs.geblendet) wert += drohung * (1 - BLENDUNG_TREFFER) * Math.min(100, w.blendung) / 100;
-    if (w.abwehrMinus && (zs.abwehrPlus || 0) > -ABWEHR_PLUS_MAX) wert += drohung * ABWEHR_PLUS_JE * w.abwehrMinus;
-    return wert * p;
+  // Was ein Zug in LP wert ist: Schaden × Trefferchance, dazu grob
+  // geschätzt, was Status und Stufen bringen. drohung = was der Gegner
+  // im nächsten Zug anrichten könnte.
+  function zugWert(k, seite, id, drohung) {
+    var a = ATTACKEN[id], e = a.e, s = k.seiten[seite], ander = gegenueber(seite), z = k.seiten[ander];
+    var ziel = aktiv(k, ander), lp = werte(ziel).zhMax, eigen = aktiv(k, seite);
+    var p = trefferChance(k, seite, id) || (z.status.weg ? 0 : 1);
+    var w = 0;
+    if (a.kategorie !== "status") {
+      w = Math.min(ziel.zh, schaetzeSchaden(k, seite, id)) * p;
+      if (e.zweirundig && !(s.status.laedt && s.status.laedt.id === id)) w *= 0.5;
+      if (e.rueckstoss) w -= w * e.rueckstoss * 0.5;
+      if (e.selbstKO) w -= eigen.zh;
+      if (e.aussetzen) w *= 0.6;
+    }
+    var chance = e.chance ? e.chance / 100 : 1;
+    if (e.status && !z.status.haupt && !(e.status === "verstrahlt" && z.status.verstrahlt)) {
+      var dauer = { verbrannt: 3 * VERBRANNT_ANTEIL, korrodiert: 3 * KORRODIERT_ANTEIL, schwer_korrodiert: 0.6 }[e.status];
+      w += (dauer ? lp * dauer : drohung * 0.6) * chance * p;
+    }
+    if (e.gegner && !z.status.nebel) Object.keys(e.gegner).forEach(function (wt) {
+      if (stufe(z, wt) > -4) w += drohung * 0.12 * Math.abs(e.gegner[wt]) * chance * p;
+    });
+    if (e.selbst) Object.keys(e.selbst).forEach(function (wt) {
+      if (stufe(s, wt) < 4) w += drohung * 0.12 * e.selbst[wt] * chance;
+    });
+    if (e.schreck && !k.hatGehandelt[ander]) w += drohung * e.schreck / 100 * 0.5;
+    if (e.festhalten && !z.status.festgehalten) w += lp * FESTHALTEN_ANTEIL * 3;
+    if (e.neutral) w += drohung * 0.12 * (Math.max(0, stufe(z, "ang") + stufe(z, "spAng")) - Math.min(0, stufe(s, "vert") + stufe(s, "spVert")));
+    if (e.kampfwetter && !(k.wetter && k.wetter.art === e.kampfwetter)) {
+      var feuer = angriffe(eigen).some(function (x) { return ATTACKEN[x].typ === "feuer" && ATTACKEN[x].kategorie !== "status"; });
+      w += e.kampfwetter === "sauerstoff" ? (feuer ? drohung * 0.6 : 0) : (STAUBFEST.indexOf(ARTEN[ziel.art].typ1) < 0 ? lp * STAUB_ANTEIL * 3 : 0);
+    }
+    if (e.wand && !(s.status.wand && s.status.wand[e.wand])) w += drohung * 0.5;
+    if (e.zielen && !s.status.zielen) w += drohung * 0.2;
+    if (e.heilen || e.erholung) w += Math.min(werte(eigen).zhMax - eigen.zh, werte(eigen).zhMax * (e.heilen || 1)) * 0.8;
+    // Wer kurz vor dem Ende steht, hat von langfristigen Zügen nichts.
+    if (a.kategorie === "status" && eigen.zh < drohung) w *= 0.3;
+    return w;
   }
 
   function kiWahl(k, seite) {
-    var el = aktiv(k, seite);
-    var s = k.seiten[seite];
+    var el = aktiv(k, seite), s = k.seiten[seite];
+    // Eine geladene Attacke wird zu Ende geführt.
+    if (s.status.laedt) return { typ: "reaktion", id: s.status.laedt.id };
     var bestes = { typ: "sammeln" }, wert = 0.5;
-    // Was der Gegner als Nächstes anrichten könnte – daran misst sich
-    // der Wert eines Schutzzugs.
-    var ander = gegenueber(seite);
-    var zs = k.seiten[ander].status;
-    var drohung = 0;
+    var ander = gegenueber(seite), drohung = 0;
     angriffe(aktiv(k, ander)).forEach(function (id) {
-      if (REAKTIONEN[id].typ !== "schutz" && !hindernis(k, ander, id)) drohung = Math.max(drohung, schaetzeSchaden(k, ander, id) * trefferChance(k, ander, id));
+      if (!hindernis(k, ander, id)) drohung = Math.max(drohung, schaetzeSchaden(k, ander, id) * (ATTACKEN[id].genau || 100) / 100);
     });
     angriffe(el).forEach(function (id) {
       if (hindernis(k, seite, id)) return;
-      var r = REAKTIONEN[id], w;
-      if (r.typ === "stoer") {
-        w = nebenWert(k, seite, r.wirkung, 1, drohung);
-      } else if (r.typ === "schutz") {
-        var wi = r.wirkung;
-        // Verteidigung +10 % je Punkt ist auf Dauer etwa so viel wert wie
-        // ein Zehntel der Drohung je Punkt (bis Fassung 11 feste Zahlen 2 und 4).
-        var plus = wi.abwehrPlus && (s.status.abwehrPlus || 0) < ABWEHR_PLUS_MAX ? drohung * ABWEHR_PLUS_JE * wi.abwehrPlus : 0;
-        if (wi.schutz) w = s.status.schutz ? 0 : drohung * (1 - wi.schutz) + plus;
-        else if (wi.tarnung) w = s.status.tarnung ? 0 : drohung * 0.5;
-        else if (wi.abwehrPlus) w = plus;
-        else w = 0;
-        // Aktivkohle: so viel wert wie das Gift, das noch käme.
-        if (wi.entgiften && s.status.vergiftet) w += werte(el).zhMax * GIFT_ANTEIL * s.status.vergiftet;
-        // Nur wer noch lange genug steht, hat vom Schutz etwas.
-        if (el.zh < drohung) w *= 0.3;
-      } else {
-        var p = trefferChance(k, seite, id);
-        w = schaetzeSchaden(k, seite, id) * p;
-        // Ein Schild hält nur einen Treffer. Wer ihn nur nach dem
-        // gedämpften Schaden bewertet, schlägt nie hinein und wartet
-        // ewig hinter „Standfest“ – so verlor Magnesium 98 % gegen Zink
-        // (gefunden 25.10.2026). Das Brechen des Schilds zählt mit.
-        if (zs.schutz || zs.tarnung) w = (w + ohneSchild(k, ander, function () { return schaetzeSchaden(k, seite, id) * p; })) / 2;
-        if (r.wirkung) w += nebenWert(k, seite, r.wirkung, p, drohung);
-      }
+      var w = zugWert(k, seite, id, drohung);
       if (w > wert) { wert = w; bestes = { typ: "reaktion", id: id }; }
     });
     return bestes;
@@ -521,30 +643,33 @@ var KAMPF = (function () {
   //   { typ: "reaktion", id } | { typ: "sammeln" }
   //   { typ: "untersuchen", werkzeug } | { typ: "bestimmen", art }
   //   { typ: "fangen", geraet } | { typ: "kuehlen" } | { typ: "wechseln", nr } | { typ: "fliehen" }
-  //   (geraet = Gefäß aus GEFAESSE; der Name stammt aus der Zeit der Fanggeräte)
   // gegnerAktion: optional (Prüfstand); sonst wählt die KI.
-  // Liefert das Protokoll dieser Runde.
-  // Handelt der Gegner vor dem Spieler? Der Schnellere zuerst, bei
-  // gleichem Tempo entscheidet der Zufall.
-  function gegnerZuerst(k) {
-    var ts = werte(aktiv(k, "spieler")).tempo;
-    var tg = werte(aktiv(k, "gegner")).tempo;
+  // Handelt der Gegner vor dem Spieler? „Greift immer zuerst an“ vor
+  // allem, sonst die höhere Initiative, bei Gleichstand der Zufall.
+  function gegnerZuerst(k, idSp, idGeg) {
+    var pSp = idSp && ATTACKEN[idSp].e.zuerst ? 1 : 0, pGeg = idGeg && ATTACKEN[idGeg].e.zuerst ? 1 : 0;
+    if (pSp !== pGeg) return pGeg > pSp;
+    var ts = initiative(k, "spieler"), tg = initiative(k, "gegner");
     return tg > ts || (tg === ts && k.zufall() < 0.5);
+  }
+
+  function rundeStart(k) {
+    k.hatGehandelt = { spieler: false, gegner: false };
   }
 
   // Für die Kampfszene (seit 25.10.2026): Ist der Gegner schneller,
   // handelt er JETZT – bevor der Spieler wählt. So wählt man immer erst,
-  // wenn das eigene Elemental an der Reihe ist. Vorher wählte man, und
-  // danach griff manchmal erst der Gegner an; das verwirrte.
+  // wenn das eigene Elemental an der Reihe ist.
   // Der Prüfstand ruft nur zug() und spielt damit wie bisher.
   function rundeBeginnen(k) {
     k.log = [];
     if (k.ende) return k.log;
+    rundeStart(k);
     var g = kiWahl(k, "gegner");
-    var zuerst = gegnerZuerst(k);
+    var zuerst = gegnerZuerst(k, null, g.typ === "reaktion" ? g.id : null);
     k.reihenfolge = zuerst ? "gegner" : "spieler";
     if (zuerst && (g.typ === "reaktion" || g.typ === "sammeln")) {
-      if (g.typ === "reaktion") { fuehreAus(k, "gegner", g.id); pruefeErschoepfung(k); }
+      if (g.typ === "reaktion") { fuehreAus(k, "gegner", g.id); k.hatGehandelt.gegner = true; pruefeErschoepfung(k); }
       else gegnerSammelt(k);
       k.gegnerHatGehandelt = true;
     } else {
@@ -558,15 +683,26 @@ var KAMPF = (function () {
     melde(k, { seite: "gegner", handelt: true, text: name(k, "gegner") + " sammelt Kraft." });
   }
 
+  // Wechseln (Spieler) setzt alles zurück, was am Elemental hing.
+  function wechsle(k, seite, nr) {
+    var s = k.seiten[seite];
+    s.aktiv = nr;
+    s.status = {};
+  }
+
   function zug(k, aktion, gegnerAktion) {
     if (k.ende) throw new Error("Der Kampf ist schon vorbei.");
     k.log = [];
-    var g = gegnerAktion || k.geplant || kiWahl(k, "gegner");
     var gegnerFertig = !!k.gegnerHatGehandelt, fest = k.reihenfolge;
+    if (!k.hatGehandelt) rundeStart(k);
+    var g = gegnerAktion || k.geplant || kiWahl(k, "gegner");
     k.geplant = null; k.gegnerHatGehandelt = false; k.reihenfolge = null;
     var sp = k.seiten.spieler;
 
-    // Alles, was keine Reaktion ist, geschieht zuerst.
+    // Eine geladene Attacke läuft weiter, was auch gewählt wurde.
+    if (sp.status.laedt && aktion.typ !== "reaktion") aktion = { typ: "reaktion", id: sp.status.laedt.id };
+
+    // Alles, was keine Attacke ist, geschieht zuerst.
     switch (aktion.typ) {
       case "untersuchen": untersuchen(k, aktion.werkzeug); break;
       case "bestimmen": bestimmen(k, aktion.art); break;
@@ -577,41 +713,43 @@ var KAMPF = (function () {
       case "kuehlen": FANGEN.kuehlen(k); break;
       case "wechseln":
         if (!sp.gruppe[aktion.nr] || sp.gruppe[aktion.nr].zh <= 0) throw new Error("Wechsel nicht möglich.");
-        sp.aktiv = aktion.nr; sp.status = {};
+        if (sp.status.festgehalten) { melde(k, { text: name(k, "spieler") + " wird festgehalten und kann nicht weg." }); break; }
+        wechsle(k, "spieler", aktion.nr);
         melde(k, { seite: "spieler", ruft: true, text: "Du rufst " + name(k, "spieler") + "." });
         break;
       case "fliehen": fliehen(k); break;
       case "sammeln": sp.ae = Math.min(AE_MAX, sp.ae + 2); melde(k, { seite: "spieler", handelt: true, text: name(k, "spieler") + " sammelt Kraft." }); break;
       case "brenner":
-        // Der Gasbrenner aus Brenner: einmal je Kampf Aktivierungsenergie
-        // von außen – und seine Flamme heizt das Feld auf.
+        // Der Bunsenbrenner: einmal je Kampf Aktivierungsenergie von außen.
         if (k.werkzeuge.indexOf("gasbrenner") < 0) throw new Error("Kein Gasbrenner im Gepäck.");
         if (k.brennerBenutzt) { melde(k, { text: "Das Gas im Brenner ist für diesen Kampf verbraucht." }); break; }
         k.brennerBenutzt = true;
         sp.ae = Math.min(AE_MAX, sp.ae + 4);
-        k.feld.waerme = Math.min(100, k.feld.waerme + 10);
-        melde(k, { text: "Du entzündest den Gasbrenner – rauschende Flamme, Luftzufuhr offen. Die Hitze liefert Aktivierungsenergie." });
+        melde(k, { text: "Du entzündest den Bunsenbrenner – rauschende Flamme. Die Hitze liefert Aktivierungsenergie." });
         break;
       case "reaktion": break;
       default: throw new Error("Unbekannte Aktion: " + aktion.typ);
     }
     if (k.ende) return k.log;
 
-    // Reaktionen: der Schnellere zuerst.
-    // Jede Reaktion gehört dem Elemental, das sie gewählt hat. Wird es
+    // Attacken: Priorität, dann Initiative.
+    // Jede Attacke gehört dem Elemental, das sie gewählt hat. Wird es
     // erschöpft und ein anderes springt ein, handelt der Neue in dieser
-    // Runde nicht mehr – sonst schlug Magnesium Eisens Hammerschlag.
+    // Runde nicht mehr.
     var reihenfolge = [];
     if (aktion.typ === "reaktion") reihenfolge.push({ seite: "spieler", id: aktion.id, wer: aktiv(k, "spieler") });
     if (!gegnerFertig) {
       if (g.typ === "reaktion") reihenfolge.push({ seite: "gegner", id: g.id, wer: aktiv(k, "gegner") });
       else if (g.typ === "sammeln") gegnerSammelt(k);
     }
-    if (reihenfolge.length === 2 && (fest ? fest === "gegner" : gegnerZuerst(k))) reihenfolge.reverse();
+    if (reihenfolge.length === 2 && (fest ? fest === "gegner" : gegnerZuerst(k, aktion.id, g.id))) reihenfolge.reverse();
+    // Wer nicht angreift, hat für Schreck und Schutz schon „gehandelt“.
+    if (aktion.typ !== "reaktion") k.hatGehandelt.spieler = true;
     for (var i = 0; i < reihenfolge.length; i++) {
       var z = reihenfolge[i];
       if (aktiv(k, z.seite) !== z.wer || z.wer.zh <= 0) continue;     // erschöpft oder ausgewechselt
       fuehreAus(k, z.seite, z.id);
+      k.hatGehandelt[z.seite] = true;
       if (pruefeErschoepfung(k)) return k.log;
     }
 
@@ -620,30 +758,40 @@ var KAMPF = (function () {
     return k.log;
   }
 
+  function dauerschaden(k, seite, anteil, text) {
+    var el = aktiv(k, seite);
+    if (!el || el.zh <= 0) return;
+    var betrag = Math.max(1, Math.floor(werte(el).zhMax * anteil));
+    el.zh = Math.max(0, el.zh - betrag);
+    melde(k, { seite: seite, schaden: betrag, text: name(k, seite) + " " + text + " (−" + betrag + " LP)." });
+  }
+
   function rundenende(k) {
     SEITEN.forEach(function (seite) {
-      var s = k.seiten[seite];
-      var el = s.gruppe[s.aktiv];
-      // Vergiftung: 10 % der vollen LP am Ende jeder Runde, 3 Runden lang.
-      if (s.status.vergiftet && el.zh > 0) {
-        var gift = Math.max(1, Math.round(werte(el).zhMax * GIFT_ANTEIL));
-        el.zh = Math.max(0, el.zh - gift);
-        melde(k, { seite: seite, schaden: gift, text: name(k, seite) + " leidet unter dem Gift (−" + gift + " LP)." });
-        if (--s.status.vergiftet <= 0) delete s.status.vergiftet;
+      var s = k.seiten[seite], st = s.status, el = aktiv(k, seite);
+      if (!el) return;
+      if (st.haupt === "verbrannt") dauerschaden(k, seite, VERBRANNT_ANTEIL, "leidet unter der Verbrennung");
+      if (st.haupt === "korrodiert") dauerschaden(k, seite, KORRODIERT_ANTEIL, "korrodiert weiter");
+      if (st.haupt === "schwer_korrodiert") { dauerschaden(k, seite, Math.min(15, st.korrZaehler) / 16, "korrodiert immer schneller"); st.korrZaehler++; }
+      if (st.festgehalten) {
+        dauerschaden(k, seite, FESTHALTEN_ANTEIL, "wird festgehalten");
+        if (--st.festgehalten <= 0) { delete st.festgehalten; melde(k, { text: name(k, seite) + " ist wieder frei." }); }
       }
-      // Brennen (seit Fassung 18): 12 % der vollen LP, 2 Runden lang.
-      if (s.status.brennt && el.zh > 0) {
-        var brand = Math.max(1, Math.round(werte(el).zhMax * BRAND_ANTEIL));
-        el.zh = Math.max(0, el.zh - brand);
-        melde(k, { seite: seite, schaden: brand, text: name(k, seite) + " brennt (−" + brand + " LP)." });
-        if (--s.status.brennt <= 0) delete s.status.brennt;
+      if (k.wetter && k.wetter.art === "staub") {
+        var a = ARTEN[el.art];
+        if (STAUBFEST.indexOf(a.typ1) < 0 && STAUBFEST.indexOf(a.typ2) < 0) dauerschaden(k, seite, STAUB_ANTEIL, "leidet unter dem Kalkstaub");
       }
-      s.ae = Math.min(AE_MAX, s.ae + AE_JE_RUNDE + Math.floor(k.feld.waerme / 30));
+      if (st.wand) Object.keys(st.wand).forEach(function (kat) { if (--st.wand[kat] <= 0) delete st.wand[kat]; });
+      if (st.nebel && --st.nebel <= 0) delete st.nebel;
+      delete st.schreck; delete st.schutzRunde; delete st.ausdauer; delete st.erlitten;
+      s.ae = Math.min(AE_MAX, s.ae + AE_JE_RUNDE);
     });
-    var f = k.feld;
-    if (f.waerme > f.grundwaerme) f.waerme = Math.max(f.grundwaerme, f.waerme - WAERME_ABKUEHLUNG);
-    if (f.offen) f.sauerstoff = Math.min(f.maxSauerstoff, f.sauerstoff + LUFTZUFUHR);
+    if (k.wetter && --k.wetter.runden <= 0) {
+      melde(k, { text: k.wetter.art === "sauerstoff" ? "Der Sauerstoff ist verbraucht." : "Der Kalkstaub legt sich." });
+      k.wetter = null;
+    }
     k.runde++;
+    k.hatGehandelt = null;
   }
 
   // true, wenn der Kampf dadurch endet.
@@ -655,7 +803,7 @@ var KAMPF = (function () {
       } else {
         melde(k, { seite: "gegner", erschoepft: true, text: name(k, "gegner") + " ist erschöpft." });
         var naechster = ersterFaehiger(k.seiten.gegner.gruppe);
-        if (naechster >= 0) { k.seiten.gegner.aktiv = naechster; k.seiten.gegner.status = {}; melde(k, { seite: "gegner", ruft: true, text: "Der Gegner ruft " + name(k, "gegner") + "." }); return false; }
+        if (naechster >= 0) { wechsle(k, "gegner", naechster); melde(k, { seite: "gegner", ruft: true, text: "Der Gegner ruft " + name(k, "gegner") + "." }); return false; }
       }
       k.ende = "sieg";
       verteileErfahrung(k);
@@ -666,7 +814,7 @@ var KAMPF = (function () {
       melde(k, { seite: "spieler", erschoepft: true, text: name(k, "spieler") + " ist erschöpft." });
       var n = ersterFaehiger(sp.gruppe);
       if (n < 0) { k.ende = "niederlage"; melde(k, { text: "Keiner kann mehr. Zeit, ins Labor zurückzukehren." }); return true; }
-      sp.aktiv = n; sp.status = {};
+      wechsle(k, "spieler", n);
       melde(k, { seite: "spieler", ruft: true, text: "Du rufst " + name(k, "spieler") + "." });
     }
     return false;
@@ -694,8 +842,9 @@ var KAMPF = (function () {
 
   function fliehen(k) {
     if (!k.wild) { melde(k, { text: "Vor einem Stoffmeister läuft man nicht davon." }); return; }
-    var ts = werte(aktiv(k, "spieler")).tempo;
-    var tg = werte(aktiv(k, "gegner")).tempo;
+    if (k.seiten.spieler.status.festgehalten) { melde(k, { text: "Festgehalten – kein Entkommen." }); return; }
+    var ts = initiative(k, "spieler");
+    var tg = initiative(k, "gegner");
     var p = Math.max(0.3, Math.min(0.95, 0.6 + (ts - tg) / 20));
     if (k.zufall() < p) { k.ende = "geflohen"; melde(k, { text: "Du ziehst dich zurück." }); }
     else melde(k, { text: "Kein Durchkommen – das Elemental schneidet dir den Weg ab." });
@@ -749,15 +898,20 @@ var KAMPF = (function () {
     kannLernen: kannLernen,
     lernen: lernen,
     ANGRIFFE_MAX: ANGRIFFE_MAX,
-    BRAND_ANTEIL: BRAND_ANTEIL,
-    BRAND_RUNDEN: BRAND_RUNDEN,
+    typFaktor: typFaktor,
+    stufenMult: stufenMult,
+    initiative: initiative,
+    STATUS_KURZ: STATUS_KURZ,
+    WERT_NAME: WERT_NAME,
+    VERBRANNT_ANTEIL: VERBRANNT_ANTEIL,
+    KORRODIERT_ANTEIL: KORRODIERT_ANTEIL,
+    AE_JE_RUNDE: AE_JE_RUNDE,
     befundText: function (eig, wert) { return BEFUND_TEXT[eig](wert); },
     STARTER_BONUS: STARTER_BONUS,
     GRUPPE_LERNT: GRUPPE_LERNT,
     basiswerte: basiswerte,
     formel: formel,
     trefferChance: trefferChance,
-    waermeStaerke: waermeStaerke,
     REGEL: REGEL,
     neuesElemental: neuesElemental,
     erfahrung: erfahrung,

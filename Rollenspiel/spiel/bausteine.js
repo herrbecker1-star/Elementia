@@ -57,6 +57,14 @@ var FARBE = {
   nacht: 0x101418
 };
 
+// Farbe je Typ (seit Fassung 20) – Punkt auf dem Attackenknopf, Raster
+// der Typentabelle in der Stoffkunde. Eigene Typsymbole folgen später.
+var TYPFARBE = {
+  knall: 0xf2a33a, erde: 0xb08a5a, leichtmetall: 0xd5dde6, kristall: 0x7fd1e8, frost: 0xa8dcff,
+  feuer: 0xe8573a, aetz: 0x9bd14a, geist: 0xa98ad8, stahl: 0x8c98a4, hartmetall: 0x4f5b68,
+  edelmetall: 0xe6c34a, magnet: 0xd84a6a, strahlung: 0x5fe35f, normal: 0xe8e0d0
+};
+
 // Kleine Symbole für Knöpfe (seit Fassung 19): Schwert = macht Schaden,
 // Schild = schützt, Blitz = stört, Flagge = Flucht, Reagenzglas = Fangen.
 // Gezeichnet statt Emoji – die sehen auf jedem Handy anders aus.
@@ -79,6 +87,15 @@ function symbolTextur(szene, name) {
   } else if (name === "flagge") {
     g.lineStyle(1.8 * u, 0xc9a66b).lineBetween(3 * u, 1 * u, 3 * u, 15.5 * u);
     g.fillStyle(0xf4ead5).fillPoints(P([[3.8, 1.5], [14, 3.5], [11, 5.5], [14, 8], [3.8, 8.5]]), true);
+  } else if (name === "sauerstoff") {
+    // Kampfwetter Sauerstoffschub: eine Flamme mit O
+    g.fillStyle(0xe8573a).fillTriangle(8 * u, 1 * u, 3 * u, 11 * u, 13 * u, 11 * u).fillCircle(8 * u, 11 * u, 5 * u);
+    g.fillStyle(0xf5d547).fillCircle(8 * u, 11.5 * u, 2.8 * u);
+  } else if (name === "staub") {
+    // Kampfwetter Kalkstaubsturm: Staubkörner im Wind
+    g.lineStyle(1.4 * u, 0xd8cbb0).lineBetween(1 * u, 5 * u, 12 * u, 5 * u).lineBetween(3 * u, 10 * u, 15 * u, 10 * u);
+    g.fillStyle(0xe8e0d0);
+    [[13, 3], [6, 7], [10, 12], [2, 13], [14, 7]].forEach(function (p) { g.fillCircle(p[0] * u, p[1] * u, 1.2 * u); });
   } else if (name === "glas") {
     g.lineStyle(1.6 * u, 0xdfe6ea).strokeRoundedRect(5 * u, 1 * u, 6 * u, 14 * u, { tl: 0, tr: 0, bl: 3 * u, br: 3 * u });
     g.fillStyle(0x7fd07f).fillRoundedRect(5.8 * u, 8 * u, 4.4 * u, 6.2 * u, { tl: 0, tr: 0, bl: 2.2 * u, br: 2.2 * u });
@@ -128,6 +145,9 @@ function baueKnopf(szene, text, beiKlick, optionen) {
     }
   }
 
+  // optionen.punkt: Farbe des Typs als Punkt links vom Namen (seit Fassung 20)
+  var punktR = MASS.px(4), punktPlatz = optionen.punkt !== undefined ? 2 * punktR + MASS.px(4) : 0;
+
   var breite = 0;
   function zeichne(aktiv) {
     grund.clear();
@@ -135,11 +155,17 @@ function baueKnopf(szene, text, beiKlick, optionen) {
     grund.fillRoundedRect(-breite / 2, -hoehe / 2, breite, hoehe, MASS.px(10));
     grund.lineStyle(MASS.px(2), 0xc9a66b, 1);
     grund.strokeRoundedRect(-breite / 2, -hoehe / 2, breite, hoehe, MASS.px(10));
+    if (punktPlatz) {
+      var bx = beschriftung.x - beschriftung.displayWidth / 2 - punktPlatz / 2;
+      grund.fillStyle(optionen.punkt, 1).fillCircle(bx, beschriftung.y, punktR)
+        .lineStyle(MASS.px(1), 0x101418, 0.8).strokeCircle(bx, beschriftung.y, punktR);
+    }
   }
   function setzeBreite(b) {
-    breite = b || Math.max(MASS.px(optionen.mindestbreite || 160), beschriftung.width + MASS.px(32));
+    breite = b || Math.max(MASS.px(optionen.mindestbreite || 160), beschriftung.width + punktPlatz + MASS.px(32));
     // Lange Namen (Schleichendes Gas) auf schmalen Knöpfen etwas kleiner
-    beschriftung.setScale(Math.min(1, (breite - MASS.px(8)) / beschriftung.width));
+    beschriftung.setScale(Math.min(1, (breite - MASS.px(8) - punktPlatz) / beschriftung.width));
+    if (punktPlatz) beschriftung.setX(punktPlatz / 2);
     gruppe.setSize(breite, hoehe);
     // Die Trefferfläche wird beim setInteractive einmal angelegt und
     // wächst nicht von selbst mit.

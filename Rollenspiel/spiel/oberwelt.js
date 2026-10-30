@@ -584,7 +584,6 @@ class OberweltSzene extends Phaser.Scene {
       this.schemenEntfernen(spr, false);
       this.ui.dialogFuehren([{ kampf: {
         art: wahl.art, stufe: wahl.stufe,
-        feld: WELT.feld(lage.biom, this.stand.wetter.art, WELT.phase(this.stand.zeit)),
         ort: WELT.ort(lage.biom)
       } }], this.stand.flags);
       return;
@@ -592,7 +591,7 @@ class OberweltSzene extends Phaser.Scene {
   }
 
   // ---------- Kampf ----------
-  // cfg: { art, stufe, wild, feld, ort }. Liefert ein Promise mit dem
+  // cfg: { art, stufe, wild, ort }. Liefert ein Promise mit dem
   // Ausgang ("sieg", "gefangen", "geflohen", "entkommen", "niederlage").
   // Die Oberwelt ruht so lange, die Oberfläche schläft.
   kampfStarten(cfg) {
@@ -605,7 +604,6 @@ class OberweltSzene extends Phaser.Scene {
         stand: szene.stand,
         gegner: cfg.gegner || [{ art: cfg.art, stufe: cfg.stufe || 3 }],
         gegnerName: cfg.name,
-        feld: cfg.feld,
         ort: cfg.ort || "dorf",
         wild: cfg.wild !== false,
         beiEnde: function (ende) {

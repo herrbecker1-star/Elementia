@@ -1,5 +1,5 @@
 // ============================================================
-//  WELT – Tageszeit, Wetter und das Kampffeld, das daraus folgt
+//  WELT – Tageszeit, Wetter und der Ort eines Kampfes
 //
 //  Reine Logik. Die Spielzeit läuft schneller als die echte: Eine
 //  Sekunde ist eine Spielminute, ein Tag dauert 24 Minuten. So erlebt
@@ -65,37 +65,18 @@ var WELT = (function () {
   }
 
   // ----------------------------------------------------------
-  //  Das Kampffeld folgt dem Ort, dem Wetter und der Tageszeit
+  //  Der Ort eines Kampfes
   // ----------------------------------------------------------
-  var BIOM_FELD = {
-    wiese:    { sauerstoff: 100, waerme: 20, feuchte: 30 },
-    dorf:     { sauerstoff: 100, waerme: 22, feuchte: 30 },
-    garten:   { sauerstoff: 100, waerme: 20, feuchte: 45 },
-    schmiede: { sauerstoff: 95,  waerme: 45, feuchte: 20 },   // die Esse glüht
-    meiler:   { sauerstoff: 80,  waerme: 45, feuchte: 20 },   // Holz verkohlt unter Luftabschluss
-    quelle:   { sauerstoff: 100, waerme: 35, feuchte: 75 },   // warme Schwefelquelle
-    hain:     { sauerstoff: 100, waerme: 18, feuchte: 55 },
-    wald:     { sauerstoff: 100, waerme: 16, feuchte: 60 }
-  };
+  // Seit Fassung 20 ohne Kampffeld (Sauerstoff, Wärme, Feuchte; Nutzer
+  // 30.10.2026). Der Ort bestimmt nur noch das Kampfbild; das Wetter
+  // ist Kulisse.
   var BIOM_ORT = { wiese: "steppe", dorf: "dorf", garten: "dorf", schmiede: "dorf", meiler: "steppe", quelle: "wald", hain: "wald", wald: "wald" };
-
-  function feld(biom, wetter, ph) {
-    var f = Object.assign({ offen: true }, BIOM_FELD[biom] || BIOM_FELD.wiese);
-    if (wetter === "regen") f.feuchte += 40;
-    if (wetter === "gewitter") f.feuchte += 35;
-    if (wetter === "nebel") f.feuchte += 25;
-    if (wetter === "hitze") f.waerme += 20;
-    if (ph === "nacht") f.waerme -= 8;
-    f.feuchte = Math.max(0, Math.min(100, f.feuchte));
-    f.waerme = Math.max(0, Math.min(100, f.waerme));
-    return f;
-  }
 
   return {
     PHASEN: PHASEN, PHASE_NAME: PHASE_NAME, WETTER_NAME: WETTER_NAME, KLIMA: KLIMA,
     MINUTEN_JE_SEKUNDE: MINUTEN_JE_SEKUNDE,
     phase: phase, uhr: uhr, neuesWetter: neuesWetter,
     einrichten: einrichten, vorruecken: vorruecken,
-    feld: feld, ort: function (biom) { return BIOM_ORT[biom] || "steppe"; }
+    ort: function (biom) { return BIOM_ORT[biom] || "steppe"; }
   };
 })();
