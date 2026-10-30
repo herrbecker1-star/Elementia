@@ -102,10 +102,15 @@ class KampfSzene extends Phaser.Scene {
     // von Abläufen, die sonst nur ein Finger auslöst.
     var zuege = new URLSearchParams(location.search).get("zuege");
     if (zuege) this.spieleZuege(zuege.split(","));
-    // Prüfschalter &lernfenster=1: das Lernfenster sofort zeigen (für Fotos)
+    // Prüfschalter &lernfenster=1: das Lernfenster sofort zeigen (für Fotos).
+    // Das Elemental springt dafür auf die nächste Stufe seines Lernsets.
     if (/[?&]lernfenster=1\b/.test(location.search)) {
       var probeEl = KAMPF.aktiv(this.k, "spieler");
-      this.bereit.then(function () { szene.lernDialog(probeEl); });
+      var naechste = Object.keys(ARTEN[probeEl.art].lernset).map(Number).filter(function (st) { return st > probeEl.stufe; })[0];
+      if (naechste) {
+        probeEl.stufe = naechste;
+        this.bereit.then(function () { szene.lernDialog(probeEl, ARTEN[probeEl.art].lernset[naechste][0]); });
+      }
     }
   }
 
@@ -215,6 +220,7 @@ class KampfSzene extends Phaser.Scene {
     // Status neben der Stufe, damit man sieht, warum etwas schiefgeht.
     var st = a.status, zeichen = [];
     if (st.vergiftet) zeichen.push("GIFT");
+    if (st.brennt) zeichen.push("BRAND");
     if (st.geblendet) zeichen.push("GEBLENDET");
     if (st.abgekuehlt) zeichen.push("ABGEKÜHLT");
     if (st.inert) zeichen.push("INERT");
@@ -341,8 +347,9 @@ class KampfSzene extends Phaser.Scene {
     var eintraege = KAMPF.angriffe(el).map(function (id) {
       var r = REAKTIONEN[id], grund = KAMPF.hindernis(k, "spieler", id), staerke;
       if (r.typ === "schutz") staerke = "Schutz";
+      else if (r.typ === "stoer") staerke = "Störung";
       else if (kennt) staerke = "≈ " + Math.round(KAMPF.schaetzeSchaden(k, "spieler", id, true) / gegnerLP * 100) + " % LP";
-      else staerke = r.typ === "waerme" ? "Stärke " + KAMPF.waermeStaerke(k) : "Stärke " + KAMPF.staerke(el, id);
+      else staerke = r.typ === "waerme" ? "Stärke " + KAMPF.waermeStaerke(k, r) : "Stärke " + KAMPF.staerke(el, id);
       return { text: r.name + "\n" + staerke + " · " + r.ae + " E", aktiv: !grund, grund: grund, beiKlick: function () { szene.ausfuehren({ typ: "reaktion", id: id }); } };
     });
     eintraege.push({ text: "Kraft sammeln", beiKlick: function () { szene.ausfuehren({ typ: "sammeln" }); } });
@@ -499,31 +506,27 @@ class KampfSzene extends Phaser.Scene {
   }
 
   angriffKurz(id, el) {
-    var r = REAKTIONEN[id], typ = r.typ === "schutz" ? "Schutz" : TYPEN[r.typ].name;
+    var r = REAKTIONEN[id], typ = r.typ === "schutz" ? "Schutz" : r.typ === "stoer" ? "Störung" : TYPEN[r.typ].name;
     var st = KAMPF.staerke(el, id);
     return r.name + "\n" + typ + (st ? " " + st : "") + " · " + r.ae + " E";
   }
 
-  // Bei Stufe 6, 8 und 10: zwei Vorschläge (KAMPF.lernVorschlaege). Bei vier
-  // Angriffen wählt man, welcher ersetzt wird – oder lernt keinen.
-  async lernDialog(el) {
+  // Seit Fassung 18 nach dem Lernset: Ist ein Platz frei, lernt das
+  // Elemental den Angriff sofort. Bei vier Angriffen wählt man, welcher
+  // ersetzt wird – oder lernt ihn nicht. Dazu der Satz Chemie.
+  async lernDialog(el, neu) {
     var name = el.spitzname || ARTEN[el.art].name;
-    var vorschlaege = KAMPF.lernVorschlaege(el);
-    if (!vorschlaege.length) return;
-    var szene = this;
-    var zusatz = vorschlaege.filter(function (id) { return angriffZusatz(id).length; })
-      .map(function (id) { return REAKTIONEN[id].name + ": " + angriffZusatz(id).join(", ") + "."; }).join(" ");
-    var w = await this.waehle(name + " ist jetzt Stufe " + el.stufe + " und kann einen neuen Angriff lernen. Welchen?" + (zusatz ? " " + zusatz : ""),
-      vorschlaege.map(function (id) { return szene.angriffKurz(id, el); }).concat(["keinen"]));
-    if (w >= vorschlaege.length) return;
-    var neu = vorschlaege[w], liste = KAMPF.angriffe(el);
+    if (!neu) neu = KAMPF.lernsetBis(el.art, el.stufe).filter(function (id) { return KAMPF.angriffe(el).indexOf(id) < 0; }).pop();
+    if (!neu || KAMPF.angriffe(el).indexOf(neu) >= 0) return;
+    var szene = this, r = REAKTIONEN[neu], liste = KAMPF.angriffe(el);
+    var info = [r.text].concat(angriffZusatz(neu).length ? [angriffZusatz(neu).join(", ") + "."] : []).join(" ") + (r.chemie ? "\n" + r.chemie : "");
     if (liste.length < KAMPF.ANGRIFFE_MAX) {
       KAMPF.lernen(el, neu);
-      await this.wartenAufTipp(name + " kann jetzt " + REAKTIONEN[neu].name + ".");
+      await this.wartenAufTipp(name + " lernt " + r.name + "!\n" + info);
       return;
     }
-    var w2 = await this.waehle(name + " kann höchstens " + KAMPF.ANGRIFFE_MAX + " Angriffe. Welchen soll " + REAKTIONEN[neu].name + " ersetzen?",
-      liste.map(function (id) { return szene.angriffKurz(id, el); }).concat(["doch nicht"]));
+    var w2 = await this.waehle(name + " kann " + r.name + " lernen. " + info + "\nEs kann höchstens " + KAMPF.ANGRIFFE_MAX + " Angriffe. Welchen soll " + r.name + " ersetzen?",
+      liste.map(function (id) { return szene.angriffKurz(id, el); }).concat(["nicht lernen"]));
     if (w2 >= liste.length) return;
     var alt = liste[w2];
     KAMPF.lernen(el, neu, alt);
@@ -552,10 +555,10 @@ class KampfSzene extends Phaser.Scene {
         ? "Du wachst in Mutters Werkstatt auf. Es riecht nach Salbe. Deine Elementals haben sich erholt – und du bist klüger als vorhin."
         : "Du wachst im Labor der Gilde auf. Jemand hat deine Elementals versorgt. „Beim nächsten Mal erst denken, dann zünden“, brummt eine Stimme.");
     }
-    // Angriffe lernen: Wer gerade Stufe 6, 8 oder 10 erreicht hat, darf wählen.
+    // Angriffe lernen: die fälligen Angriffe aus dem Lernset (el.lernen).
     for (var n = 0; n < stand.gruppe.length; n++) {
       var el = stand.gruppe[n];
-      while (el.lernen > 0) { el.lernen--; await this.lernDialog(el); }
+      while (Array.isArray(el.lernen) && el.lernen.length) await this.lernDialog(el, el.lernen.shift());
     }
     var beiEnde = this.daten.beiEnde;
     this.scene.stop();

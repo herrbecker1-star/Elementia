@@ -30,6 +30,9 @@ class OberweltSzene extends Phaser.Scene {
   create(daten) {
     var szene = this;
     this.stand = daten.stand;
+    // Phaser verwendet die Szene beim Neustart weiter: Merker zurücksetzen.
+    this.wechselt = false;
+    this.ausgangSperre = true;   // erst frei, wenn man die Ankunftstür verlassen hat
 
     // ---------- Karte ----------
     var karte = this.make.tilemap({ key: this.stand.karte });
@@ -71,6 +74,12 @@ class OberweltSzene extends Phaser.Scene {
         ding.setDepth(o.y);
         eintrag.figur = null;
         eintrag.ding = ding;
+      } else if (eig.elemental && szene.textures.exists("el-" + eig.elemental)) {
+        // Seit Fassung 18: das Elemental selbst als Objekt (Starterwahl)
+        var tier = szene.personen.create(o.x, o.y - 4, "el-" + eig.elemental);
+        tier.setScale(30 / Math.max(tier.width, tier.height)).refreshBody();
+        tier.setDepth(o.y);
+        eintrag.ding = tier;
       }
       szene.ansprechbar.push(eintrag);
     });
@@ -116,9 +125,24 @@ class OberweltSzene extends Phaser.Scene {
         szene.schemenTextur();
         var kx = Math.floor(szene.held.x / 32), ky = Math.floor(szene.held.y / 32);
         var lage = szene.lageAn(kx, ky);
-        var wahl = AUFTRETEN.waehle(szene.auftritte, lage, szene.zufall) || { art: "zink", stufe: 3 };
+        var wahl = AUFTRETEN.waehle(AUFTRETEN.fuerStand(szene.auftritte, szene.stand), lage, szene.zufall) || { art: "zink", stufe: 3 };
         szene.schemenSetzen(kx, ky, wahl, lage);
         szene.schemen[szene.schemen.length - 1].setPosition(szene.held.x, szene.held.y + 6).setAlpha(1);
+      });
+    }
+
+    // Prüfschalter ?tuer=1: nach einer Sekunde die Figur auf den ersten
+    // Ausgang mit Ziel stellen – einmal je Spielstart, nicht nach jedem
+    // Wechsel. Mit ?probe=1 meldet jeder Aufbau der Oberwelt seine Karte.
+    if (window.PROBE_MELDEN) window.PROBE_MELDEN("oberwelt: " + this.stand.karte);
+    if (/[?&]tuer=1\b/.test(location.search) && !OberweltSzene.tuerGeprueft) {
+      OberweltSzene.tuerGeprueft = true;
+      var tuer = this.ausgaenge.filter(function (a) { return a.eig.ziel && !a.eig.offenWenn; })[0];
+      // Erst zum Startpunkt: Wer an einer Tür ankommt, muss sie erst verlassen (ausgangSperre).
+      if (tuer) this.time.delayedCall(500, function () { szene.held.setPosition(start.x, start.y); });
+      if (tuer) this.time.delayedCall(1000, function () {
+        szene.held.setPosition(tuer.x, tuer.y - 6);
+        if (window.PROBE_MELDEN) window.PROBE_MELDEN("tuer: " + tuer.name);
       });
     }
 
@@ -363,7 +387,15 @@ class OberweltSzene extends Phaser.Scene {
   }
 
   // Wechsel auf eine andere Karte: Die Szene startet mit dem neuen Ort neu.
+  // Nur EINMAL auslösen (Fassung 18, 30.10.2026): fadeOut startet die
+  // Abblende bei jedem Aufruf neu. Solange die Figur auf der Tür stand,
+  // blieb sie bei 6 % hängen – erst ein Schritt zurück ließ sie enden,
+  // und dann bauten alle gesammelten Hörer die Szene nacheinander neu auf.
   wechsleKarte(ziel, punkt) {
+    if (this.wechselt) return;
+    this.wechselt = true;
+    this.held.setVelocity(0, 0);
+    this.held.anims.stop();
     this.stand.karte = ziel;
     this.stand.ankunft = punkt;
     this.stand.x = null; this.stand.y = null;
@@ -376,9 +408,19 @@ class OberweltSzene extends Phaser.Scene {
   // Ausgänge und Auslöser prüfen, sobald man sie betritt.
   betreten() {
     var held = this.held, szene = this, flags = this.stand.flags;
-    for (var i = 0; i < this.ausgaenge.length; i++) {
+    // Seit Fassung 18 zählt, ob der Körper die Türkachel berührt (4 px
+    // Spielraum), nicht der Abstand zur Mitte: Wer schräg kam, blieb an
+    // der Wandecke neben der Tür hängen und musste neu ansetzen.
+    var koerper = held.body;
+    var beruehrt = function (a) {
+      return koerper.right > a.x - 20 && koerper.x < a.x + 20 && koerper.bottom > a.y - 20 && koerper.y < a.y + 20;
+    };
+    // Wer an einer Tür ankommt (Labor: 4 px davor), soll nicht sofort
+    // wieder hinaus. Die Ausgänge gelten erst, wenn man keinen mehr berührt.
+    if (this.ausgangSperre && !this.ausgaenge.some(beruehrt)) this.ausgangSperre = false;
+    for (var i = 0; !this.ausgangSperre && i < this.ausgaenge.length; i++) {
       var a = this.ausgaenge[i];
-      if (Phaser.Math.Distance.Between(held.x, held.y + 6, a.x, a.y) > 22) continue;
+      if (!beruehrt(a)) continue;
       // Zurückschieben, damit man nicht auf dem Ausgang stehen bleibt
       var zurueck = function () {
         var dx = szene.karte.widthInPixels / 2 - a.x, dy = szene.karte.heightInPixels / 2 - a.y;
@@ -472,7 +514,8 @@ class OberweltSzene extends Phaser.Scene {
       if (d < SCHEMEN.MIN_ABSTAND || d > SCHEMEN.MAX_ABSTAND) continue;
       var lage = this.lageAn(kx, ky);
       if (!lage.begehbar) continue;
-      var wahl = AUFTRETEN.waehle(this.auftritte, lage, this.zufall);
+      // Lumis Starter, Ilkas Kupfer und Aluminium erscheinen nicht wild
+      var wahl = AUFTRETEN.waehle(AUFTRETEN.fuerStand(this.auftritte, this.stand), lage, this.zufall);
       if (!wahl) continue;
       this.schemenSetzen(kx, ky, wahl, lage);
       return;
@@ -614,6 +657,7 @@ class OberweltSzene extends Phaser.Scene {
   update(zeit, delta) {
     var held = this.held;
     held.setDepth(held.y);
+    if (this.wechselt) return;   // Abblende läuft: keine Eingabe, keine Ausgänge
 
     // Die UI-Szene startet parallel und ist im ersten Takt noch nicht fertig.
     if (!this.ui.eingabe) return;

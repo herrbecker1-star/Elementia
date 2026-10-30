@@ -100,6 +100,14 @@ var SPIELSTAND = (function () {
         el.angriffe = el.angriffe.map(function (id) { return ALTE_ANGRIFFE[id] || id; })
           .filter(function (id, i, liste) { return liste.indexOf(id) === i; });
       }
+      // Seit Fassung 18: Lernsets. Das alte Lernrecht (eine Zahl) entfällt;
+      // freie Plätze füllen die fälligen Angriffe des Lernsets, die neuesten
+      // zuerst. Was das Elemental schon kann, bleibt.
+      if (typeof el.lernen === "number") el.lernen = [];
+      if (Array.isArray(el.angriffe) && typeof KAMPF !== "undefined" && ARTEN[el.art] && ARTEN[el.art].lernset) {
+        var faellig = KAMPF.lernsetBis(el.art, el.stufe).filter(function (id) { return el.angriffe.indexOf(id) < 0; });
+        while (el.angriffe.length < KAMPF.ANGRIFFE_MAX && faellig.length) el.angriffe.push(faellig.pop());
+      }
       // Die LP-Skala ist seit Fassung 12 kleiner: nicht mehr als voll.
       if (typeof KAMPF !== "undefined" && ARTEN[el.art] && typeof el.zh === "number") el.zh = Math.min(el.zh, KAMPF.werte(el).zhMax);
     });

@@ -56,6 +56,26 @@ var AUFTRETEN = (function () {
   }
 
   // ----------------------------------------------------------
+  //  Wer ist schon fangbar? (seit Fassung 18)
+  // ----------------------------------------------------------
+  // Region, ab der die Art wild vorkommt – oder null, wenn sie es schon tut.
+  // Gesperrt sind Arten mit fangbarAb (Ilkas Kupfer und Aluminium) und der
+  // Starter, den man nicht gewählt hat: Lumi hat ihn. Kapitel 1 ist ganz
+  // Feuerlande; mit den Clans der Erzhügel fällt die Sperre über die Region.
+  var LUMIS_STARTER_AB = "Clans der Erzhügel";
+  function fangbarAb(art, stand) {
+    if (ARTEN[art].fangbarAb) return ARTEN[art].fangbarAb;
+    var gewaehlt = stand && stand.flags && stand.flags.starter;
+    if (gewaehlt && art !== gewaehlt && STARTER_ARTEN.indexOf(art) >= 0) return LUMIS_STARTER_AB;
+    return null;
+  }
+
+  // Die Auftrittstabelle ohne gesperrte Arten
+  function fuerStand(tabelle, stand) {
+    return tabelle.filter(function (e) { return !fangbarAb(e.art, stand); });
+  }
+
+  // ----------------------------------------------------------
   //  Die Karte lesen: Gegend und Abseits je Kachel
   // ----------------------------------------------------------
   // karte: Tiled-JSON. Liefert { breite, hoehe, lage(x, y) → { biom,
@@ -102,5 +122,5 @@ var AUFTRETEN = (function () {
     };
   }
 
-  return { passt: passt, moeglich: moeglich, waehle: waehle, kartenLagen: kartenLagen, ABSEITS_BONUS: ABSEITS_BONUS, ABSEITS_AB: ABSEITS_AB };
+  return { passt: passt, moeglich: moeglich, waehle: waehle, kartenLagen: kartenLagen, fangbarAb: fangbarAb, fuerStand: fuerStand, ABSEITS_BONUS: ABSEITS_BONUS, ABSEITS_AB: ABSEITS_AB };
 })();

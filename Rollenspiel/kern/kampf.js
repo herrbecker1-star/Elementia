@@ -27,7 +27,8 @@ var KAMPF = (function () {
   var WAERME_ABKUEHLUNG = 4;
   var LUFTZUFUHR = 3;             // Sauerstoff je Runde im Freien
   var VOLLTREFFER = 1 / 16;       // verdoppelt den Schaden vor dem „+2“ (wie Gen 2)
-  var ABWEHR_PLUS_MAX = 4;        // Schutzschichten stapeln sich nicht endlos
+  var ABWEHR_PLUS_MAX = 5;        // Schutzschichten stapeln sich nicht endlos (bis Fassung 17: 4;
+                                  // seit 18 gibt es Schutz +50 %: Hartstoff, Feuerverzinken, Eloxieren)
   var ABWEHR_PLUS_JE = 0.1;       // je Punkt +10 % Verteidigung und Sp.-Verteidigung
   // Stellschrauben, die der Prüfstand für Messreihen verstellen darf (KAMPF.REGEL):
   // stamm      Angriff aus der Grundausstattung der eigenen Art (Gen 2: STAB)
@@ -49,6 +50,8 @@ var KAMPF = (function () {
   var BLENDUNG_TREFFER = 0.7;     // Trefferchance geblendet
   var BLENDUNG_DAUER = 2;         // eigene Angriffe
   var GIFT_ANTEIL = 0.1, GIFT_RUNDEN = 3;
+  // Brennen (seit Fassung 18): kürzer, dafür heftiger als Gift.
+  var BRAND_ANTEIL = 0.12, BRAND_RUNDEN = 2;
   var SEITEN = ["spieler", "gegner"];
 
   // ----------------------------------------------------------
@@ -116,57 +119,45 @@ var KAMPF = (function () {
   }
 
   // Stärke eines Angriffs für die Anzeige: die feste Zahl auf der Skala
-  // bis 100. Schutz und Wärmeleitung (hängt am Feld) haben keine: null.
+  // bis 100. Schutz, Störung und Wärme (hängt am Feld) haben keine: null.
   function staerke(el, id) {
     var r = REAKTIONEN[id];
-    if (r.typ === "schutz" || r.typ === "waerme") return null;
+    if (r.typ === "schutz" || r.typ === "stoer" || r.typ === "waerme") return null;
     return r.staerke;
   }
 
+  // ----------------------------------------------------------
+  //  Angriffe lernen – seit Fassung 18 nach dem Lernset der Art
+  //  (ARTEN[art].lernset, freigegeben 29.10.2026). Jedes Elemental hat
+  //  seine eigene Liste (el.angriffe), höchstens 4. Ein neues Elemental
+  //  kann die letzten 4 Angriffe seines Lernsets bis zu seiner Stufe.
+  //  Bis Fassung 17: zwei Vorschläge aus dem Katalog bei Stufe 6/8/10.
+  // ----------------------------------------------------------
+  var ANGRIFFE_MAX = 4;
+
+  // Alle Angriffe des Lernsets bis zur Stufe, in Lernreihenfolge.
+  function lernsetBis(artId, stufe) {
+    var set = ARTEN[artId].lernset, liste = [];
+    Object.keys(set).map(Number).sort(function (a, b) { return a - b; }).forEach(function (st) {
+      if (st <= stufe) set[st].forEach(function (id) { if (liste.indexOf(id) < 0) liste.push(id); });
+    });
+    return liste;
+  }
+
   function neuesElemental(artId, stufe, starter) {
-    var el = { art: artId, stufe: stufe, ep: 0, angriffe: ARTEN[artId].reaktionen.slice() };
+    var el = { art: artId, stufe: stufe, ep: 0, angriffe: lernsetBis(artId, stufe).slice(-ANGRIFFE_MAX) };
     if (starter) el.starter = true;
     el.zh = werte(el).zhMax;
     return el;
   }
 
-  // ----------------------------------------------------------
-  //  Angriffe lernen (seit 25.10.2026)
-  //  Jedes Elemental hat seine eigene Liste (el.angriffe), anfangs die
-  //  Angriffe seiner Art. Bei Stufe 6, 8 und 10 darf es einen neuen
-  //  lernen: aus den allgemeinen Angriffen, die ihm laut Katalog
-  //  zustehen (kannAngriff, daten\elementals.js). Höchstens 4.
-  // ----------------------------------------------------------
-  var LERNSTUFEN = [6, 8, 10], ANGRIFFE_MAX = 4;
-
   function angriffe(el) {
-    return el.angriffe || ARTEN[el.art].reaktionen;
+    return el.angriffe || lernsetBis(el.art, el.stufe).slice(-ANGRIFFE_MAX);
   }
 
-  // Zwei Vorschläge, fest bestimmt (gleiches Elemental, gleiche Vorschläge):
-  // zuerst Angriffe einer Art, die es noch gar nicht kann (Schlag, Feuer,
-  // Schutz …), dann die stärkeren.
-  // Lernbar ist ein Angriff mit lernbar: true (daten\elementals.js), der
-  // dem Stoff zusteht und nicht stärker ist als der stärkste Angriff
-  // seiner eigenen Art. Gemessen 25.10.2026 auf Stufe 10 (Spanne der
-  // Siegquoten): ohne Lernen 45 · alles Erlaubte lernbar 61–91 (Eisen mit
-  // Wuchtstoß 99 %) · mit Kraftgrenze 64 · nur Grundangriffe 44–47.
-  // Darum sind vorerst nur Rempler, Schlag und Standfest lernbar.
+  // Lernen darf ein Elemental, was sein Lernset bis zu seiner Stufe enthält.
   function kannLernen(el, id) {
-    var r = REAKTIONEN[id];
-    if (!r.lernbar || r.fuer.nur || !kannAngriff(el.art, id)) return false;
-    var eigeneMax = Math.max.apply(null, ARTEN[el.art].reaktionen.map(function (x) { return REAKTIONEN[x].staerke || 0; }));
-    return (r.staerke || 0) <= eigeneMax;
-  }
-
-  function lernVorschlaege(el) {
-    var kann = angriffe(el), typen = kann.map(function (id) { return REAKTIONEN[id].typ; });
-    return Object.keys(REAKTIONEN).filter(function (id) {
-      return kann.indexOf(id) < 0 && kannLernen(el, id);
-    }).sort(function (a, b) {
-      var neuA = typen.indexOf(REAKTIONEN[a].typ) < 0 ? 0 : 1, neuB = typen.indexOf(REAKTIONEN[b].typ) < 0 ? 0 : 1;
-      return neuA - neuB || (REAKTIONEN[b].staerke || 0) - (REAKTIONEN[a].staerke || 0) || (a < b ? -1 : 1);
-    }).slice(0, 2);
+    return lernsetBis(el.art, el.stufe).indexOf(id) >= 0;
   }
 
   // Lernt id; ist die Liste voll, ersetzt es den Angriff ersetze.
@@ -184,7 +175,9 @@ var KAMPF = (function () {
 
   function epBisNaechste(stufe) { return 10 + 10 * stufe; }
 
-  // Gibt Erfahrung; liefert die Liste der erreichten Stufen.
+  // Gibt Erfahrung; liefert die Liste der erreichten Stufen. Fällige
+  // Angriffe des Lernsets kommen in el.lernen (Liste); nach dem Kampf
+  // fragt die Szene sie ab (lernDialog).
   function erfahrung(el, betrag) {
     var neu = [];
     el.ep += betrag;
@@ -194,8 +187,10 @@ var KAMPF = (function () {
       el.stufe++;
       el.zh += werte(el).zhMax - alt;
       neu.push(el.stufe);
-      // Merken, dass nach dem Kampf ein Angriff gelernt werden darf
-      if (LERNSTUFEN.indexOf(el.stufe) >= 0) el.lernen = (el.lernen || 0) + 1;
+      (ARTEN[el.art].lernset[el.stufe] || []).forEach(function (id) {
+        if (!Array.isArray(el.lernen)) el.lernen = [];
+        if (angriffe(el).indexOf(id) < 0 && el.lernen.indexOf(id) < 0) el.lernen.push(id);
+      });
     }
     return neu;
   }
@@ -290,6 +285,7 @@ var KAMPF = (function () {
     if (k.seiten[seite].ae < r.ae) return "Zu wenig Aktivierungsenergie (" + r.ae + " nötig).";
     if (r.o2 && k.feld.sauerstoff < r.o2) return "Zu wenig Sauerstoff – die Flamme erstickt.";
     if (r.braucht && r.braucht.waerme && k.feld.waerme < r.braucht.waerme) return "Das Feld ist zu kalt dafür (Wärme " + r.braucht.waerme + " nötig).";
+    if (r.braucht && r.braucht.feuchte && k.feld.feuchte < r.braucht.feuchte) return "Das Feld ist zu trocken dafür (Feuchte " + r.braucht.feuchte + " nötig).";
     return null;
   }
 
@@ -312,7 +308,12 @@ var KAMPF = (function () {
   // das Feld um 10 kühler. Nur die Feldwärme (Plan) gab bei Wärme 20 Stärke
   // 20 – Kupfer gewann 8 %. Messreihen 27.10.2026 (Kupfer, Stufe 5): +40 →
   // 25 %, +45 → 42 %, +50 → 51 %, aber dann schlägt Kupfer Eisen 98 %.
-  function waermeStaerke(k) { return Math.min(100, Math.round(k.feld.waerme) + REGEL.waermeGrund); }
+  // Seit Fassung 18 kann ein Angriff einen eigenen Grundwert haben
+  // (Kurzschluss +50, Lichtbogen +70); die Obergrenze steigt mit.
+  function waermeStaerke(k, r) {
+    var grund = r && r.waermeGrund || REGEL.waermeGrund;
+    return Math.min(60 + grund, Math.round(k.feld.waerme) + grund);
+  }
 
   // Das Feld als Wetter (Gen 2: Regen und Sonne): Feuchte über 70 dämpft
   // Feuer auf die Hälfte, große Hitze (REGEL.hitzeFeuer) facht es an (×1,5).
@@ -343,7 +344,7 @@ var KAMPF = (function () {
 
   function schaden(k, seite, reaktionId, zufall, voll) {
     var r = REAKTIONEN[reaktionId];
-    if (r.typ === "schutz") return 0;
+    if (r.typ === "schutz" || r.typ === "stoer") return 0;
     var an = aktiv(k, seite), ziel = aktiv(k, gegenueber(seite));
     var zs = k.seiten[gegenueber(seite)].status;
     var wa = werte(an), wz = werte(ziel);
@@ -351,12 +352,36 @@ var KAMPF = (function () {
     var physisch = TYPEN[r.typ].physisch;
     var A = physisch ? wa.angriff : wa.spAngriff;
     var V = (physisch ? wz.verteidigung : wz.spVerteidigung) * (1 + ABWEHR_PLUS_JE * (zs.abwehrPlus || 0));
-    var st = r.typ === "waerme" ? waermeStaerke(k) : r.staerke;
+    var st = r.typ === "waerme" ? waermeStaerke(k, r) : r.staerke;
     var stamm = ARTEN[an.art].reaktionen.indexOf(reaktionId) >= 0 ? REGEL.stamm : 1;
     var s = formel(an.stufe, st, A, V, [stamm, typWirkung(r.typ, ziel.art, k.feld.waerme).faktor, feldFaktor(k, r)], zufall, voll);
     if (zs.schutz) s *= zs.schutz;
     if (zs.tarnung) s *= 0.5;
     return Math.max(1, Math.floor(s));
+  }
+
+  // Nebenwirkungen beim Gegner mit ihrer Chance in % (100 = sicher) –
+  // nur, wer noch steht. Ein neuer Treffer startet die Dauer neu.
+  function nebenwirkungen(k, ander, w) {
+    var z = k.seiten[ander], ziel = aktiv(k, ander);
+    if (ziel.zh <= 0) return;
+    var trifft = function (chance) { return chance >= 100 || k.zufall() * 100 < chance; };
+    if (w.blendung && trifft(w.blendung)) {
+      z.status.geblendet = BLENDUNG_DAUER;
+      melde(k, { text: name(k, ander) + " ist geblendet und trifft schlechter." });
+    }
+    if (w.vergiftung && trifft(w.vergiftung)) {
+      z.status.vergiftet = GIFT_RUNDEN;
+      melde(k, { text: name(k, ander) + " ist vergiftet." });
+    }
+    if (w.brennen && trifft(w.brennen)) {
+      z.status.brennt = BRAND_RUNDEN;
+      melde(k, { text: name(k, ander) + " brennt." });
+    }
+    if (w.abwehrMinus) {
+      z.status.abwehrPlus = Math.max(-ABWEHR_PLUS_MAX, (z.status.abwehrPlus || 0) - w.abwehrMinus);
+      melde(k, { text: "Die Verteidigung von " + name(k, ander) + " sinkt." });
+    }
   }
 
   function fuehreAus(k, seite, reaktionId) {
@@ -377,7 +402,11 @@ var KAMPF = (function () {
     melde(k, { seite: seite, reaktion: reaktionId, text: wer + ": " + r.name + "!" });
 
     var w = r.wirkung || {};
-    if (r.typ !== "schutz") {
+    if (r.typ === "stoer") {
+      // Störangriff (seit Fassung 18): kein Schaden, kein Trefferwurf –
+      // die Wirkung tritt sicher ein.
+      nebenwirkungen(k, ander, w);
+    } else if (r.typ !== "schutz") {
       var chance = trefferChance(k, seite, reaktionId);
       if (s.status.geblendet && --s.status.geblendet <= 0) delete s.status.geblendet;
       if (k.zufall() >= chance) {
@@ -395,21 +424,17 @@ var KAMPF = (function () {
         delete z.status.schutz;
         delete z.status.tarnung;
         melde(k, { seite: ander, schaden: betrag, text: name(k, ander) + " verliert " + betrag + " LP." });
-        // Nebenwirkungen mit ihrer Chance in % – nur, wer noch steht.
-        if (ziel.zh > 0 && w.blendung && k.zufall() * 100 < w.blendung) {
-          z.status.geblendet = BLENDUNG_DAUER;
-          melde(k, { text: name(k, ander) + " ist geblendet und trifft schlechter." });
-        }
-        if (ziel.zh > 0 && w.vergiftung && k.zufall() * 100 < w.vergiftung) {
-          z.status.vergiftet = GIFT_RUNDEN;
-          melde(k, { text: name(k, ander) + " ist vergiftet." });
-        }
+        nebenwirkungen(k, ander, w);
       }
     }
 
     if (r.o2) k.feld.sauerstoff = Math.max(0, k.feld.sauerstoff - r.o2);
     if (r.waerme) k.feld.waerme = Math.min(100, k.feld.waerme + r.waerme);
 
+    if (w.entgiften && s.status.vergiftet) {
+      delete s.status.vergiftet;
+      melde(k, { text: wer + " ist nicht mehr vergiftet." });
+    }
     if (w.schutz) s.status.schutz = w.schutz;
     if (w.tarnung) s.status.tarnung = true;
     if (w.abwehrPlus) s.status.abwehrPlus = Math.min(ABWEHR_PLUS_MAX, (s.status.abwehrPlus || 0) + w.abwehrPlus);
@@ -428,6 +453,22 @@ var KAMPF = (function () {
     return wert;
   }
 
+  // Was eine Nebenwirkung der KI wert ist (seit Fassung 18), in LP:
+  // Gift und Brand der erwartete Dauerschaden, Blendung ein Teil der
+  // Drohung, weniger Verteidigung wie ein Schutz für die eigene Seite.
+  // Nur, was beim Gegner noch nicht wirkt. p = Trefferchance.
+  function nebenWert(k, seite, w, p, drohung) {
+    var ander = gegenueber(seite), zs = k.seiten[ander].status, ziel = aktiv(k, ander);
+    var lp = werte(ziel).zhMax, wert = 0;
+    // Mehr als die verbleibenden LP lassen sich nicht abziehen.
+    var rest = function (x) { return Math.min(x, ziel.zh); };
+    if (w.vergiftung && !zs.vergiftet) wert += rest(lp * GIFT_ANTEIL * GIFT_RUNDEN) * Math.min(100, w.vergiftung) / 100;
+    if (w.brennen && !zs.brennt) wert += rest(lp * BRAND_ANTEIL * BRAND_RUNDEN) * Math.min(100, w.brennen) / 100;
+    if (w.blendung && !zs.geblendet) wert += drohung * (1 - BLENDUNG_TREFFER) * Math.min(100, w.blendung) / 100;
+    if (w.abwehrMinus && (zs.abwehrPlus || 0) > -ABWEHR_PLUS_MAX) wert += drohung * ABWEHR_PLUS_JE * w.abwehrMinus;
+    return wert * p;
+  }
+
   function kiWahl(k, seite) {
     var el = aktiv(k, seite);
     var s = k.seiten[seite];
@@ -443,7 +484,9 @@ var KAMPF = (function () {
     angriffe(el).forEach(function (id) {
       if (hindernis(k, seite, id)) return;
       var r = REAKTIONEN[id], w;
-      if (r.typ === "schutz") {
+      if (r.typ === "stoer") {
+        w = nebenWert(k, seite, r.wirkung, 1, drohung);
+      } else if (r.typ === "schutz") {
         var wi = r.wirkung;
         // Verteidigung +10 % je Punkt ist auf Dauer etwa so viel wert wie
         // ein Zehntel der Drohung je Punkt (bis Fassung 11 feste Zahlen 2 und 4).
@@ -452,6 +495,8 @@ var KAMPF = (function () {
         else if (wi.tarnung) w = s.status.tarnung ? 0 : drohung * 0.5;
         else if (wi.abwehrPlus) w = plus;
         else w = 0;
+        // Aktivkohle: so viel wert wie das Gift, das noch käme.
+        if (wi.entgiften && s.status.vergiftet) w += werte(el).zhMax * GIFT_ANTEIL * s.status.vergiftet;
         // Nur wer noch lange genug steht, hat vom Schutz etwas.
         if (el.zh < drohung) w *= 0.3;
       } else {
@@ -462,6 +507,7 @@ var KAMPF = (function () {
         // ewig hinter „Standfest“ – so verlor Magnesium 98 % gegen Zink
         // (gefunden 25.10.2026). Das Brechen des Schilds zählt mit.
         if (zs.schutz || zs.tarnung) w = (w + ohneSchild(k, ander, function () { return schaetzeSchaden(k, seite, id) * p; })) / 2;
+        if (r.wirkung) w += nebenWert(k, seite, r.wirkung, p, drohung);
       }
       if (w > wert) { wert = w; bestes = { typ: "reaktion", id: id }; }
     });
@@ -585,6 +631,13 @@ var KAMPF = (function () {
         melde(k, { seite: seite, schaden: gift, text: name(k, seite) + " leidet unter dem Gift (−" + gift + " LP)." });
         if (--s.status.vergiftet <= 0) delete s.status.vergiftet;
       }
+      // Brennen (seit Fassung 18): 12 % der vollen LP, 2 Runden lang.
+      if (s.status.brennt && el.zh > 0) {
+        var brand = Math.max(1, Math.round(werte(el).zhMax * BRAND_ANTEIL));
+        el.zh = Math.max(0, el.zh - brand);
+        melde(k, { seite: seite, schaden: brand, text: name(k, seite) + " brennt (−" + brand + " LP)." });
+        if (--s.status.brennt <= 0) delete s.status.brennt;
+      }
       s.ae = Math.min(AE_MAX, s.ae + AE_JE_RUNDE + Math.floor(k.feld.waerme / 30));
     });
     var f = k.feld;
@@ -692,11 +745,12 @@ var KAMPF = (function () {
     rundeBeginnen: rundeBeginnen,
     melde: melde,
     angriffe: angriffe,
-    lernVorschlaege: lernVorschlaege,
+    lernsetBis: lernsetBis,
     kannLernen: kannLernen,
     lernen: lernen,
-    LERNSTUFEN: LERNSTUFEN,
     ANGRIFFE_MAX: ANGRIFFE_MAX,
+    BRAND_ANTEIL: BRAND_ANTEIL,
+    BRAND_RUNDEN: BRAND_RUNDEN,
     befundText: function (eig, wert) { return BEFUND_TEXT[eig](wert); },
     STARTER_BONUS: STARTER_BONUS,
     GRUPPE_LERNT: GRUPPE_LERNT,

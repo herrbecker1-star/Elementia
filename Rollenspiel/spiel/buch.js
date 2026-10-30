@@ -232,9 +232,13 @@ class BuchSzene extends Phaser.Scene {
       var bild = szene.bild(x + MASS.px(6), y + MASS.px(6), art, bh, !kennt);
       var tx = x + MASS.px(12) + bild.displayWidth;
       szene.text(tx, y + MASS.px(6), kennt ? a.name : "???", 14, null, "bold");
-      var marke = gefangen[art] ? "\n✓ gefangen" : a.fangbarAb && kennt ? "\ngesehen · fangbar später" : "";
+      // Seit Fassung 18 gilt die Sperre auch für Lumis Starter (AUFTRETEN.fangbarAb).
+      var spaeter = AUFTRETEN.fangbarAb(art, stand);
+      var marke = gefangen[art] ? "\n✓ gefangen" : spaeter && kennt ? "\ngesehen · fangbar später" : "";
       szene.text(tx, y + MASS.px(26), kennt ? a.formel + " · " + a.klasse + marke : (a.seltenheit !== "haeufig" ? "selten" : ""), 12, "#5a4632");
-      var hinweis = szene.text(x + MASS.px(6), y + bh + MASS.px(12), kennt ? FUNDHINWEISE[art].genau : FUNDHINWEISE[art].vage, 11, kennt ? FARBE.tinte : "#6b4a2b", kennt ? "" : "italic");
+      var lumis = spaeter && !a.fangbarAb;
+      var fundtext = !kennt ? FUNDHINWEISE[art].vage : lumis ? "Lumi hat es. Wild erst bei den " + spaeter + "." : FUNDHINWEISE[art].genau;
+      var hinweis = szene.text(x + MASS.px(6), y + bh + MASS.px(12), fundtext, 11, kennt ? FARBE.tinte : "#6b4a2b", kennt ? "" : "italic");
       hinweis.setWordWrapWidth(zB - MASS.px(12), true);
       // Einmal erkannt genügt: Werte und Angriffe stehen dann im Buch.
       if (kennt) szene.antippbar(x, y, zB, zH, function () { szene.zeigeDetailVon(null, art, "stoffbuch"); });
@@ -296,13 +300,19 @@ class BuchSzene extends Phaser.Scene {
     })), 10);
     y += Math.max(h1, h2) + MASS.px(6);
 
-    var zeilen = [["Angriff", "Typ", "Stärke", "E", "Wirkung"]];
-    (el ? KAMPF.angriffe(el) : a.reaktionen).forEach(function (id) {
+    // Eigenes Elemental: seine Angriffe. Sonst (Stoffbuch, seit Fassung 18)
+    // das Lernset der Art mit der Stufe davor.
+    var stufeVon = {};
+    Object.keys(a.lernset).forEach(function (st) { a.lernset[st].forEach(function (id) { if (!stufeVon[id]) stufeVon[id] = st; }); });
+    var liste = el ? KAMPF.angriffe(el) : KAMPF.lernsetBis(art, 50);
+    var zeilen = [[el ? "Angriff" : "Stufe · Angriff", "Typ", "Stärke", "E", "Wirkung"]];
+    liste.forEach(function (id) {
       var r = REAKTIONEN[id];
-      var st = r.typ === "waerme" ? "Wärme + " + KAMPF.REGEL.waermeGrund : r.typ === "schutz" ? "–" : String(KAMPF.staerke(probe, id));
-      zeilen.push([r.name, r.typ === "schutz" ? "Schutz" : TYPEN[r.typ].name, st, r.ae, [r.text].concat(angriffZusatz(id)).join(" ")]);
+      var st = r.typ === "waerme" ? "Wärme + " + (r.waermeGrund || KAMPF.REGEL.waermeGrund) : r.typ === "schutz" || r.typ === "stoer" ? "–" : String(KAMPF.staerke(probe, id));
+      var typ = r.typ === "schutz" ? "Schutz" : r.typ === "stoer" ? "Störung" : TYPEN[r.typ].name;
+      zeilen.push([el ? r.name : stufeVon[id] + " · " + r.name, typ, st, r.ae, [r.text].concat(angriffZusatz(id)).join(" ")]);
     });
-    this.tabelle(x, y, [b * 0.2, b * 0.13, b * 0.12, b * 0.05, b * 0.5], zeilen, 10);
+    this.tabelle(x, y, [b * 0.2, b * 0.13, b * 0.12, b * 0.05, b * 0.5], zeilen, el ? 10 : 8);
   }
 
   // Seit Fassung 17 als Tabellen: Gefäße und Waren links, Geräte rechts.

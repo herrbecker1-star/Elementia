@@ -95,10 +95,28 @@ function starterWahl(art) {
     { einblenden: schmiede ? "starterwahl_eisen" : "starterwahl_magnesium", text: schmiede
       ? "Ein Funke springt vom glühenden Eisen. Er wächst, bekommt Augen – und sieht dich an."
       : "Das Blatt-Amulett deiner Mutter blitzt auf. Etwas Silbriges schwebt vor dir." },
-    { geben: { elemental: { art: art, stufe: 3, starter: true } } },
+    // Seit Fassung 18 Stufe 4 (vorher 3): Dort lernt das Lernset den ersten
+    // Angriff des eigenen Stoffs (Funkenflug, Aufflammen). Auf Stufe 3
+    // verlor der Starter allein gegen Kolja immer (Messung 29.10.2026).
+    { geben: { elemental: { art: art, stufe: 4, starter: true } } },
     { benennen: true },
     { setze: "starter", wert: art },
     { sag: schmiede ? "Vater" : "Mutter", text: "Dein erstes Elemental begleitet dich ein Leben lang. Lumi wartet auf dem Dorfplatz." }
+  ];
+}
+
+// Seit Fassung 18: Neben jedem Elternteil steht sein Elemental. Spricht man
+// es an, sieht man sein Bild – und kann es gleich wählen.
+function starterAnsehen(art) {
+  var a = ARTEN[art];
+  return [
+    { einblenden: "el-" + art, text: a.name + " · " + a.formel + " – " + (art === "eisen"
+      ? "hart und schwer. Der Magnet hält es fest."
+      : "leicht und silbrig. Es brennt heller als hundert Kerzen.") },
+    { wahl: "Nimmst du " + a.name + "?", optionen: [
+      { text: "Ja", dann: starterWahl(art) },
+      { text: "Noch nicht", dann: [{ erzaehl: "Es sieht dir nach." }] }
+    ] }
   ];
 }
 
@@ -155,6 +173,9 @@ var DIALOGE = {
     { erzaehl: "Du lebst in Stoffingen, einem armen Dorf in den Feuerlanden. „Wer nichts hat, den lässt man in Ruhe“, sagt deine Mutter." },
     { erzaehl: "Heute ist dein 12. Geburtstag. Ab heute lernst du ein Handwerk: in Vaters Schmiede oder in Mutters Garten. Lumi wartet auf dem Dorfplatz." }
   ],
+
+  starter_eisen: starterAnsehen("eisen"),
+  starter_magnesium: starterAnsehen("magnesium"),
 
   vater: [
     { wennNicht: "starter", dann: [
@@ -235,8 +256,8 @@ var DIALOGE = {
   //  Gespielt statt erzählt: Die Figuren bewegen sich auf der Karte,
   //  gesprochen werden sieben kurze Sätze. Die Positionen sind Kacheln
   //  der Karte Stoffingen: Lumi steht auf (17, 12), der Weg nach Osten
-  //  ist Zeile 13, die Mutter kommt aus dem Garten (12, 7) durch die
-  //  Lücke im Zaun bei (13, 9).
+  //  ist Zeile 13. Die Mutter steht seit Fassung 18 neben dem Vater
+  //  (10, 5) und kommt an der Gartenecke vorbei über Spalte 9.
   // ============================================================
   reiter_szenen: [
     { welt: { zeit: "15:00" } },
@@ -261,7 +282,7 @@ var DIALOGE = {
       { sag: "Anführer", text: "Alle Kinder des Dorfes. Aufsitzen." },
       { erzaehl: "Sie sind nicht grob. Sie haken ab wie auf einer Liste. Der Sohn des Köhlers. Die Mädchen vom Kerzenzieher." },
       { gehen: { wer: "reiter1", nach: [[18, 13], [16, 13]], parallel: true } },
-      { gehen: { wer: "mutter", nach: [[13, 8], [13, 12], [15, 13]], tempo: 150 } },
+      { gehen: { wer: "mutter", nach: [[9, 5], [9, 13], [15, 13]], tempo: 150 } },
       { zeichen: { wer: "mutter", art: "!" } },
       { sag: "Mutter", text: "Nicht mein Kind. Zwölf Jahre, seit heute früh. Das ist kein Kind mehr, das ist ein Lehrling." },
       { zeichen: { wer: "anfuehrer", art: "…" } },

@@ -28,6 +28,10 @@ var SZENENBILDER = {
   lumis_kolben: "grafik/szenen/lumis_kolben.jpg"
 };
 
+// Seit Fassung 18: "el-eisen" blendet das Elementalbild ein. Es ist schon
+// geladen (titel.js), darum steht es nicht in SZENENBILDER.
+function bildSchluessel(name) { return name.indexOf("el-") === 0 ? name : "szene-" + name; }
+
 class UiSzene extends Phaser.Scene {
   constructor() { super("ui"); }
 
@@ -528,7 +532,7 @@ class UiSzene extends Phaser.Scene {
   // Spielstart soll im Schul-WLAN nicht auf sieben große Bilder warten.
   // Kommt ein Bild nicht binnen 2,5 s, erscheint der Platzhalter.
   einblenden(name, text) {
-    var szene = this, schluessel = "szene-" + name, pfad = SZENENBILDER[name];
+    var szene = this, schluessel = bildSchluessel(name), pfad = SZENENBILDER[name];
     if (!pfad || this.textures.exists(schluessel)) return this.einblendenZeigen(name, text);
     this.dialog.setVisible(false);
     return new Promise(function (fertig) {
@@ -548,10 +552,12 @@ class UiSzene extends Phaser.Scene {
     var ebene = this.add.container(0, 0).setDepth(30).setAlpha(0);
     var grund = this.add.graphics().fillStyle(0x08090b, 0.92).fillRect(0, 0, b, h);
     ebene.add(grund);
-    var schluessel = "szene-" + name, bild;
+    var schluessel = bildSchluessel(name), bild;
     if (this.textures.exists(schluessel)) {
       bild = this.add.image(b / 2, h * 0.45, schluessel);
-      bild.setScale(Math.min(b * 0.9 / bild.width, h * 0.72 / bild.height));
+      // Ein Elementalbild ist quadratisch und klein: nicht über die halbe Höhe hinaus
+      var hoch = name.indexOf("el-") === 0 ? 0.6 : 0.72;
+      bild.setScale(Math.min(b * 0.9 / bild.width, h * hoch / bild.height));
       this.tweens.add({ targets: bild, scale: bild.scale * 1.06, duration: 6000 });
       ebene.add(bild);
     } else {
