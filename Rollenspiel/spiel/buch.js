@@ -37,6 +37,11 @@ class BuchSzene extends Phaser.Scene {
     if (daten.detail && ARTEN[daten.detail]) {
       var eigenes = this.stand.gruppe.filter(function (el) { return el.art === daten.detail; })[0];
       this.zeigeDetailVon(eigenes || null, daten.detail, eigenes ? "gruppe" : "stoffbuch");
+    } else if (daten.reiter === "stoffkunde") {
+      // Prüfschalter ?buch=stoffkunde&seite=1..4
+      this.stoffTeil = "kunde";
+      this.kundeSeite = Math.max(0, (Number(new URLSearchParams(location.search).get("seite")) || 1) - 1);
+      this.zeige("stoffbuch");
     } else this.zeige(daten.reiter || "gruppe");
   }
 
@@ -207,8 +212,20 @@ class BuchSzene extends Phaser.Scene {
     return yy - y;
   }
 
-  zeigeStoffbuch(f) {
-    var szene = this, stand = this.stand;
+  // Seit Fassung 19 zwei Teile: Stoffe (die Sammlung) und Stoffkunde (die
+  // chemischen Hintergründe). Im Spiel selbst stehen nur Symbole und
+  // Zahlen; wer mehr wissen will, findet es hier.
+  zeigeStoffbuch(f0) {
+    var szene = this, stand = this.stand, teil = this.stoffTeil || "stoffe";
+    var kopfH = MASS.px(36), x = f0.x;
+    [["stoffe", "Stoffe"], ["kunde", "Stoffkunde"]].forEach(function (p) {
+      var k = baueKnopf(szene, p[1], function () { szene.stoffTeil = p[0]; szene.neuZeichnen(); }, { hoehe: 28, schrift: 13, mindestbreite: 96 });
+      k.setPosition(x + k.width / 2, f0.y + MASS.px(14)).setAlpha(teil === p[0] ? 1 : 0.55);
+      x += k.width + MASS.px(6);
+      szene.inhalt.push(k);
+    });
+    if (teil === "kunde") { this.zeigeStoffkunde({ x: f0.x, y: f0.y + kopfH, b: f0.b, h: f0.h - kopfH }, x + MASS.px(8), f0.y); return; }
+    var f = { x: f0.x, y: f0.y + kopfH - MASS.px(24), b: f0.b, h: f0.h - kopfH + MASS.px(24) };
     var arten = Object.keys(ARTEN);
     var gefangen = {};
     stand.gruppe.concat(stand.lager).forEach(function (el) { gefangen[el.art] = true; });
@@ -216,7 +233,7 @@ class BuchSzene extends Phaser.Scene {
     // Seit Fassung 17 auch, wen man bei einem Stoffmeister gesehen hat.
     function kenntArt(a) { return stand.bekannt.indexOf(a) >= 0 || gefangen[a] || stand.gesehen.indexOf(a) >= 0; }
     var bekannt = arten.filter(kenntArt).length;
-    this.text(f.x, f.y, "Großmutters Buch · " + bekannt + " von " + arten.length + " Stoffen bekannt", 13, "#5a4632");
+    this.text(x + MASS.px(8), f0.y + MASS.px(6), "Großmutters Buch · " + bekannt + " von " + arten.length + " Stoffen bekannt", 13, "#5a4632");
 
     // Ab 7 Arten vier Spalten: Bei acht Arten in drei Spalten ragte die
     // dritte Reihe unten aus dem Buch (Fassung 13–16).
@@ -243,6 +260,78 @@ class BuchSzene extends Phaser.Scene {
       // Einmal erkannt genügt: Werte und Angriffe stehen dann im Buch.
       if (kennt) szene.antippbar(x, y, zB, zH, function () { szene.zeigeDetailVon(null, art, "stoffbuch"); });
     });
+  }
+
+  // Stoffkunde: vier Seiten zum Blättern, alles aus den Regeln abgeleitet
+  // (daten\typen.js, kern\kampf.js) – was hier steht, rechnet der Kampf.
+  zeigeStoffkunde(f, kopfX, kopfY) {
+    var szene = this, stand = this.stand;
+    var seiten = ["Merksätze", "Was wirkt gegen was", "Kampffeld und Energie", "Deine Angriffe und ihre Chemie"];
+    var nr = this.kundeSeite || 0;
+    [["‹", -1], ["›", 1]].forEach(function (p) {
+      var ziel = nr + p[1], geht = ziel >= 0 && ziel < seiten.length;
+      var k = baueKnopf(szene, p[0], function () { if (geht) { szene.kundeSeite = ziel; szene.neuZeichnen(); } }, { hoehe: 28, schrift: 15, mindestbreite: 36 });
+      k.setPosition(kopfX + k.width / 2, kopfY + MASS.px(14)).setAlpha(geht ? 1 : 0.3);
+      kopfX += k.width + MASS.px(6);
+      szene.inhalt.push(k);
+    });
+    this.text(kopfX + MASS.px(6), kopfY + MASS.px(5), (nr + 1) + "/" + seiten.length + "  " + seiten[nr], 15, null, "bold");
+
+    // Nur die Typen und Stoffklassen, die es im Spiel schon gibt
+    var typen = Object.keys(TYPEN).filter(function (t) {
+      return Object.keys(REAKTIONEN).some(function (id) { return REAKTIONEN[id].typ === t; });
+    });
+    var klassen = STOFFKLASSEN.filter(function (kl) {
+      return Object.keys(ARTEN).some(function (a) { return ARTEN[a].klasse === kl; });
+    });
+    var bruch = function (z) { return z === 0.5 ? "×½" : "×" + z; };
+
+    if (nr === 0) {
+      var zeilen = [["Nr.", "Merksatz"]];
+      Object.keys(MERKSAETZE).forEach(function (n) { zeilen.push([n, MERKSAETZE[n]]); });
+      this.tabelle(f.x, f.y, [f.b * 0.06, f.b * 0.94], zeilen, 12);
+    } else if (nr === 1) {
+      var kopf = ["Angriff ↓  gegen →"].concat(klassen);
+      var rumpf = typen.map(function (t) {
+        return [TYPEN[t].name].concat(klassen.map(function (kl) {
+          var e = TYPEN[t].gegen[kl];
+          return e ? bruch(e[0]) + " " + e[2] + " (" + e[1] + ")" : "×1";
+        }));
+      });
+      var sp = (f.b * 0.75) / klassen.length;
+      var h = this.tabelle(f.x, f.y, [f.b * 0.25].concat(klassen.map(function () { return sp; })), [kopf].concat(rumpf), 12);
+      var ausn = Object.keys(ARTEN).filter(function (a) { return ARTEN[a].ausnahmen; }).map(function (a) {
+        return ARTEN[a].name + ": " + Object.keys(ARTEN[a].ausnahmen).map(function (t) {
+          var x = ARTEN[a].ausnahmen[t];
+          return TYPEN[t].name + " " + bruch(x.faktor) + " " + x.wort + (x.bisWaerme ? " (bis Wärme " + x.bisWaerme + ")" : "");
+        }).join(", ");
+      });
+      this.text(f.x, f.y + h + MASS.px(8), "In Klammern die Nummer des Merksatzes. Ausnahmen – " + ausn.join(" · "), 12, "#5a4632")
+        .setWordWrapWidth(f.b, true);
+    } else if (nr === 2) {
+      var R = KAMPF.REGEL;
+      this.tabelle(f.x, f.y, [f.b * 0.2, f.b * 0.8], [
+        ["", "Wirkung im Kampf"],
+        ["Sauerstoff", "Feuer braucht und verbraucht ihn. Fehlt er, erstickt die Flamme."],
+        ["Wärme", "Je 30 Wärme +1 E je Runde für beide. Ab 50 ist Zink formbar. Ab " + R.hitzeFeuer + " (und trocken) wirkt Feuer ×1,5."],
+        ["Feuchte", "Über 70 wirkt Feuer nur halb."],
+        ["Energie (E)", "Jede Runde +3, höchstens " + KAMPF.AE_MAX + ". Kraft sammeln +2, Gasbrenner +4 (einmal je Kampf)."],
+        ["Schutz", "Ein Schutz schwächt den nächsten Treffer."]
+      ], 12);
+    } else {
+      var ids = [];
+      stand.gruppe.concat(stand.lager).forEach(function (el) {
+        KAMPF.angriffe(el).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
+      });
+      if (!ids.length) { this.text(f.x, f.y, "Noch kennt keines deiner Elementals einen Angriff.", 13); return; }
+      var z4 = [["Angriff", "Typ", "Treffer", "Was geschieht"]];
+      ids.forEach(function (id) {
+        var r = REAKTIONEN[id];
+        var typ = r.typ === "schutz" ? "Schutz" : r.typ === "stoer" ? "Störung" : TYPEN[r.typ].name;
+        z4.push([r.name, typ, (r.genau || 100) + " %", [r.chemie || r.text].concat(angriffZusatz(id).filter(function (z) { return z.indexOf("Treffer") !== 0; })).join(" ")]);
+      });
+      this.tabelle(f.x, f.y, [f.b * 0.17, f.b * 0.1, f.b * 0.08, f.b * 0.65], z4, 11);
+    }
   }
 
   // ============================================================

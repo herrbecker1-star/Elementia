@@ -131,8 +131,9 @@ class KampfSzene extends Phaser.Scene {
     if (window.PROBE_MELDEN) window.PROBE_MELDEN("Runde " + this.k.runde + " bereit");
     this.zeigeText(einleitung && !log.length ? einleitung : "Was tust du?");
     this.zeigeHauptmenue();
-    // Prüfschalter &menue=angriff: das Angriffsmenü gleich offen (für Fotos)
-    if (/[?&]menue=angriff\b/.test(location.search)) this.menueReaktion();
+    // Prüfschalter &menue=mehr / feld / bestimmen / fangen: gleich offen (für Fotos)
+    if (/[?&]menue=mehr\b/.test(location.search)) this.menueMehr();
+    if (/[?&]menue=fangen\b/.test(location.search)) this.menueFangen();
     if (/[?&]menue=feld\b/.test(location.search)) this.feldErklaeren();
     if (/[?&]menue=bestimmen\b/.test(location.search)) this.menueBestimmen();
   }
@@ -303,17 +304,22 @@ class KampfSzene extends Phaser.Scene {
     this.knoepfe = [];
   }
 
-  // eintraege: [{ text, aktiv, beiKlick }]
+  // eintraege: [{ text, aktiv, beiKlick, unten, symbol, platz }]
+  // platz: [spalte, zeile] im Hauptmenü, "mehr" für den schmalen Knopf
+  // rechts. Ohne platz ordnet anordnen() die Knöpfe als Raster.
   zeigeKnoepfe(eintraege) {
-    var szene = this;
+    var szene = this, haupt = eintraege.some(function (e) { return e.platz; });
     this.leereKnoepfe();
     this.knoepfe = eintraege.map(function (e) {
       var k = baueKnopf(szene, e.text, function () {
         if (szene.beschaeftigt) return;
         if (e.aktiv === false) { if (e.grund) szene.zeigeText(e.grund); return; }
         e.beiKlick();
-      }, { hoehe: eintraege.length > 6 ? 30 : 38, schrift: eintraege.length > 6 ? 12 : 13, mindestbreite: 60 });
+      }, { hoehe: haupt ? (e.platz === "mehr" ? 90 : 42) : eintraege.length > 6 ? 30 : 38,
+           schrift: haupt ? 13 : eintraege.length > 6 ? 12 : 13, mindestbreite: haupt ? 20 : 60,
+           unten: e.unten, symbol: e.symbol });
       if (e.aktiv === false) k.setAlpha(0.45);
+      k.platz = e.platz;
       return k;
     });
     this.anordnen();
@@ -321,47 +327,44 @@ class KampfSzene extends Phaser.Scene {
 
   zurueck() { return { text: "‹ Zurück", beiKlick: this.zeigeHauptmenue.bind(this) }; }
 
+  // Seit Fassung 19 nach der Skizze drehbuch\Menüband im Kampf.png: Die
+  // Angriffe liegen direkt auf Knöpfen – Name, darunter die Stärke und ein
+  // Symbol (Schwert Schaden, Schild Schutz, Blitz Störung). Daneben Flucht
+  // (Flagge) und Fangen (Reagenzglas), rechts „⋯“ für alles Weitere.
+  // Treffer-% und Nebenwirkungen stehen nur noch im Menü (Gruppe → Elemental).
   zeigeHauptmenue() {
-    var szene = this, k = this.k;
-    this.zeigeKnoepfe([
-      { text: "Angriff", beiKlick: function () { szene.menueReaktion(); } },
-      { text: "Untersuchen", beiKlick: function () { szene.menueUntersuchen(); } },
-      { text: "Bestimmen", aktiv: k.wild && !k.erkannt, grund: k.wild ? "Du weißt schon, was es ist." : "Den Stoff eines Stoffmeisters kennst du – er hat ihn dir genannt.", beiKlick: function () { szene.menueBestimmen(); } },
-      { text: "Fangen", aktiv: k.wild, beiKlick: function () { szene.menueFangen(); } },
-      { text: "Wechseln", aktiv: this.stand.gruppe.filter(function (el) { return el.zh > 0; }).length > 1, grund: "Niemand sonst ist bereit.", beiKlick: function () { szene.menueWechseln(); } },
-      { text: "Fliehen", aktiv: k.wild, beiKlick: function () { szene.ausfuehren({ typ: "fliehen" }); } }
-    ]);
+    var szene = this, k = this.k, el = KAMPF.aktiv(k, "spieler");
+    var eintraege = KAMPF.angriffe(el).slice(0, 4).map(function (id, i) {
+      var r = REAKTIONEN[id], grund = KAMPF.hindernis(k, "spieler", id);
+      var schutz = r.typ === "schutz", stoer = r.typ === "stoer";
+      var st = schutz || stoer ? "" : r.typ === "waerme" ? KAMPF.waermeStaerke(k, r) : KAMPF.staerke(el, id);
+      return { text: r.name, unten: String(st), symbol: schutz ? "schild" : stoer ? "blitz" : "schwert",
+        aktiv: !grund, grund: grund, platz: [i % 2, Math.floor(i / 2)],
+        beiKlick: function () { szene.ausfuehren({ typ: "reaktion", id: id }); } };
+    });
+    eintraege.push(
+      { text: "Flucht", symbol: "flagge", platz: [2, 0], aktiv: k.wild, grund: "Vor einem Stoffmeister läuft man nicht weg.",
+        beiKlick: function () { szene.ausfuehren({ typ: "fliehen" }); } },
+      { text: "Fangen", symbol: "glas", platz: [2, 1], aktiv: k.wild, grund: "Das Elemental eines Stoffmeisters fängt man nicht.",
+        beiKlick: function () { szene.menueFangen(); } },
+      { text: "⋯", platz: "mehr", beiKlick: function () { szene.menueMehr(); } }
+    );
+    this.zeigeKnoepfe(eintraege);
   }
 
-  menueReaktion() {
+  // Alles, was nicht auf das Menüband passt
+  menueMehr() {
     var szene = this, k = this.k;
-    var el = KAMPF.aktiv(k, "spieler");
-    // Jeder Knopf zeigt Stärke und Energie; Trefferchance und Nebenwirkung
-    // in % stehen im Text daneben (auf dem Knopf ist dafür kein Platz – bei
-    // vier Spalten am Handy schon gar nicht). Ist der Gegner erkannt, steht statt der Stärke,
-    // welchen Anteil seiner vollen LP ein Treffer etwa nimmt (25 % ≈ vier
-    // Treffer). Bei einem unerkannten Gegner verriete das den Stoff – dann
-    // die Stärke des Angriffs (Skala bis 100, seit Fassung 12).
-    var kennt = !k.wild || k.erkannt;
-    var gegnerLP = KAMPF.werte(KAMPF.aktiv(k, "gegner")).zhMax;
-    var eintraege = KAMPF.angriffe(el).map(function (id) {
-      var r = REAKTIONEN[id], grund = KAMPF.hindernis(k, "spieler", id), staerke;
-      if (r.typ === "schutz") staerke = "Schutz";
-      else if (r.typ === "stoer") staerke = "Störung";
-      else if (kennt) staerke = "≈ " + Math.round(KAMPF.schaetzeSchaden(k, "spieler", id, true) / gegnerLP * 100) + " % LP";
-      else staerke = r.typ === "waerme" ? "Stärke " + KAMPF.waermeStaerke(k, r) : "Stärke " + KAMPF.staerke(el, id);
-      return { text: r.name + "\n" + staerke + " · " + r.ae + " E", aktiv: !grund, grund: grund, beiKlick: function () { szene.ausfuehren({ typ: "reaktion", id: id }); } };
-    });
-    eintraege.push({ text: "Kraft sammeln", beiKlick: function () { szene.ausfuehren({ typ: "sammeln" }); } });
+    var eintraege = [
+      { text: "Untersuchen", beiKlick: function () { szene.menueUntersuchen(); } },
+      { text: "Bestimmen", aktiv: k.wild && !k.erkannt, grund: k.wild ? "Du weißt schon, was es ist." : "Den Stoff eines Stoffmeisters kennst du – er hat ihn dir genannt.", beiKlick: function () { szene.menueBestimmen(); } },
+      { text: "Wechseln", aktiv: this.stand.gruppe.filter(function (el) { return el.zh > 0; }).length > 1, grund: "Niemand sonst ist bereit.", beiKlick: function () { szene.menueWechseln(); } },
+      { text: "Kraft sammeln\n+2 E", beiKlick: function () { szene.ausfuehren({ typ: "sammeln" }); } }
+    ];
     if (this.stand.werkzeuge.indexOf("gasbrenner") >= 0) {
       eintraege.push({ text: "Gasbrenner\n+4 E", aktiv: !k.brennerBenutzt, grund: "Das Gas ist für diesen Kampf verbraucht.", beiKlick: function () { szene.ausfuehren({ typ: "brenner" }); } });
     }
     eintraege.push(this.zurueck());
-    var zs = k.seiten.gegner.status;
-    var zusatz = KAMPF.angriffe(el).filter(function (id) { return angriffZusatz(id).length; })
-      .map(function (id) { return REAKTIONEN[id].name + ": " + angriffZusatz(id).join(", ") + "."; }).join(" ");
-    this.zeigeText((zusatz ? zusatz + " " : "") + "Energie (E) " + k.seiten.spieler.ae + "/" + KAMPF.AE_MAX + ". Jede Runde +3, Wärme im Feld gibt mehr. Kraft sammeln: +2." +
-      (zs.schutz || zs.tarnung ? " Der Gegner ist geschützt: Dein nächster Treffer wirkt schwächer." : ""));
     this.zeigeKnoepfe(eintraege);
   }
 
@@ -601,20 +604,62 @@ class KampfSzene extends Phaser.Scene {
     if (this.feldZone.input) this.feldZone.input.hitArea.setSize(MASS.px(186), MASS.px(62));
     this.zeichneFeld(this.letzteLage && this.letzteLage.feld);
 
-    // Untere Leiste: Text links, Knöpfe rechts
-    var knopfB = Math.min(MASS.px(420), b * 0.52);
-    this.leiste.clear().fillStyle(FARBE.papier, 0.97).fillRect(0, raumH, b, leisteH)
-      .lineStyle(MASS.px(3), FARBE.papierRand, 1).lineBetween(0, raumH, b, raumH);
-    this.text.setPosition(rand + MASS.px(6), raumH + MASS.px(10)).setWordWrapWidth(b - knopfB - 3 * rand, true);
+    // Untere Leiste (seit Fassung 19): links der Kampftext auf einer
+    // Schriftrolle, rechts das Menüband in einem Rahmen.
+    var knopfB = Math.min(MASS.px(440), b * 0.54), innen = MASS.px(8);
+    var rahmenX = b - rand - knopfB - innen, rahmenB = knopfB + 2 * innen;
+    var rolleB = rahmenX - 2 * rand, rolleY = raumH + MASS.px(10), rolleH = leisteH - MASS.px(24);
+    var g = this.leiste.clear();
+    g.fillStyle(0x101418, 0.55).fillRect(0, raumH, b, leisteH);
+    this.zeichneRolle(g, rand, rolleY, rolleB, rolleH);
+    g.fillStyle(FARBE.papier, 0.96).fillRoundedRect(rahmenX, raumH + MASS.px(4), rahmenB, leisteH - MASS.px(8), MASS.px(18))
+      .lineStyle(MASS.px(3), FARBE.papierRand, 1).strokeRoundedRect(rahmenX, raumH + MASS.px(4), rahmenB, leisteH - MASS.px(8), MASS.px(18));
+    var rolleRand = MASS.px(22);
+    this.text.setPosition(rand + rolleRand, rolleY + MASS.px(8)).setWordWrapWidth(rolleB - 2 * rolleRand, true);
 
-    // Bis sechs Knöpfe in zwei Reihen; mehr (Bestimmen: sieben) in vier Spalten.
-    var spalten = this.knoepfe.length > 6 ? 4 : 3, luecke = MASS.px(6);
+    var luecke = MASS.px(6), x0 = rahmenX + innen, y0 = raumH + MASS.px(10);
+    if (this.knoepfe.some(function (k) { return k.platz; })) {
+      // Hauptmenü: 2 × 3 Knöpfe, rechts der schmale „⋯“ über beide Reihen
+      var mehrB = MASS.px(30), kh2 = MASS.px(42);
+      var kb2 = (knopfB - mehrB - 3 * luecke) / 3;
+      this.knoepfe.forEach(function (k) {
+        if (k.platz === "mehr") {
+          k.setzeBreite(mehrB / MASS.dpr);
+          k.setPosition(x0 + knopfB - mehrB / 2, y0 + kh2 + luecke / 2);
+          return;
+        }
+        k.setzeBreite(kb2 / MASS.dpr);
+        k.setPosition(x0 + k.platz[0] * (kb2 + luecke) + kb2 / 2, y0 + k.platz[1] * (kh2 + luecke) + kh2 / 2);
+      });
+      return;
+    }
+    // Untermenüs: bis sechs Knöpfe in zwei Reihen; mehr (Bestimmen: neun) in vier Spalten.
+    var spalten = this.knoepfe.length > 6 ? 4 : 3;
     var kh = MASS.px(this.knoepfe.length > 6 ? 30 : 38);
     var kb = (knopfB - (spalten - 1) * luecke) / spalten;
-    var x0 = b - rand - knopfB, y0 = raumH + MASS.px(10);
     this.knoepfe.forEach(function (k, i) {
       k.setzeBreite(kb / MASS.dpr);
       var sp = i % spalten, ze = Math.floor(i / spalten);
       k.setPosition(x0 + sp * (kb + luecke) + kb / 2, y0 + ze * (kh + luecke) + kh / 2);
+    });
+  }
+
+  // Eine Schriftrolle: Papierbahn zwischen zwei gerollten Enden, unten
+  // links ein Zipfel wie bei einer Sprechblase.
+  zeichneRolle(g, x, y, b, h) {
+    var r = MASS.px(9), dunkel = 0xb89a66, rand = FARBE.papierRand, linie = MASS.px(2);
+    var zx = x + b * 0.22, zh = MASS.px(8);
+    g.fillStyle(FARBE.papier, 0.97).fillRect(x + r, y + MASS.px(4), b - 2 * r, h - MASS.px(8));
+    g.fillTriangle(zx - MASS.px(10), y + h - MASS.px(5), zx + MASS.px(10), y + h - MASS.px(5), zx - MASS.px(2), y + h + zh);
+    g.lineStyle(linie, rand, 1)
+      .lineBetween(x + r, y + MASS.px(4), x + b - r, y + MASS.px(4))
+      .lineBetween(x + r, y + h - MASS.px(4), zx - MASS.px(10), y + h - MASS.px(4))
+      .lineBetween(zx + MASS.px(10), y + h - MASS.px(4), x + b - r, y + h - MASS.px(4))
+      .lineBetween(zx - MASS.px(10), y + h - MASS.px(4), zx - MASS.px(2), y + h + zh)
+      .lineBetween(zx + MASS.px(10), y + h - MASS.px(4), zx - MASS.px(2), y + h + zh);
+    [x, x + b - 2 * r].forEach(function (rx) {
+      g.fillStyle(0xe6d3ab, 1).fillRoundedRect(rx, y, 2 * r, h, r);
+      g.fillStyle(dunkel, 1).fillRect(rx + r * 0.9, y + r * 0.6, r * 0.5, h - r * 1.2);
+      g.lineStyle(linie, rand, 1).strokeRoundedRect(rx, y, 2 * r, h, r);
     });
   }}

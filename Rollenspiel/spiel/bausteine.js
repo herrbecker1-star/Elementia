@@ -57,6 +57,38 @@ var FARBE = {
   nacht: 0x101418
 };
 
+// Kleine Symbole für Knöpfe (seit Fassung 19): Schwert = macht Schaden,
+// Schild = schützt, Blitz = stört, Flagge = Flucht, Reagenzglas = Fangen.
+// Gezeichnet statt Emoji – die sehen auf jedem Handy anders aus.
+// Liefert den Texturschlüssel; die Textur entsteht beim ersten Gebrauch.
+function symbolTextur(szene, name) {
+  var s = MASS.px(18), schluessel = "symbol-" + name + "-" + s;
+  if (szene.textures.exists(schluessel)) return schluessel;
+  var u = s / 16, g = szene.make.graphics({ add: false });
+  var P = function (liste) { return liste.map(function (p) { return { x: p[0] * u, y: p[1] * u }; }); };
+  if (name === "schwert") {
+    g.lineStyle(2.4 * u, 0xdfe6ea).lineBetween(5 * u, 11 * u, 14.5 * u, 1.5 * u);   // Klinge
+    g.lineStyle(2.2 * u, 0xd9a63a).lineBetween(2.5 * u, 8.5 * u, 7.5 * u, 13.5 * u); // Parierstange
+    g.lineStyle(2.4 * u, 0x8a5a32).lineBetween(1.5 * u, 14.5 * u, 4.5 * u, 11.5 * u); // Griff
+  } else if (name === "schild") {
+    var sechs = P([[8, 1], [14, 4.5], [14, 11.5], [8, 15], [2, 11.5], [2, 4.5]]);
+    g.fillStyle(0x6aa6e0).fillPoints(sechs, true);
+    g.lineStyle(1.6 * u, 0xdfe6ea).strokePoints(sechs, true, true);
+  } else if (name === "blitz") {
+    g.fillStyle(0xf5d547).fillPoints(P([[9, 0.5], [3, 9], [7.5, 9], [5.5, 15.5], [13, 6], [8.5, 6], [11, 0.5]]), true);
+  } else if (name === "flagge") {
+    g.lineStyle(1.8 * u, 0xc9a66b).lineBetween(3 * u, 1 * u, 3 * u, 15.5 * u);
+    g.fillStyle(0xf4ead5).fillPoints(P([[3.8, 1.5], [14, 3.5], [11, 5.5], [14, 8], [3.8, 8.5]]), true);
+  } else if (name === "glas") {
+    g.lineStyle(1.6 * u, 0xdfe6ea).strokeRoundedRect(5 * u, 1 * u, 6 * u, 14 * u, { tl: 0, tr: 0, bl: 3 * u, br: 3 * u });
+    g.fillStyle(0x7fd07f).fillRoundedRect(5.8 * u, 8 * u, 4.4 * u, 6.2 * u, { tl: 0, tr: 0, bl: 2.2 * u, br: 2.2 * u });
+    g.lineStyle(1.6 * u, 0xdfe6ea).lineBetween(3.5 * u, 1 * u, 12.5 * u, 1 * u);
+  }
+  g.generateTexture(schluessel, s, s);
+  g.destroy();
+  return schluessel;
+}
+
 // Ein rechteckiger Knopf mit Beschriftung. Reagiert auf pointerup,
 // nicht pointerdown: Nur so erlauben Browser Vollbild und
 // Zwischenablage aus dem Handler heraus, und ein Finger, der
@@ -72,6 +104,30 @@ function baueKnopf(szene, text, beiKlick, optionen) {
   }).setOrigin(0.5);
   gruppe.add([grund, beschriftung]);
 
+  // optionen.unten: zweite Zeile (z. B. die Stärke), optionen.symbol: ein
+  // Symbol (symbolTextur) – rechts neben der zweiten Zeile, ohne sie
+  // rechts neben dem Text. Beides als Gruppe mittig.
+  if (optionen.unten !== undefined || optionen.symbol) {
+    var unten = szene.add.text(0, 0, optionen.unten || "", {
+      fontFamily: SCHRIFT.familie, fontSize: schrift + "px", color: FARBE.knopfText, fontStyle: "bold"
+    }).setOrigin(0, 0.5);
+    gruppe.add(unten);
+    var bild = optionen.symbol ? szene.add.image(0, 0, symbolTextur(szene, optionen.symbol)).setOrigin(0, 0.5) : null;
+    if (bild) gruppe.add(bild);
+    var zweiZeilen = optionen.unten !== undefined;
+    var luecke = unten.width && bild ? MASS.px(5) : 0;
+    if (!zweiZeilen && bild) {
+      var gesamt = beschriftung.width + MASS.px(6) + bild.width;
+      beschriftung.setX(-gesamt / 2 + beschriftung.width / 2);
+      bild.setPosition(gesamt / 2 - bild.width, 0);
+    } else {
+      beschriftung.setY(-hoehe * 0.2);
+      var zb = unten.width + luecke + (bild ? bild.width : 0), zy = hoehe * 0.22;
+      unten.setPosition(-zb / 2, zy);
+      if (bild) bild.setPosition(-zb / 2 + unten.width + luecke, zy);
+    }
+  }
+
   var breite = 0;
   function zeichne(aktiv) {
     grund.clear();
@@ -82,6 +138,8 @@ function baueKnopf(szene, text, beiKlick, optionen) {
   }
   function setzeBreite(b) {
     breite = b || Math.max(MASS.px(optionen.mindestbreite || 160), beschriftung.width + MASS.px(32));
+    // Lange Namen (Schleichendes Gas) auf schmalen Knöpfen etwas kleiner
+    beschriftung.setScale(Math.min(1, (breite - MASS.px(8)) / beschriftung.width));
     gruppe.setSize(breite, hoehe);
     // Die Trefferfläche wird beim setInteractive einmal angelegt und
     // wächst nicht von selbst mit.

@@ -228,14 +228,13 @@ var DIALOGE = {
         { erzaehl: "Lumi hat keine Eltern mehr. Du passt auf sie auf, seit du denken kannst. Ihr seid nicht verwandt, aber beste Freunde." },
         { sag: "Lumi", text: "Du hast eins! Ich hab das andere bekommen. Und Funzel, das kleine Licht hier, ist mir einfach gefolgt." },
         { sag: "Lumi", text: "Übungskampf? Meins gegen deins!" },
-        // Lumi hat den Starter, den man nicht gewählt hat – Stufe 1 gegen deine 3,
-        // ohne Starterbonus. Fassung 13 (gedämpfte Stufen): Mit Lumi auf Stufe 2
-        // gewann der Eisen-Starter nur 52 %, auf Stufe 1 sind es 95 % (Magnesium-
-        // Starter 100 %). Gemessen 27.10.2026, Prüfstand 2d.
+        // Lumi hat den Starter, den man nicht gewählt hat – Stufe 3 gegen deine 4,
+        // ohne Starterbonus (Wunsch des Nutzers, Fassung 19). Bis Fassung 18
+        // Stufe 1; Messung siehe Prüfstand 2d.
         { wennGleich: ["starter", "eisen"], dann: [
-          { kampf: { gegner: [{ art: "magnesium", stufe: 1 }], wild: false, name: "Lumi", ort: "dorf", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } }
+          { kampf: { gegner: [{ art: "magnesium", stufe: 3 }], wild: false, name: "Lumi", ort: "dorf", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } }
         ], sonst: [
-          { kampf: { gegner: [{ art: "eisen", stufe: 1 }], wild: false, name: "Lumi", ort: "dorf", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } }
+          { kampf: { gegner: [{ art: "eisen", stufe: 3 }], wild: false, name: "Lumi", ort: "dorf", feld: { sauerstoff: 100, waerme: 20, feuchte: 30 } } }
         ] },
         { wennGleich: ["letzter_kampf", "sieg"], dann: [
           { sag: "Lumi", text: "Gut! Funzel flackert vor Freude." }

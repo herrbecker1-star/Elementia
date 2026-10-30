@@ -42,7 +42,7 @@ var ARTEN = {
     steckbrief: { farbe: "grau", glanz: true, magnetisch: true, leitfaehig: true, verformbar: true, brennt: false },
     form: "stueck",
     reaktionen: ["blankhieb", "funkenflug", "standfest", "hieb"],
-    lernset: { 1: ["leichtschlag", "hieb", "standfest", "blankhieb"], 4: ["funkenflug"], 8: ["hammerschlag"], 12: ["korrosion"], 16: ["anlaufen"],
+    lernset: { 1: ["leichtschlag", "hieb", "standfest"], 4: ["funkenflug"], 8: ["blankhieb"], 12: ["korrosion"], 16: ["anlaufen"],
       20: ["haerten"], 24: ["zuendfunke"], 28: ["wuchtstoss"], 32: ["waermeleitung"], 36: ["ansturm"], 40: ["flaechenbrand"],
       45: ["weissglut"], 50: ["schmiedehammer"] }
   },
@@ -84,7 +84,7 @@ var ARTEN = {
     steckbrief: { farbe: "rötlich", glanz: true, magnetisch: false, leitfaehig: true, verformbar: true, brennt: false },
     form: "stueck",
     reaktionen: ["blankhieb", "waermeleitung", "anlaufen", "beissen"],
-    lernset: { 1: ["leichtschlag", "beissen", "standfest", "blankhieb"], 4: ["waermeleitung"], 8: ["hammerschlag"], 12: ["anlaufen"], 16: ["wetterhaut"],
+    lernset: { 1: ["leichtschlag", "beissen", "standfest"], 4: ["waermeleitung"], 8: ["blankhieb"], 12: ["anlaufen"], 16: ["wetterhaut"],
       20: ["kurzschluss"], 24: ["funkenflug"], 28: ["schwermetall"], 32: ["wuchtstoss"], 36: ["ansturm"], 40: ["weissglut"],
       45: ["lichtbogen"], 50: ["schmiedehammer"] }
   },
