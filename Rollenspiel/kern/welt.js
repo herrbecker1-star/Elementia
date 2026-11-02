@@ -2,15 +2,17 @@
 //  WELT – Tageszeit, Wetter und der Ort eines Kampfes
 //
 //  Reine Logik. Die Spielzeit läuft schneller als die echte: Eine
-//  Sekunde ist eine Spielminute, ein Tag dauert 24 Minuten. So erlebt
-//  auch, wer nur am Nachmittag spielt, eine Nacht – und damit die
-//  Elementals, die nur nachts erscheinen.
+//  Sekunde sind drei Spielminuten, ein Tag dauert 8 Minuten (seit
+//  Fassung 21; vorher 24 – Handytest: „die Tageszeit muss schneller
+//  vergehen“). Die Uhr läuft nur in der Oberwelt, nicht in Dialog,
+//  Menü oder Kampf. Nach gut vier Minuten kommt die erste Nacht – und
+//  damit die Elementals, die nur nachts erscheinen.
 // ============================================================
 
 var WELT = (function () {
   "use strict";
 
-  var MINUTEN_JE_SEKUNDE = 1;
+  var MINUTEN_JE_SEKUNDE = 3;
   var START_MINUTE = 7 * 60;                   // 7:00 Uhr, der Geburtstagsmorgen
 
   var PHASEN = ["morgen", "tag", "abend", "nacht"];
@@ -18,9 +20,11 @@ var WELT = (function () {
   var WETTER_NAME = { klar: "klar", hitze: "Hitze", nebel: "Nebel", regen: "Regen", gewitter: "Gewitter" };
 
   // Wetter je Region: Gewichte. Die Feuerlande sind trocken und heiß.
+  // Seit Fassung 21 Nebel 2 → 1 (Handytest: „sehr viel Nebel“).
   var KLIMA = {
-    feuerlande: { klar: 5, hitze: 3, nebel: 2, regen: 1.5, gewitter: 0.5 }
+    feuerlande: { klar: 5, hitze: 3, regen: 2, nebel: 1, gewitter: 1 }
   };
+  var WETTER_DAUER = [120, 300];               // Spielminuten: 40–100 s Oberwelt
 
   function phase(minute) {
     var h = (minute / 60) % 24;
@@ -36,12 +40,18 @@ var WELT = (function () {
     return (h < 10 ? "0" : "") + h + ":" + (mm < 10 ? "0" : "") + mm;
   }
 
-  function neuesWetter(klima, zufall) {
+  // Seit Fassung 21 nie zweimal dasselbe Wetter hintereinander (bisher:
+  // „Wetter variabler“). Ohne „bisher“ wie zuvor.
+  function neuesWetter(klima, zufall, bisher) {
     var gewichte = KLIMA[klima], summe = 0, art;
-    for (art in gewichte) summe += gewichte[art];
-    var r = zufall() * summe;
-    for (art in gewichte) { r -= gewichte[art]; if (r <= 0) return art; }
-    return "klar";
+    for (art in gewichte) if (art !== bisher) summe += gewichte[art];
+    var r = zufall() * summe, letzte = "klar";
+    for (art in gewichte) {
+      if (art === bisher) continue;
+      letzte = art;
+      r -= gewichte[art]; if (r <= 0) return art;
+    }
+    return letzte;
   }
 
   // Legt Zeit und Wetter im Spielstand an, falls sie fehlen.
@@ -58,8 +68,11 @@ var WELT = (function () {
     var altPhase = phase(stand.zeit), altWetter = stand.wetter.art;
     stand.zeit += sekunden * MINUTEN_JE_SEKUNDE;
     if (stand.zeit >= stand.wetter.bis) {
-      // Ein Wetter hält drei bis acht Spielstunden (3 bis 8 Minuten).
-      stand.wetter = { art: neuesWetter(stand.klima || "feuerlande", zufall), bis: stand.zeit + 180 + zufall() * 300 };
+      // Ein Wetter hält zwei bis fünf Spielstunden (40 bis 100 s).
+      stand.wetter = {
+        art: neuesWetter(stand.klima || "feuerlande", zufall, stand.wetter.art),
+        bis: stand.zeit + WETTER_DAUER[0] + zufall() * (WETTER_DAUER[1] - WETTER_DAUER[0])
+      };
     }
     return { phase: phase(stand.zeit) !== altPhase, wetter: stand.wetter.art !== altWetter };
   }

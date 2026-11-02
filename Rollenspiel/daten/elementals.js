@@ -121,6 +121,19 @@ var ARTEN = {
     stoff: { haerte: 9.3, dichte: 2.34, schmelz: 2076 },
     steckbrief: { farbe: "schwarz", glanz: true, magnetisch: false, leitfaehig: false, verformbar: false, brennt: true },
     form: "stueck",
+  },
+
+  // Seit Fassung 21 (Handytest: „Kohlenstoff, Silicium und Bor müssen
+  // häufiger auftreten“). Halbmetall wie Bor: glänzt wie ein Metall und
+  // splittert doch. Als Halbleiter leitet es so schwach, dass Maras
+  // Lämpchen dunkel bleibt. Gleiche Befunde wie Bor – nur die Farbe
+  // (dunkelgrau statt schwarz) und die Flammprobe trennen beide.
+  silicium: {
+    name: "Silicium", formel: "Si", klasse: "Nichtmetall", gruppe: "hg4", bild: "silicium", seltenheit: "selten",
+    beschreibung: "Grau glänzende, spröde Kristalle – sieht aus wie Metall und splittert doch. Sand und Glas sind Siliciumdioxid; aus reinem Silicium sind Computerchips.",
+    stoff: { haerte: 6.5, dichte: 2.33, schmelz: 1414 },
+    steckbrief: { farbe: "dunkelgrau", glanz: true, magnetisch: false, leitfaehig: false, verformbar: false, brennt: false },
+    form: "stueck",
   }
 };
 
