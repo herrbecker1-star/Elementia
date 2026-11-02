@@ -8,8 +8,9 @@
 //  Chemisch begründet, wo es geht:
 //   · Kohlenstoff am Meiler – nachts leuchtet dort die Glut. Holzkohle-
 //     reste liegen auch auf Wiese, Hain und im Wald.
-//   · Schwefel an der warmen Quelle, bei Nebel oder Hitze, morgens
-//     und abends – Schwefelquellen dampfen, wenn die Luft kühl ist.
+//   · Schwefel an der warmen Quelle, seit Fassung 22 zu jeder Zeit; bei
+//     Nebel oder Hitze, morgens und abends noch häufiger – Schwefel-
+//     quellen dampfen, wenn die Luft kühl ist.
 //   · Bor an warmen Quellen: Borsäure tritt in heißen Quellen aus.
 //   · Silicium (seit Fassung 21) im Sand: auf Wiese, Hain und im Wald.
 //   · Magnesium im Garten, bei Tag – Mutter: „In jeder grünen
@@ -31,8 +32,9 @@ var AUFTRITTE = {
     { art: "eisen",       stufe: [2, 3], gewicht: 4, biome: ["schmiede"], zeit: ["morgen", "tag"] },
     { art: "magnesium",   stufe: [2, 3], gewicht: 4, biome: ["garten"], zeit: ["morgen", "tag"], wetter: ["klar", "hitze"] },
     { art: "kohlenstoff", stufe: [3, 5], gewicht: 6, biome: ["meiler"] },
+    { art: "schwefel",    stufe: [4, 6], gewicht: 4, biome: ["quelle"] },
     { art: "schwefel",    stufe: [4, 6], gewicht: 3, biome: ["quelle"], zeit: ["morgen", "abend"], wetter: ["nebel", "hitze"] },
-    { art: "bor",         stufe: [4, 5], gewicht: 3, biome: ["quelle"] }
+    { art: "bor",         stufe: [4, 5], gewicht: 2, biome: ["quelle"] }
     // Seit Fassung 17 nicht mehr wild: Kupfer und Aluminium. Man sieht sie
     // bei Gildenmeisterin Ilka; fangbar sind sie erst in den Clans der
     // Erzhügel (Entscheidung des Autors, 29.10.2026).
@@ -47,6 +49,7 @@ var AUFTRITTE = {
     { art: "silicium",    stufe: [3, 5], gewicht: 3, biome: ["wald"] },
     { art: "bor",         stufe: [4, 6], gewicht: 1, biome: ["wald"] },
     { art: "eisen",       stufe: [3, 5], gewicht: 2, biome: ["wald"], nurAbseits: true },
+    { art: "schwefel",    stufe: [4, 6], gewicht: 4, biome: ["quelle"] },
     { art: "schwefel",    stufe: [4, 6], gewicht: 3, biome: ["quelle"], zeit: ["morgen", "abend"], wetter: ["nebel", "hitze"] },
     // Seit Fassung 13: Bor an der warmen Quelle – Borsäure tritt in heißen
     // Quellen aus (die Dampfquellen der Toskana). Seit Fassung 21 bei
@@ -71,7 +74,7 @@ var FUNDHINWEISE = {
   zink:        { vage: "„Auf offenem Feld grasen die Stillen mit den bläulichen Platten.“",
                  genau: "Auf Wiesen und im Hain, zu jeder Zeit." },
   schwefel:    { vage: "„Wo das Wasser warm ist und nach faulen Eiern riecht – aber nicht zu jeder Stunde.“",
-                 genau: "An der warmen Quelle, morgens und abends, bei Nebel oder Hitze." },
+                 genau: "An den warmen Quellen in Stoffingen und im Kolbenwald. Morgens und abends bei Nebel oder Hitze am häufigsten." },
   // Seit Fassung 17: nur bei Ilka zu sehen, fangbar in den Erzhügeln
   kupfer:      { vage: "„Das rote Metall dient der Gilde der Flammen. Frei begegnet es dir erst bei den Clans der Erzhügel.“",
                  genau: "Gildenmeisterin Ilka kämpft damit. Wild erst bei den Clans der Erzhügel." },
