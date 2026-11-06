@@ -113,7 +113,7 @@ class BuchSzene extends Phaser.Scene {
   // ändert man die Reihenfolge; Antippen der Zeile zeigt die Details.
   zeigeGruppe(f) {
     var szene = this, stand = this.stand;
-    if (!stand.gruppe.length) { this.text(f.x, f.y, "Noch begleitet dich kein Elemental.", 16); return; }
+    if (!stand.gruppe.length) { this.text(f.x, f.y, "Noch begleitet dich kein Elemon.", 16); return; }
     var luecke = MASS.px(5), fussH = MASS.px(18);
     var zeileH = Math.min(MASS.px(64), (f.h - fussH - luecke * (SPIELSTAND.GRUPPE_MAX - 1)) / SPIELSTAND.GRUPPE_MAX);
     var knopfB = MASS.px(44), rechts = f.x + f.b;
@@ -150,7 +150,7 @@ class BuchSzene extends Phaser.Scene {
         szene.inhalt.push(k);
       });
     });
-    this.text(f.x, f.y + f.h - fussH + MASS.px(2), (stand.lager.length ? "Im Lager warten " + stand.lager.length + " weitere Elementals. " : "") +
+    this.text(f.x, f.y + f.h - fussH + MASS.px(2), (stand.lager.length ? "Im Lager warten " + stand.lager.length + " weitere Elemons. " : "") +
       "Wer oben steht, beginnt den Kampf. Antippen zeigt Werte und Angriffe.", 12, "#5a4632");
   }
 
@@ -161,7 +161,7 @@ class BuchSzene extends Phaser.Scene {
     var szene = this, stand = this.stand;
     if (!stand.lager.length) {
       this.text(f.x, f.y, "Das Lager ist leer.", 16);
-      this.text(f.x, f.y + MASS.px(26), "Fängst du mehr Elementals, als in deine Gruppe passen (" + SPIELSTAND.GRUPPE_MAX + "), warten sie hier.", 13, "#5a4632")
+      this.text(f.x, f.y + MASS.px(26), "Fängst du mehr Elemons, als in deine Gruppe passen (" + SPIELSTAND.GRUPPE_MAX + "), warten sie hier.", 13, "#5a4632")
         .setWordWrapWidth(f.b, true);
       return;
     }
@@ -187,7 +187,7 @@ class BuchSzene extends Phaser.Scene {
       k.setPosition(x + spB - MASS.px(6) - k.width / 2, y + zeileH / 2);
       szene.inhalt.push(k);
     });
-    this.text(f.x, f.y + f.h - MASS.px(16), "Ist die Gruppe voll, tauscht das Elemental mit dem untersten der Gruppe.", 12, "#5a4632");
+    this.text(f.x, f.y + f.h - MASS.px(16), "Ist die Gruppe voll, tauscht das Elemon mit dem untersten der Gruppe.", 12, "#5a4632");
   }
 
   // Eine einfache Tabelle: breiten in Pixeln, zeilen[0] ist die Kopfzeile.
@@ -299,7 +299,7 @@ class BuchSzene extends Phaser.Scene {
       stand.gruppe.concat(stand.lager).forEach(function (el) {
         KAMPF.angriffe(el).forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
       });
-      if (!ids.length) { this.text(f.x, f.y, "Noch kennt keines deiner Elementals eine Attacke.", 13); return; }
+      if (!ids.length) { this.text(f.x, f.y, "Noch kennt keines deiner Elemons eine Attacke.", 13); return; }
       var z4 = [["Attacke", "Typ", "Stärke", "Treffer", "E", "Effekt", "Erklärung"]];
       ids.forEach(function (id) {
         var a = ATTACKEN[id], st = KAMPF.staerke(null, id);
@@ -418,6 +418,22 @@ class BuchSzene extends Phaser.Scene {
     var h1 = this.tabelle(f.x, y, [halb * 0.5, halb * 0.2, halb * 0.3], zeilen, 11);
     this.text(f.x, y + h1 + MASS.px(4), "Ein Gefäß wird nur verbraucht, wenn der Bund gelingt.", 11, "#5a4632", "italic")
       .setWordWrapWidth(halb, true);
+    // Seit Fassung 26: Fennas Brot heilt die ganze Gruppe einmal unterwegs.
+    var szene = this;
+    if (stand.vorrat.brot > 0) {
+      var knopf = baueKnopf(this, "Brot essen", function () {
+        stand.vorrat.brot--;
+        stand.gruppe.concat(stand.lager).forEach(function (el) { el.zh = KAMPF.werte(el).zhMax; });
+        szene.gepaeckMeldung = "Alle Elemons sind satt und wieder bei Kräften.";
+        szene.neuZeichnen();
+      }, { hoehe: 32, schrift: 13, mindestbreite: 120 });
+      knopf.setPosition(f.x + knopf.width / 2, y + h1 + MASS.px(44));
+      this.inhalt.push(knopf);
+    }
+    if (this.gepaeckMeldung) {
+      this.text(f.x, y + h1 + MASS.px(66), this.gepaeckMeldung, 12, "#3f7a2a", "bold").setWordWrapWidth(halb, true);
+      this.gepaeckMeldung = null;
+    }
 
     var x2 = f.x + halb + MASS.px(12);
     var geraete = [["Werkzeug / Gerät", "wofür"]];

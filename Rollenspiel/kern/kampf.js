@@ -273,6 +273,8 @@ var KAMPF = (function () {
       var s = k.seiten[seite], el = s.gruppe[s.aktiv];
       if (!el) return;
       l.seiten[seite] = { nr: s.aktiv, art: el.art, name: name(k, seite), stufe: el.stufe, zh: el.zh, zhMax: werte(el).zhMax, ae: s.ae,
+        // Seit Fassung 23: Erfahrung für den lila Balken unter den LP
+        ep: el.ep || 0, epMax: epBisNaechste(el.stufe),
         status: JSON.parse(JSON.stringify(s.status)) };
     });
     return l;
@@ -287,7 +289,7 @@ var KAMPF = (function () {
   // bleibt namenlos – erkennen ist Teil des Spiels.
   function name(k, seite) {
     var el = aktiv(k, seite);
-    if (seite === "gegner" && k.wild && !k.erkannt) return "Das unbekannte Elemental";
+    if (seite === "gegner" && k.wild && !k.erkannt) return "Das unbekannte Elemon";
     return (el.spitzname || ARTEN[el.art].name);
   }
 
@@ -581,6 +583,41 @@ var KAMPF = (function () {
   // Was ein Zug in LP wert ist: Schaden × Trefferchance, dazu grob
   // geschätzt, was Status und Stufen bringen. drohung = was der Gegner
   // im nächsten Zug anrichten könnte.
+  // Der beste erwartete Schaden einer Seite im nächsten Zug (Schaden ×
+  // Trefferchance über alle Attacken, die sie gerade einsetzen kann).
+  function besterSchaden(k, seite) {
+    var b = 0;
+    angriffe(aktiv(k, seite)).forEach(function (id) {
+      if (!hindernis(k, seite, id)) b = Math.max(b, schaetzeSchaden(k, seite, id) * trefferChance(k, seite, id));
+    });
+    return b;
+  }
+
+  // Wie viele Runden nach diesem Zug wirkt eine Stufe noch? So lange, bis
+  // eine Seite voraussichtlich erschöpft ist, höchstens 5. Wer den Gegner
+  // ohnehin mit dem nächsten Treffer besiegt, gewinnt durch Stufen nichts.
+  var REST_MAX = 5;
+  function restRunden(k, seite) {
+    var ander = gegenueber(seite);
+    var meine = aktiv(k, seite).zh / Math.max(1, besterSchaden(k, ander));
+    var seine = aktiv(k, ander).zh / Math.max(1, besterSchaden(k, seite));
+    return Math.max(0, Math.min(REST_MAX, meine, seine) - 1);
+  }
+
+  // Gewinn je Runde, wenn auf Seite „wo“ die Stufe wt um n wandert: mehr
+  // eigener Schaden plus weniger Drohung. Probeweise gesetzt, dann zurück.
+  function stufenGewinn(k, seite, wo, wt, n) {
+    var ander = gegenueber(seite), st = k.seiten[wo].status;
+    var vorher0 = besterSchaden(k, seite), drohung0 = besterSchaden(k, ander);
+    var hatte = !!st.stufen, alt = hatte ? st.stufen[wt] : undefined;
+    st.stufen = st.stufen || {};
+    st.stufen[wt] = Math.max(-6, Math.min(6, (alt || 0) + n));
+    var gewinn = (besterSchaden(k, seite) - vorher0) + (drohung0 - besterSchaden(k, ander));
+    if (alt === undefined) delete st.stufen[wt]; else st.stufen[wt] = alt;
+    if (!hatte) delete st.stufen;
+    return Math.max(0, gewinn);
+  }
+
   function zugWert(k, seite, id, drohung) {
     var a = ATTACKEN[id], e = a.e, s = k.seiten[seite], ander = gegenueber(seite), z = k.seiten[ander];
     var ziel = aktiv(k, ander), lp = werte(ziel).zhMax, eigen = aktiv(k, seite);
@@ -598,13 +635,29 @@ var KAMPF = (function () {
       var dauer = { verbrannt: 3 * VERBRANNT_ANTEIL, korrodiert: 3 * KORRODIERT_ANTEIL, schwer_korrodiert: 0.6 }[e.status];
       w += (dauer ? lp * dauer : drohung * 0.6) * chance * p;
     }
-    if (e.gegner && !z.status.nebel) Object.keys(e.gegner).forEach(function (wt) {
-      if (stufe(z, wt) > -4) w += drohung * 0.12 * Math.abs(e.gegner[wt]) * chance * p;
-    });
-    if (e.selbst) Object.keys(e.selbst).forEach(function (wt) {
-      if (stufe(s, wt) < 4) w += drohung * 0.12 * e.selbst[wt] * chance;
-    });
-    if (e.schreck && !k.hatGehandelt[ander]) w += drohung * e.schreck / 100 * 0.5;
+    // Statuswert-Stufen (seit Fassung 23): Was die Stufe je Runde bringt,
+    // probeweise ausgerechnet (eigener Schaden rauf, Drohung runter), mal
+    // die Runden, die der Kampf voraussichtlich noch dauert. Bis Fassung 22
+    // zählte nur 12 % einer Runde – Schutzangriffe wählte die KI nie.
+    if (REGEL.kiStufenAlt) {   // Messschalter: die KI bis Fassung 22
+      if (e.gegner && !z.status.nebel) Object.keys(e.gegner).forEach(function (wt) {
+        if (stufe(z, wt) > -4) w += drohung * 0.12 * Math.abs(e.gegner[wt]) * chance * p;
+      });
+      if (e.selbst) Object.keys(e.selbst).forEach(function (wt) {
+        if (stufe(s, wt) < 4) w += drohung * 0.12 * e.selbst[wt] * chance;
+      });
+    } else if ((e.gegner && !z.status.nebel) || e.selbst) {
+      var rest = restRunden(k, seite);
+      if (e.gegner && !z.status.nebel) Object.keys(e.gegner).forEach(function (wt) {
+        if (stufe(z, wt) > -4) w += stufenGewinn(k, seite, ander, wt, e.gegner[wt]) * rest * chance * p;
+      });
+      if (e.selbst) Object.keys(e.selbst).forEach(function (wt) {
+        if (stufe(s, wt) < 4) w += stufenGewinn(k, seite, seite, wt, e.selbst[wt]) * rest * chance;
+      });
+    }
+    // Zwischen zwei Runden ist hatGehandelt null (Fassung 23: fiel erst auf,
+    // als Magnesium Biss schon auf Stufe 5 kann und die Messung die KI vorab fragt).
+    if (e.schreck && !(k.hatGehandelt && k.hatGehandelt[ander])) w += drohung * e.schreck / 100 * 0.5;
     if (e.festhalten && !z.status.festgehalten) w += lp * FESTHALTEN_ANTEIL * 3;
     if (e.neutral) w += drohung * 0.12 * (Math.max(0, stufe(z, "ang") + stufe(z, "spAng")) - Math.min(0, stufe(s, "vert") + stufe(s, "spVert")));
     if (e.kampfwetter && !(k.wetter && k.wetter.art === e.kampfwetter)) {
@@ -711,6 +764,7 @@ var KAMPF = (function () {
         if (k.ende === "gefangen") verteileErfahrung(k, 0.5);
         break;
       case "kuehlen": FANGEN.kuehlen(k); break;
+      case "brot": brotEssen(k); break;
       case "wechseln":
         if (!sp.gruppe[aktion.nr] || sp.gruppe[aktion.nr].zh <= 0) throw new Error("Wechsel nicht möglich.");
         if (sp.status.festgehalten) { melde(k, { text: name(k, "spieler") + " wird festgehalten und kann nicht weg." }); break; }
@@ -840,6 +894,19 @@ var KAMPF = (function () {
     });
   }
 
+  // Seit Fassung 27: Fennas Brot im Kampf – das aktive Elemon erholt sich
+  // um die Hälfte seiner LP. Kostet den Zug (danach handelt der Gegner).
+  var BROT_ANTEIL = 0.5;
+  function brotEssen(k) {
+    if (!(k.vorrat.brot > 0)) { melde(k, { text: "Kein Brot mehr im Gepäck." }); return; }
+    var el = aktiv(k, "spieler"), max = werte(el).zhMax;
+    if (el.zh >= max) { melde(k, { text: name(k, "spieler") + " ist satt und bei vollen Kräften." }); return; }
+    k.vorrat.brot--;
+    var plus = Math.min(max - el.zh, Math.round(max * BROT_ANTEIL));
+    el.zh += plus;
+    melde(k, { seite: "spieler", handelt: true, text: name(k, "spieler") + " isst Fennas Brot (+" + plus + " LP)." });
+  }
+
   function fliehen(k) {
     if (!k.wild) { melde(k, { text: "Vor einem Stoffmeister läuft man nicht davon." }); return; }
     if (k.seiten.spieler.status.festgehalten) { melde(k, { text: "Festgehalten – kein Entkommen." }); return; }
@@ -847,7 +914,7 @@ var KAMPF = (function () {
     var tg = initiative(k, "gegner");
     var p = Math.max(0.3, Math.min(0.95, 0.6 + (ts - tg) / 20));
     if (k.zufall() < p) { k.ende = "geflohen"; melde(k, { text: "Du ziehst dich zurück." }); }
-    else melde(k, { text: "Kein Durchkommen – das Elemental schneidet dir den Weg ab." });
+    else melde(k, { text: "Kein Durchkommen – das Elemon schneidet dir den Weg ab." });
   }
 
   // ----------------------------------------------------------
@@ -859,16 +926,36 @@ var KAMPF = (function () {
     magnetisch: function (v) { return v ? "Der Magnet zieht es an!" : "Der Magnet zeigt keine Wirkung."; },
     leitfaehig: function (v) { return v ? "Das Lämpchen leuchtet – es leitet den Strom." : "Das Lämpchen bleibt dunkel – kein Strom."; },
     verformbar: function (v) { return v ? "Unter dem Hammer verbiegt es sich." : "Unter dem Hammer splittert es – spröde."; },
-    brennt: function (v) { return v ? "In der Brennerflamme fängt es Feuer." : "In der Brennerflamme brennt es nicht."; }
+    brennt: function (v) { return v ? "In der Brennerflamme fängt es Feuer." : "In der Brennerflamme brennt es nicht."; },
+    // Seit Fassung 26: das Thermometer (bis etwa 360 °C)
+    zustand: function (v) {
+      var z = v.split("|");
+      if (z[0] === "gas") return "Thermometer: Bei 20 °C ein Gas – es siedet schon bei " + z[1].replace("-", "−") + " °C.";
+      if (z[0] === "fluessig") return "Thermometer: Bei 20 °C flüssig.";
+      return z[1] === "heiss" ? "Thermometer: Fest. Es schmilzt erst weit über 360 °C – dafür reicht das Thermometer nicht."
+        : "Thermometer: Fest. Es schmilzt schon bei " + z[1] + " °C.";
+    }
   };
+  var THERMOMETER_BIS = 360;
+
+  // Was ein Werkzeug an einer Art findet. Fast alles steht im Steckbrief;
+  // „zustand“ (Thermometer, seit Fassung 26) folgt aus den Stoffdaten:
+  // "gas|-196", "fest|115" (messbar) oder "fest|heiss" (über 360 °C).
+  function befundWert(art, eig) {
+    if (eig !== "zustand") return art.steckbrief[eig];
+    var s = art.stoff;
+    if (typeof s.siede === "number" && s.siede < 20) return "gas|" + s.siede;
+    if (s.schmelz < 20) return "fluessig|" + s.schmelz;
+    return "fest|" + (s.schmelz <= THERMOMETER_BIS ? Math.round(s.schmelz) : "heiss");
+  }
 
   function untersuchen(k, werkzeug) {
     if (k.werkzeuge.indexOf(werkzeug) < 0) throw new Error("Werkzeug nicht im Gepäck: " + werkzeug);
     var art = ARTEN[aktiv(k, "gegner").art];
     melde(k, { text: "Du prüfst mit " + WERKZEUGE[werkzeug].name + "." });
     WERKZEUGE[werkzeug].prueft.forEach(function (eig) {
-      k.befunde[eig] = art.steckbrief[eig];
-      melde(k, { befund: eig, text: BEFUND_TEXT[eig](art.steckbrief[eig]) });
+      k.befunde[eig] = befundWert(art, eig);
+      melde(k, { befund: eig, text: BEFUND_TEXT[eig](k.befunde[eig]) });
     });
   }
 
@@ -882,9 +969,9 @@ var KAMPF = (function () {
     // Ein Widerspruch zu den eigenen Befunden ist die beste Hilfe:
     // Er zeigt, WARUM die Vermutung nicht stimmt.
     var vermutet = ARTEN[artId];
-    var widerspruch = Object.keys(k.befunde).filter(function (eig) { return vermutet.steckbrief[eig] !== k.befunde[eig]; })[0];
+    var widerspruch = Object.keys(k.befunde).filter(function (eig) { return befundWert(vermutet, eig) !== k.befunde[eig]; })[0];
     melde(k, { erkannt: false, text: "Nein, " + vermutet.name + " ist es nicht." +
-      (widerspruch ? " " + vermutet.name + " würde sich anders verhalten: " + BEFUND_TEXT[widerspruch](vermutet.steckbrief[widerspruch]) : "") });
+      (widerspruch ? " " + vermutet.name + " würde sich anders verhalten: " + BEFUND_TEXT[widerspruch](befundWert(vermutet, widerspruch)) : "") });
   }
 
   return {
@@ -907,6 +994,7 @@ var KAMPF = (function () {
     KORRODIERT_ANTEIL: KORRODIERT_ANTEIL,
     AE_JE_RUNDE: AE_JE_RUNDE,
     befundText: function (eig, wert) { return BEFUND_TEXT[eig](wert); },
+    befundWert: befundWert,
     STARTER_BONUS: STARTER_BONUS,
     GRUPPE_LERNT: GRUPPE_LERNT,
     basiswerte: basiswerte,

@@ -71,7 +71,7 @@ var FANGEN = (function () {
     var g = k.seiten.gegner;
     var el = g.gruppe[g.aktiv];
     var art = GEFAESSE[gefaess];
-    if (!k.wild) { KAMPF.melde(k, { text: "Ein Elemental mit Stoffmeister fängt man nicht." }); return; }
+    if (!k.wild) { KAMPF.melde(k, { text: "Ein Elemon mit Stoffmeister fängt man nicht." }); return; }
     if (!(k.vorrat[gefaess] > 0)) { KAMPF.melde(k, { text: "Kein " + art.name + " mehr im Gepäck." }); return; }
 
     var p = chance(k, gefaess);
@@ -107,7 +107,7 @@ var FANGEN = (function () {
   // Elemental ab, das Fangen gelingt doppelt so leicht. Kostet den Zug.
   function kuehlen(k) {
     var g = k.seiten.gegner;
-    if (!k.wild) { KAMPF.melde(k, { text: "Ein Elemental mit Stoffmeister kühlt man nicht ab." }); return; }
+    if (!k.wild) { KAMPF.melde(k, { text: "Ein Elemon mit Stoffmeister kühlt man nicht ab." }); return; }
     if (!(k.vorrat.kaeltemischung > 0)) { KAMPF.melde(k, { text: "Keine Kältemischung mehr im Gepäck." }); return; }
     if (g.status.abgekuehlt) { KAMPF.melde(k, { text: KAMPF.name(k, "gegner") + " ist schon abgekühlt." }); return; }
     k.vorrat.kaeltemischung--;

@@ -27,7 +27,9 @@ var HANDEL = (function () {
   // Was jeder Marktstand führt
   var MAERKTE = {
     stoffingen: ["reagenzglas", "kaeltemischung", "glasbruch"],
-    brenner:    ["reagenzglas", "kaeltemischung", "glasbruch"]
+    brenner:    ["reagenzglas", "kaeltemischung", "glasbruch"],
+  // Seit Fassung 25: Fischerin Marit in Teilchin – Kältemischung aus dem Eiskeller
+  teilchin:   ["reagenzglas", "kaeltemischung", "glasbruch"]
   };
 
   // Gefäße und Verbrauchsgüter liegen im Vorrat, Glasbruch und Quarz im Material.

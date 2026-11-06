@@ -211,8 +211,9 @@ var EREIGNISSE = (function () {
           if (!s.erscheinen.name || !istKachel(s.erscheinen.bei)) fehler.push(hier + ": erscheinen braucht name und bei: [x, y]");
           if (typeof s.erscheinen.figur !== "number" && !s.erscheinen.bild) fehler.push(hier + ": erscheinen braucht figur oder bild");
         } else if (s.minispiel !== undefined) {
-          if (s.minispiel !== "werkbank") fehler.push(hier + ": unbekanntes Minispiel " + s.minispiel);
-          if (!Array.isArray(s.proben) || !s.proben.length) fehler.push(hier + ": Werkbank ohne Proben");
+          if (["werkbank", "teilchenkisten", "duftspur"].indexOf(s.minispiel) < 0) fehler.push(hier + ": unbekanntes Minispiel " + s.minispiel);
+          if (s.minispiel !== "werkbank") { /* Teilchen-Minispiele brauchen keine Proben (seit Fassung 26) */ }
+          else if (!Array.isArray(s.proben) || !s.proben.length) fehler.push(hier + ": Werkbank ohne Proben");
           else s.proben.forEach(function (p, i) { if (typeof ARTEN !== "undefined" && !ARTEN[p.stoff]) fehler.push(hier + ".proben[" + i + "]: unbekannter Stoff " + p.stoff); });
         } else if (s.zeichen !== undefined) {
           if (["!", "?", "…", "♥"].indexOf(s.zeichen.art) < 0) fehler.push(hier + ": unbekanntes Zeichen " + s.zeichen.art);

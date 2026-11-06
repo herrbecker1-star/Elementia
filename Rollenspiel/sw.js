@@ -12,7 +12,7 @@
 // ============================================================
 
 // Bei JEDER Veröffentlichung erhöhen – sonst holt kein Handy die neue Fassung.
-var FASSUNG = 22;
+var FASSUNG = 27;
 var SPEICHER = "elementia-abenteuer-" + FASSUNG;
 
 var DATEIEN = [
@@ -26,11 +26,13 @@ var DATEIEN = [
   "kern/fangen.js",
   "kern/handel.js",
   "kern/werkbank.js",
+  "kern/teilchen.js",
   "kern/welt.js",
   "kern/auftreten.js",
   "daten/auftreten.js",
   "spiel/buch.js",
   "spiel/werkbank.js",
+  "spiel/teilchen.js",
   "daten/elementals.js",
   "daten/kreaturen.js",
   "spiel/kampfszene.js",
@@ -43,9 +45,13 @@ var DATEIEN = [
   "grafik/elementals/aluminium.png",
   "grafik/elementals/bor.png",
   "grafik/elementals/silicium.png",
+  "grafik/elementals/stickstoff.png",
+  "grafik/elementals/nickel.png",
+  "grafik/elementals/cobalt.png",
   "grafik/kampf/dorf.jpg",
   "grafik/kampf/wald.jpg",
   "grafik/kampf/steppe.jpg",
+  "grafik/kampf/kueste.jpg",
   "grafik/szenen/starterwahl_eisen.jpg",
   "grafik/szenen/starterwahl_magnesium.jpg",
   "grafik/szenen/reiter_ankunft.jpg",
@@ -70,6 +76,11 @@ var DATEIEN = [
   "karten/brenner.json",
   "karten/labor_stoffingen.json",
   "karten/labor_brenner.json",
+  "karten/meerstrasse.json",
+  "karten/teilchin.json",
+  "karten/labor_teilchin.json",
+  "karten/steppenpfad.json",
+  "karten/pyrit.json",
   "icons/icon-192.png",
   "icons/icon-512.jpg"
 ];

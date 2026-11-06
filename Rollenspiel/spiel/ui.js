@@ -289,7 +289,7 @@ class UiSzene extends Phaser.Scene {
       kampf: function (cfg) {
         var bereit = szene.oberwelt.stand.gruppe.some(function (el) { return el.zh > 0; });
         if (!bereit) {
-          var text = szene.oberwelt.stand.gruppe.length ? "Deine Elementals sind erschöpft. Erst ins Labor!" : "Du hast noch kein Elemental dabei.";
+          var text = szene.oberwelt.stand.gruppe.length ? "Deine Elemons sind erschöpft. Erst ins Labor!" : "Du hast noch kein Elemon dabei.";
           return szene.sprechblase(null, text).then(function () { return "nicht_bereit"; });
         }
         szene.dialog.setVisible(false);
@@ -323,8 +323,10 @@ class UiSzene extends Phaser.Scene {
       minispiel: function (cfg) {
         szene.dialog.setVisible(false);
         return new Promise(function (fertig) {
-          szene.scene.launch("werkbank", { cfg: cfg, beiEnde: fertig });
-          szene.scene.bringToTop("werkbank");
+          // Seit Fassung 26 mehrere Minispiele: Werkbank und die Teilchen-Szene
+          var schluessel = cfg.minispiel === "werkbank" ? "werkbank" : "teilchen";
+          szene.scene.launch(schluessel, { cfg: cfg, beiEnde: fertig });
+          szene.scene.bringToTop(schluessel);
         });
       },
       // Markt und Labor (seit Fassung 17, Logik in kern\handel.js)

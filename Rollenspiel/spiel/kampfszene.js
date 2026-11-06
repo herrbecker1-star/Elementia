@@ -12,7 +12,8 @@
 //    unten        Textleiste links, Aktionen rechts
 // ============================================================
 
-var KAMPF_HINTERGRUND = { dorf: "grafik/kampf/dorf.jpg", wald: "grafik/kampf/wald.jpg", steppe: "grafik/kampf/steppe.jpg" };
+// Seit Fassung 26: kueste (Teilchin) – das Bild malt der Nutzer, bis dahin ein Platzhalter
+var KAMPF_HINTERGRUND = { dorf: "grafik/kampf/dorf.jpg", wald: "grafik/kampf/wald.jpg", steppe: "grafik/kampf/steppe.jpg", kueste: "grafik/kampf/kueste.jpg" };
 
 class KampfSzene extends Phaser.Scene {
   constructor() { super("kampf"); }
@@ -93,7 +94,7 @@ class KampfSzene extends Phaser.Scene {
       ? (daten.gegnerName || "Dein Gegenüber") + " schickt " + ARTEN[daten.gegner[0].art].name + " vor!"
       : this.k.erkannt
         ? "Ein wildes " + ARTEN[daten.gegner[0].art].name + " stellt sich dir in den Weg!"
-        : "Ein unbekanntes Elemental stellt sich dir in den Weg! Was mag es sein?";
+        : "Ein unbekanntes Elemon stellt sich dir in den Weg! Was mag es sein?";
     this.bereit = this.rundeStarten(erster);
 
     // Prüfschalter ?zuege=lupe,magnet,bestimmen:schwefel,ki,fangen:spatel
@@ -177,8 +178,11 @@ class KampfSzene extends Phaser.Scene {
     c.balken = this.add.graphics();
     c.zeile = this.add.text(0, 0, "", { fontFamily: SCHRIFT.familie, fontSize: MASS.px(12) + "px", color: "#5a4632" });
     c.rahmen = this.add.graphics();
-    c.add([c.grund, c.name, c.stufe, c.balken, c.zeile, c.rahmen]);
+    // Seit Fassung 23: lila Erfahrungsbalken unter dem LP-Balken (nur eigene Seite)
+    c.epBalken = this.add.graphics();
+    c.add([c.grund, c.name, c.stufe, c.balken, c.epBalken, c.zeile, c.rahmen]);
     c.anteil = 1;
+    c.epAnteil = null;
     return c;
   }
 
@@ -202,16 +206,17 @@ class KampfSzene extends Phaser.Scene {
     var k = this.k;
     if (lage && lage.seiten[seite]) {
       var l = lage.seiten[seite];
-      return { name: l.name, art: l.art, stufe: l.stufe, zh: l.zh, zhMax: l.zhMax, ae: l.ae, status: l.status, erkannt: lage.erkannt, befunde: lage.befunde };
+      return { name: l.name, art: l.art, stufe: l.stufe, zh: l.zh, zhMax: l.zhMax, ae: l.ae, ep: l.ep || 0, epMax: l.epMax || KAMPF.epBisNaechste(l.stufe), status: l.status, erkannt: lage.erkannt, befunde: lage.befunde };
     }
     var el = KAMPF.aktiv(k, seite);
-    return { name: KAMPF.name(k, seite), art: el.art, stufe: el.stufe, zh: el.zh, zhMax: KAMPF.werte(el).zhMax, ae: k.seiten[seite].ae, status: k.seiten[seite].status, erkannt: k.erkannt, befunde: k.befunde };
+    return { name: KAMPF.name(k, seite), art: el.art, stufe: el.stufe, zh: el.zh, zhMax: KAMPF.werte(el).zhMax, ae: k.seiten[seite].ae, ep: el.ep || 0, epMax: KAMPF.epBisNaechste(el.stufe), status: k.seiten[seite].status, erkannt: k.erkannt, befunde: k.befunde };
   }
 
   zeichneInfo(c, seite, lage) {
     var k = this.k, a = this.ansicht(seite, lage);
     // Der Gegnerkasten hat eine Zeile mehr: LP und darunter die Befunde.
-    var b = MASS.px(220), h = MASS.px(seite === "gegner" ? 76 : 62);
+    // Seit Fassung 23 ist der eigene Kasten 6 px höher: Platz für die Erfahrung.
+    var b = MASS.px(220), h = MASS.px(seite === "gegner" ? 76 : 68);
     c.breite = b; c.hoehe = h;
     c.grund.clear().fillStyle(FARBE.papier, 0.93).fillRoundedRect(0, 0, b, h, MASS.px(10))
       .lineStyle(MASS.px(2), FARBE.papierRand, 1).strokeRoundedRect(0, 0, b, h, MASS.px(10));
@@ -243,11 +248,40 @@ class KampfSzene extends Phaser.Scene {
     });
     var plus = stufen.length ? "  ·  " + stufen.join(" ") : "";
     if (seite === "spieler") {
+      this.zeichneErfahrung(c, a, b);
       c.zeile.setText("LP " + a.zh + "/" + a.zhMax + "  ·  Energie " + a.ae + "/" + KAMPF.AE_MAX + plus);
     } else {
       c.zeile.setText("LP " + a.zh + "/" + a.zhMax + plus + "\n" + this.befundZeile(a.befunde));
     }
-    c.zeile.setPosition(MASS.px(10), MASS.px(40));
+    c.zeile.setPosition(MASS.px(10), MASS.px(seite === "spieler" ? 46 : 40));
+  }
+
+  // Der lila Erfahrungsbalken (seit Fassung 23): zeigt, wie nah die nächste
+  // Stufe ist. Bei einem Stufenaufstieg läuft er erst voll und beginnt dann
+  // von vorn; bei einem Wechsel des Elementals springt er ohne Lauf.
+  zeichneErfahrung(c, a, b) {
+    var ziel = Math.max(0, Math.min(1, a.ep / a.epMax));
+    var wer = a.name + "|" + a.art, bb = b - MASS.px(20), y = MASS.px(38), hoch = MASS.px(4);
+    var zeichne = function (anteil) {
+      c.epAnteil = anteil;
+      c.epBalken.clear().fillStyle(0x3a2a1c, 0.25).fillRoundedRect(MASS.px(10), y, bb, hoch, MASS.px(2))
+        .fillStyle(0x8a4fc0, 1).fillRoundedRect(MASS.px(10), y, Math.max(0, bb * anteil), hoch, MASS.px(2));
+    };
+    var aufstieg = c.epWer === wer && typeof c.epStufe === "number" && a.stufe > c.epStufe;
+    var gleich = c.epWer === wer && c.epStufe === a.stufe && c.epAnteil !== null;
+    // Jede Meldung zeichnet neu: Ein laufender Lauf zum selben Ziel bleibt.
+    if (gleich && c.epZiel === ziel && c.epLauf && c.epLauf.isPlaying()) return;
+    c.epWer = wer; c.epStufe = a.stufe; c.epZiel = ziel;
+    if (c.epLauf) c.epLauf.stop();
+    if (!aufstieg && !gleich) { zeichne(ziel); return; }
+    if (!aufstieg && Math.abs(c.epAnteil - ziel) < 0.001) { zeichne(ziel); return; }
+    var szene = this;
+    var laufe = function (von, bis, dann) {
+      c.epLauf = szene.tweens.addCounter({ from: von, to: bis, duration: 500,
+        onUpdate: function (t) { zeichne(t.getValue()); }, onComplete: dann });
+    };
+    if (aufstieg) laufe(c.epAnteil || 0, 1, function () { laufe(0, ziel); });
+    else laufe(c.epAnteil, ziel);
   }
 
   befundZeile(befunde) {
@@ -258,6 +292,11 @@ class KampfSzene extends Phaser.Scene {
     if (b.leitfaehig !== undefined) t.push(b.leitfaehig ? "leitet" : "leitet nicht");
     if (b.verformbar !== undefined) t.push(b.verformbar ? "verformbar" : "spröde");
     if (b.brennt !== undefined) t.push(b.brennt ? "brennt" : "brennt nicht");
+    // Seit Fassung 26: Thermometer – fest, flüssig oder Gas bei 20 °C
+    if (b.zustand !== undefined) {
+      var z = b.zustand.split("|");
+      t.push(z[0] === "gas" ? "Gas" : z[0] === "fluessig" ? "flüssig" : z[1] === "heiss" ? "fest" : "fest, schmilzt bei " + z[1] + " °C");
+    }
     return t.length ? t.join(" · ") : "noch nicht untersucht";
   }
 
@@ -340,7 +379,7 @@ class KampfSzene extends Phaser.Scene {
     eintraege.push(
       { text: "Flucht", symbol: "flagge", platz: [2, 0], aktiv: k.wild, grund: "Vor einem Stoffmeister läuft man nicht weg.",
         beiKlick: function () { szene.ausfuehren({ typ: "fliehen" }); } },
-      { text: "Fangen", symbol: "glas", platz: [2, 1], aktiv: k.wild, grund: "Das Elemental eines Stoffmeisters fängt man nicht.",
+      { text: "Fangen", symbol: "glas", platz: [2, 1], aktiv: k.wild, grund: "Das Elemon eines Stoffmeisters fängt man nicht.",
         beiKlick: function () { szene.menueFangen(); } },
       { text: "⋯", platz: "mehr", beiKlick: function () { szene.menueMehr(); } }
     );
@@ -356,6 +395,12 @@ class KampfSzene extends Phaser.Scene {
       { text: "Wechseln", aktiv: this.stand.gruppe.filter(function (el) { return el.zh > 0; }).length > 1, grund: "Niemand sonst ist bereit.", beiKlick: function () { szene.menueWechseln(); } },
       { text: "Kraft sammeln\n+2 E", beiKlick: function () { szene.ausfuehren({ typ: "sammeln" }); } }
     ];
+    // Seit Fassung 27: Brot heilt das aktive Elemon um die Hälfte (kostet den Zug)
+    if (this.stand.vorrat.brot > 0) {
+      var aktivEl = KAMPF.aktiv(k, "spieler");
+      eintraege.push({ text: "Brot ×" + this.stand.vorrat.brot + "\n+½ LP", aktiv: aktivEl.zh < KAMPF.werte(aktivEl).zhMax, grund: "Es ist bei vollen Kräften.",
+        beiKlick: function () { szene.ausfuehren({ typ: "brot" }); } });
+    }
     if (this.stand.werkzeuge.indexOf("gasbrenner") >= 0) {
       eintraege.push({ text: "Gasbrenner\n+4 E", aktiv: !k.brennerBenutzt, grund: "Das Gas ist für diesen Kampf verbraucht.", beiKlick: function () { szene.ausfuehren({ typ: "brenner" }); } });
     }
@@ -369,7 +414,7 @@ class KampfSzene extends Phaser.Scene {
       return { text: WERKZEUGE[w].name, beiKlick: function () { szene.ausfuehren({ typ: "untersuchen", werkzeug: w }); } };
     });
     eintraege.push(this.zurueck());
-    this.zeigeText("Womit prüfst du das Elemental? Jede Prüfung kostet einen Zug.");
+    this.zeigeText("Womit prüfst du das Elemon? Jede Prüfung kostet einen Zug.");
     this.zeigeKnoepfe(eintraege);
   }
 
@@ -551,8 +596,10 @@ class KampfSzene extends Phaser.Scene {
       stand.gruppe.forEach(function (el) { el.zh = KAMPF.werte(el).zhMax; });
       var imDorf = !stand.labor || /stoffingen/.test(stand.labor.karte);
       await this.wartenAufTipp(imDorf
-        ? "Du wachst in Mutters Werkstatt auf. Es riecht nach Salbe. Deine Elementals haben sich erholt – und du bist klüger als vorhin."
-        : "Du wachst im Labor der Gilde auf. Jemand hat deine Elementals versorgt. „Beim nächsten Mal erst denken, dann zünden“, brummt eine Stimme.");
+        ? "Du wachst in Mutters Werkstatt auf. Es riecht nach Salbe. Deine Elemons haben sich erholt – und du bist klüger als vorhin."
+        : /teilchin/.test(stand.labor.karte)   // seit Fassung 25: der Leuchtturm
+          ? "Du wachst im Leuchtturm auf. Hella hat deine Elemons versorgt. „Erst schauen, dann kämpfen“, sagt sie."
+          : "Du wachst im Labor der Gilde auf. Jemand hat deine Elemons versorgt. „Beim nächsten Mal erst denken, dann zünden“, brummt eine Stimme.");
     }
     // Angriffe lernen: die fälligen Angriffe aus dem Lernset (el.lernen).
     for (var n = 0; n < stand.gruppe.length; n++) {

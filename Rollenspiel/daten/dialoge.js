@@ -23,7 +23,7 @@
 //    tutorial_fertig  Übungskampf mit Lumi
 //    reiter_da        die Reiter waren da (Lumi weg)
 //    aufgebrochen     heimlich losgegangen (Eltern schlafen)
-//    markt_fertig     Maras Kisten (Quest 1) – öffnet den Weg nach Osten
+//    markt_fertig     Maras Kisten (Quest 1) – öffnet den Weg nach Süden (seit Fassung 24)
 //    schemen_frei     ab jetzt erscheinen Schemen
 //    geraetepass      Vitras Prüfung (Quest 2)
 //    flammenschein    Ilkas Prüfung (Quest 2b) – danach auch Gefäße herstellen
@@ -101,7 +101,7 @@ function starterWahl(art) {
     { geben: { elemental: { art: art, stufe: 4, starter: true } } },
     { benennen: true },
     { setze: "starter", wert: art },
-    { sag: schmiede ? "Vater" : "Mutter", text: "Dein erstes Elemental begleitet dich ein Leben lang. Lumi wartet auf dem Dorfplatz." }
+    { sag: schmiede ? "Vater" : "Mutter", text: "Dein erstes Elemon begleitet dich ein Leben lang. Lumi wartet auf dem Dorfplatz." }
   ];
 }
 
@@ -122,7 +122,7 @@ function starterAnsehen(art) {
 
 // Labor: heilen, speichern, eine Zeile
 function labor(zeile) {
-  return [{ heilen: true }, { speichern: true }, { erzaehl: zeile + " Deine Elementals sind wieder bei Kräften. (Gespeichert.)" }];
+  return [{ heilen: true }, { speichern: true }, { erzaehl: zeile + " Deine Elemons sind wieder bei Kräften. (Gespeichert.)" }];
 }
 
 // Seit Fassung 17: Am Labortisch schmilzt man Glasbruch zu neuen Gefäßen –
@@ -149,11 +149,31 @@ function stoffmeister(o) {
         { geben: { geld: o.geld } },
         { setze: flag }
       ], sonst: [
-        { sag: o.name, text: "Komm wieder, wenn deine Elementals ausgeruht sind." }
+        { sag: o.name, text: "Komm wieder, wenn deine Elemons ausgeruht sind." }
       ] }
     ] }
   ];
 }
+
+// Seit Fassung 26: eine Station der Teilchin-Quest. Eine kurze Szene, dann
+// die Frage nach dem Vorgang. Falsch: die Erklärung, und man kann es noch
+// einmal versuchen (wie die Gerätefragen im Kolbenwald).
+var VORGAENGE_NAMEN = ["schmelzen", "erstarren", "verdunsten", "kondensieren"];
+function stationFrage(flag, szene, richtig, erklaerung) {
+  return [
+    { wenn: flag, dann: [{ erzaehl: szene + " (" + richtig.charAt(0).toUpperCase() + richtig.slice(1) + ".)" }], sonst: [
+      { erzaehl: szene },
+      { wahl: "Was passiert hier?", optionen: VORGAENGE_NAMEN.map(function (v) {
+        return v === richtig
+          ? { text: v, dann: [{ erzaehl: "Richtig. " + erklaerung }, { setze: flag }] }
+          : { text: v, dann: [{ erzaehl: "Nicht ganz. Schau noch einmal hin und frag dich: Wird es fester oder lockerer, wärmer oder kälter?" }] };
+      }) }
+    ] }
+  ];
+}
+var TEILCHEN_MERKSATZ = "Alle Stoffe bestehen aus kleinsten Teilchen, die sich ständig bewegen. Je wärmer, desto schneller.";
+// Die Gruppe des Spähers: Stickstoff (fangbar erst in Aerosol) und Kohlenstoff.
+var SPAEHER_GRUPPE = [{ art: "stickstoff", stufe: 9 }, { art: "kohlenstoff", stufe: 8 }];
 
 // Glasbruch-Fundstelle im Kolbenwald
 function glasbruch(id, menge) {
@@ -168,7 +188,7 @@ var DIALOGE = {
   einstieg: [
     // Seit Fassung 14 mit drei Bildern: Hadronenwolke → Erwachen → Elementia.
     { einblenden: "hadronenwolke", text: "Vor langer Zeit traf eine Hadronenwolke die Erde." },
-    { einblenden: "erwachen", text: "Wo ihre Funken niedergingen, erwachten die Stoffe zum Leben: die Elementals." },
+    { einblenden: "erwachen", text: "Wo ihre Funken niedergingen, erwachten die Stoffe zum Leben: die Elemons." },
     { einblenden: "elementia", text: "Erst hatten die Menschen Angst. Dann lernten sie, in ganz Elementia mit ihnen zu leben. Wer sie versteht, heißt Stoffmeister." },
     { erzaehl: "Du lebst in Stoffingen, einem armen Dorf in den Feuerlanden. „Wer nichts hat, den lässt man in Ruhe“, sagt deine Mutter." },
     { erzaehl: "Heute ist dein 12. Geburtstag. Ab heute lernst du ein Handwerk: in Vaters Schmiede oder in Mutters Garten. Lumi wartet auf dem Dorfplatz." }
@@ -186,7 +206,7 @@ var DIALOGE = {
       ] }
     ], sonst: [
       { wennGleich: ["starter", "eisen"], dann: [
-        { sag: "Vater", text: "Pass auf dein Elemental auf. Und auf deine Finger." }
+        { sag: "Vater", text: "Pass auf dein Elemon auf. Und auf deine Finger." }
       ], sonst: [
         { sag: "Vater", text: "Der Garten also. Magnesium ist übrigens ein Metall, sagt deine Mutter. Ich hab nicht widersprochen." }
       ] }
@@ -217,7 +237,7 @@ var DIALOGE = {
       { sag: "Mutter", text: "Halt still. So. Und pass auf Lumi auf, wenn du sie findest." }
     ] },
     { heilen: true }, { speichern: true },
-    { erzaehl: "Deine Elementals sind wieder bei Kräften. (Gespeichert.)" }
+    { erzaehl: "Deine Elemons sind wieder bei Kräften. (Gespeichert.)" }
   ],
 
   lumi: [
@@ -254,9 +274,10 @@ var DIALOGE = {
   //  Akt B – Die grauen Reiter (H1–H4)
   //  Gespielt statt erzählt: Die Figuren bewegen sich auf der Karte,
   //  gesprochen werden sieben kurze Sätze. Die Positionen sind Kacheln
-  //  der Karte Stoffingen: Lumi steht auf (17, 12), der Weg nach Osten
-  //  ist Zeile 13. Die Mutter steht seit Fassung 18 neben dem Vater
-  //  (10, 5) und kommt an der Gartenecke vorbei über Spalte 9.
+  //  der Karte Stoffingen: Lumi steht auf (17, 12), der Dorfweg ist
+  //  Zeile 13. Die Mutter steht seit Fassung 18 neben dem Vater (10, 5)
+  //  und kommt an der Gartenecke vorbei über Spalte 9. Seit Fassung 24
+  //  kommen und gehen die Reiter durch die Schlucht (Spalte 34, nach unten).
   // ============================================================
   reiter_szenen: [
     { welt: { zeit: "15:00" } },
@@ -297,11 +318,11 @@ var DIALOGE = {
       { verschwinden: "lumi" },
       { setze: "reiter_da" },
       // Der Fehlschlag zum Selberspielen: Man rennt hinterher und kommt nie an.
-      { gehen: { wer: "anfuehrer", nach: [[22, 13], [44, 13]], tempo: 140, parallel: true } },
-      { gehen: { wer: "reiter1", nach: [[23, 12], [44, 12]], tempo: 140, parallel: true } },
-      { gehen: { wer: "reiter2", nach: [[23, 14], [44, 14]], tempo: 140, parallel: true } },
-      { gehen: { wer: "reiter3", nach: [44, 12], tempo: 140, parallel: true } },
-      { verfolgen: { wer: "wagen", nach: [41, 13] } },
+      { gehen: { wer: "anfuehrer", nach: [[22, 13], [34, 13], [34, 27]], tempo: 140, parallel: true } },
+      { gehen: { wer: "reiter1", nach: [[23, 12], [33, 12], [33, 27]], tempo: 140, parallel: true } },
+      { gehen: { wer: "reiter2", nach: [[23, 14], [35, 14], [35, 27]], tempo: 140, parallel: true } },
+      { gehen: { wer: "reiter3", nach: [[33, 12], [34, 27]], tempo: 140, parallel: true } },
+      { verfolgen: { wer: "wagen", nach: [[34, 13], [34, 27]] } },
       { einblenden: "leerer_dorfplatz", text: "Du greifst nach Lumis Hand. Du bekommst nur Luft zu fassen." }
     ], kurz: "Graue Reiter haben die Kinder mitgenommen, und Lumi haben sie gezielt gesucht. Niemand weiß, warum. Hol sie zurück!" },
 
@@ -351,15 +372,15 @@ var DIALOGE = {
         { ablauf: "mara_kisten" },
         { sag: "Mara", text: "Alle fünf! Behalt das Werkzeug. Und hier, dein Lohn." },
         { geben: { vorrat: { reagenzglas: 3 }, geld: 30 } },
-        { sag: "Mara", text: "Draußen flackern jetzt Lichter: wilde Elementals. Erst prüfen, dann bestimmen. Mitnehmen kannst du sie im Reagenzglas." },
+        { sag: "Mara", text: "Draußen flackern jetzt Lichter: wilde Elemons. Erst prüfen, dann bestimmen. Mitnehmen kannst du sie im Reagenzglas." },
         { setze: "markt_fertig" },
         { setze: "schemen_frei" },
-        { erzaehl: "Lumis Spur führt nach Osten, durch den Kolbenwald." }
+        { erzaehl: "Lumis Spur führt nach Süden, durch die Schlucht in den Kolbenwald." }
       ], sonst: [
         // Seit Fassung 17 Marktstand: Gläser und Kältemischung, Ankauf von Glasbruch
         { sag: "Mara", text: "Reagenzgläser, Kältemischung – und Glasbruch kaufe ich dir ab. Der Kolbenwald ist voll davon." },
         { handel: "stoffingen" },
-        { sag: "Mara", text: "Nach Osten, durch den Kolbenwald. Und iss was unterwegs." }
+        { sag: "Mara", text: "Nach Süden, durch die Schlucht in den Kolbenwald. Und iss was unterwegs." }
       ] }
     ] }
   ],
@@ -385,7 +406,7 @@ var DIALOGE = {
       ], sonst: [
         { sag: "Köhler Brand", text: "Sie haben meinen Jungen mitgenommen. Er hat nachts die Glut bewacht. Jetzt schläft sie mir ein." },
         { wennElemental: "kohlenstoff", dann: [
-          { erzaehl: "Dein Kohlenstoff-Elemental schwebt zum Meiler. Die Glut wacht auf." },
+          { erzaehl: "Dein Kohlenstoff-Elemon schwebt zum Meiler. Die Glut wacht auf." },
           { sag: "Köhler Brand", text: "Es kennt seinen Ort. Holzkohle entsteht, wenn Holz ohne Luft erhitzt wird. Hier, für dein Buch." },
           { erzaehl: "Buchseite „Verkohlung“: Holz ohne Luft erhitzt wird zu Holzkohle. Mit Luft verbrennt es zu Asche." },
           { sag: "Köhler Brand", text: "Und nimm meine alte Tiegelzange. Im Labor wirst du sie brauchen." },
@@ -410,8 +431,8 @@ var DIALOGE = {
     { erzaehl: "Ein Regal voller Gläser, jedes beschriftet. Ordnung ist die halbe Chemie." }
   ],
 
-  schild_ost: [
-    { erzaehl: "Ein Schild: „Nach Osten – Kolbenwald.“" }
+  wegweiser_stoffingen: [
+    { erzaehl: "Ein Schild: „Nach Süden – Kolbenwald.“" }
   ],
 
   meiler: [
@@ -435,7 +456,7 @@ var DIALOGE = {
 
   // Seit Fassung 17: zwei Stoffmeister am Weg und vier Stellen mit Glasbruch
   kolja: stoffmeister({ id: "kolja", name: "Geselle Kolja",
-    gruss: "Ich bin Geselle bei der Gerätemacher-Gilde. Zeig mal, was deine Elementals können!",
+    gruss: "Ich bin Geselle bei der Gerätemacher-Gilde. Zeig mal, was deine Elemons können!",
     gegner: [{ art: "zink", stufe: 3 }, { art: "kohlenstoff", stufe: 4 }],
     sieg: "Nicht schlecht. Hier, dein Preisgeld.",
     danach: "Glasbruch liegt hier überall. Mara in Stoffingen kauft ihn dir ab.",
@@ -519,7 +540,7 @@ var DIALOGE = {
 
   ilka: [
     { wenn: "flammenschein", dann: [
-      { sag: "Gildenmeisterin Ilka", text: "Der Wagen fuhr durchs Osttor, Richtung Teilchin. Und jetzt raus, bevor du hier etwas anzündest." }
+      { sag: "Gildenmeisterin Ilka", text: "Der Wagen fuhr durchs Südtor, die Meerstraße hinunter. Richtung Teilchin. Und jetzt raus, bevor du etwas anzündest." }
     ], sonst: [
       { sag: "Gildenmeisterin Ilka", text: "Mit einem Feuerwesen durch die Feuerlande? Erst den Flammenschein! Teil eins: die Reihenfolge." },
       { ablauf: "ilka_reihenfolge" },
@@ -536,8 +557,8 @@ var DIALOGE = {
             { wennGleich: ["letzter_kampf", "sieg"], dann: [
               { sag: "Gildenmeisterin Ilka", text: "Bestanden. Kristall, Leichtmetall, Stahl – du hast alle drei bezwungen." },
               { geben: { werkzeug: ["gasbrenner"], geld: 150 } },
-              { sag: "Gildenmeisterin Ilka", text: "Der Bunsenbrenner gibt deinem Elemental einmal pro Kampf Energie. Im Labor schmilzt du damit Glas." },
-              { sag: "Gildenmeisterin Ilka", text: "Der Wagen fuhr durchs Osttor, Richtung Teilchin." },
+              { sag: "Gildenmeisterin Ilka", text: "Der Bunsenbrenner gibt deinem Elemon einmal pro Kampf Energie. Im Labor schmilzt du damit Glas." },
+              { sag: "Gildenmeisterin Ilka", text: "Der Wagen fuhr durchs Südtor, die Meerstraße hinunter. Richtung Teilchin." },
               { setze: "flammenschein" }
             ], sonst: [
               { sag: "Gildenmeisterin Ilka", text: "Nicht bestanden. Ruh dich aus und komm wieder." }
@@ -599,7 +620,7 @@ var DIALOGE = {
         { geben: { vorrat: { rundkolben: 1 } } },
         { setze: "knopf_zurueck" }
       ], sonst: [
-        { sag: "Kind", text: "Hast du Knopf gesehen? Mein Elemental. Klein, bläulich, ein bisschen feige. Er ist zum Brunnen gelaufen." },
+        { sag: "Kind", text: "Hast du Knopf gesehen? Mein Elemon. Klein, bläulich, ein bisschen feige. Er ist zum Brunnen gelaufen." },
         { setze: "knopf_gesucht" }
       ] }
     ] }
@@ -629,10 +650,217 @@ var DIALOGE = {
 
   abspann_kapitel1: [
     { wenn: "bonardt_bekannt",
-      dann: [{ einblenden: "aufbruch", text: "Irgendwo dort im Osten ist Lumi. Und ein Mann, der Bonardt heißt." }],
-      sonst: [{ einblenden: "aufbruch", text: "Irgendwo dort im Osten ist Lumi. Und der Anführer mit dem grauen Reiher auf dem Schild." }] },
+      dann: [{ einblenden: "aufbruch", text: "Irgendwo dort draußen ist Lumi. Und ein Mann, der Bonardt heißt." }],
+      sonst: [{ einblenden: "aufbruch", text: "Irgendwo dort draußen ist Lumi. Und der Anführer mit dem grauen Reiher auf dem Schild." }] },
     { setze: "kapitel1_fertig" },
     { erzaehl: "Ende von Kapitel 1. Fortsetzung: Teilchin." },
     { speichern: true }
+  ],
+
+  // ============================================================
+  //  Seit Fassung 25: Kapitel 2 – die Meerstraße und die Küste
+  //  Der Abspann von Kapitel 1 kommt beim ersten Schritt auf die
+  //  Meerstraße (vorher am Osttor von Brenner). Wer ihn schon gesehen
+  //  hat, bekommt nur den Titel von Kapitel 2.
+  //  Die Storyquest „Der Duft von Teilchin“ ist ein Vorschlag
+  //  (drehbuch\kapitel-2-teilchin.md); bis zur Freigabe sprechen Fenna
+  //  und der Späher nur ihre Rolle an.
+  // ============================================================
+  kapitel2_beginn: [
+    { wennNicht: "kapitel1_fertig", dann: [{ ablauf: "abspann_kapitel1" }] },
+    { erzaehl: "Kapitel 2 – Teilchin. Die Meerstraße führt durch den Wald zur Küste. Irgendwo vorn riecht es nach Salz." },
+    { setze: "kapitel2_begonnen" }
+  ],
+
+  wegweiser_meerstrasse: [
+    { erzaehl: "Ein Schild: „Westen – Teilchin, an der Küste. Norden – Brenner.“" }
+  ],
+
+  // Drei Leute an der Meerstraße. Stufen gemessen (Prüfstand 2h, 06.11.2026):
+  // Mit einem Fang auf der Stufe des stärksten Gegners gewinnt man 75–100 %,
+  // Kuno (Tor nach Pyrit) eine Stufe darüber. Siehe LIESMICH „Fassung 25“.
+  hinnerk: stoffmeister({ id: "hinnerk", name: "Fuhrmann Hinnerk",
+    gruss: "Ein grauer Wagen hat mich von der Straße gedrängt. Seitdem kämpfe ich mit jedem, der vorbeikommt!",
+    gegner: [{ art: "eisen", stufe: 6 }, { art: "schwefel", stufe: 6 }],
+    sieg: "Du bist stärker als du aussiehst. Der Wagen fuhr nach Westen, zur Küste.",
+    danach: "Der graue Wagen fuhr nach Westen. Nach Teilchin.",
+    geld: 90 }),
+
+  grete: stoffmeister({ id: "grete", name: "Sammlerin Grete",
+    gruss: "Holzkohle, Kräuter, schwarze Steine – alles meins. Willst du was davon? Dann kämpf!",
+    gegner: [{ art: "kohlenstoff", stufe: 7 }, { art: "bor", stufe: 7 }],
+    sieg: "Gut gekämpft. Hier, für deinen Beutel.",
+    danach: "Bor färbt Flammen grün. Das hat mir meine Großmutter gezeigt.",
+    geld: 100 }),
+
+  ole: stoffmeister({ id: "ole", name: "Fischerjunge Ole",
+    gruss: "Ich will Fischer werden, wie meine Tante in Teilchin. Erst muss ich aber dich schlagen!",
+    gegner: [{ art: "zink", stufe: 6 }, { art: "silicium", stufe: 7 }],
+    sieg: "Mist. Sag Tante Marit nicht, dass ich verloren habe.",
+    danach: "In Teilchin gibt es einen Leuchtturm. Die Wärterin hilft jedem.",
+    geld: 100 }),
+
+  // Der Schatz: abseits, hinter den Bäumen. Einmal zu öffnen.
+  schatz_meerstrasse: [
+    { wenn: "schatz_meerstrasse", dann: [
+      { erzaehl: "Die Truhe ist leer." }
+    ], sonst: [
+      { erzaehl: "Eine alte Truhe, halb unter Moos. Jemand hat sie hier versteckt." },
+      { geben: { geld: 120, vorrat: { rundkolben: 1 } } },
+      { erzaehl: "Darin: 120 Taler und ein Rundkolben." },
+      { setze: "schatz_meerstrasse" }
+    ] }
+  ],
+
+  glasbruch_ms1: glasbruch("ms1", 2),
+  glasbruch_ms2: glasbruch("ms2", 1),
+  glasbruch_ms3: glasbruch("ms3", 2),
+  glasbruch_ms4: glasbruch("ms4", 1),
+
+  // ---------- Teilchin ----------
+  teilchin_ankunft: [
+    { erzaehl: "Teilchin. Schon auf der Brücke riecht es nach frischem Brot – und nach Meer." }
+  ],
+
+  // ---------- Seit Fassung 26: Storyquest „Der Duft von Teilchin“ ----------
+  // Freigegeben am 06.11.2026 (drehbuch\Kapitel 2 - Storyquest Teilchin).
+  // Flags: teilchin_quest → kisten_fertig (Hella) → st_netze, st_eis,
+  // st_fenster, st_wachs (vier Stationen) → duftspur_fertig + besiegt_spaeher
+  // → strandweg_offen (Fenna, Thermometer).
+  fenna: [
+    { wennNicht: "teilchin_quest", dann: [
+      { sag: "Bäckerin Fenna", text: "Der Mann da hat meine Backstube versiegelt. Er sagt, mein Brotduft sei verbotener Zauber!" },
+      { sag: "Bäckerin Fenna", text: "Unsichtbares, das durch die Gassen wandert … Hella im Leuchtturm weiß, wie man so einem Wurm etwas beweist." },
+      // Seit Fassung 27: Brot schon zu Beginn – Heilung für unterwegs und im Kampf
+      { sag: "Bäckerin Fenna", text: "Hier, nimm Brot mit. Das letzte, bevor er die Tür zugemacht hat. Es macht müde Elemons wieder munter." },
+      { geben: { vorrat: { brot: 3 } } },
+      { erzaehl: "Brot heilt: im Kampf unter „⋯“ ein Elemon um die Hälfte, im Menü unter Gepäck die ganze Gruppe." },
+      { setze: "teilchin_quest" }
+    ], sonst: [
+      { wenn: "besiegt_spaeher", dann: [
+        { wennNicht: "strandweg_offen", dann: [
+          { sag: "Bäckerin Fenna", text: "Er ist weg! Und meine Backstube ist wieder offen. Hier – frisches Brot, und das Thermometer meines Vaters." },
+          { geben: { werkzeug: ["thermometer"], vorrat: { brot: 5 }, geld: 100 } },
+          { erzaehl: "Das Thermometer zeigt im Kampf, ob ein Stoff bei 20 °C fest, flüssig oder ein Gas ist." },
+          { sag: "Bäckerin Fenna", text: "Und noch etwas: Der graue Wagen fuhr zur Mine von Pyrit. Die Küste hinunter, dann über den Steppenpfad." },
+          { setze: "strandweg_offen" }
+        ], sonst: [
+          { sag: "Bäckerin Fenna", text: "Die Küste hinunter, dann über den Steppenpfad nach Pyrit. Pass auf dich auf." }
+        ] }
+      ], sonst: [
+        { wennNicht: "kisten_fertig", dann: [
+          { sag: "Bäckerin Fenna", text: "Geh zu Hella in den Leuchtturm, unten am Strand." }
+        ], sonst: [
+          { sag: "Bäckerin Fenna", text: "Überall im Dorf ändern Stoffe ihren Zustand: an den Netzen, im Eiskeller, an meinem Fenster, am Wachs des Leuchtturms." }
+        ] }
+      ] }
+    ] }
+  ],
+
+  spaeher_teilchin: [
+    { wennNicht: "teilchin_quest", dann: [
+      { sag: "Späher", text: "Zurück! Aus diesem Haus kommt etwas Unsichtbares. Das ist Zauber – und Zauber ist verboten." }
+    ], sonst: alleFlags(["kisten_fertig", "st_netze", "st_eis", "st_fenster", "st_wachs"], [
+      { wennNicht: "duftspur_fertig", dann: [
+        { sag: "Späher", text: "Du willst mir erklären, was ein Duft ist? Bitte. Ich höre." },
+        { minispiel: "duftspur", sprecher: "Du" },
+        { setze: "duftspur_fertig" },
+        { sag: "Späher", text: "Teilchen … die sich bewegen … Unsinn! Meine Elemons sehen das anders." }
+      ] }
+    ].concat(stoffmeister({ id: "spaeher", name: "Späher", ort: "kueste",
+      gruss: "Genug geredet! Mein Stickstoff ist so unsichtbar wie dein Brotduft. Versuch ihn zu treffen!",
+      // Stickstoff (Gas, vier Fünftel der Luft) – fangbar erst in Aerosol.
+      // Stufen gemessen (Prüfstand 2h), siehe LIESMICH „Fassung 26“.
+      gegner: SPAEHER_GRUPPE,
+      sieg: "Pah. Dann bleibt die Backstube eben offen. Die Reiter erfahren davon!",
+      danach: "Hmpf.",
+      geld: 120 })), [
+      { sag: "Späher", text: "Du hast nichts in der Hand. Unsichtbar ist unsichtbar." },
+      { wennNicht: "kisten_fertig", dann: [{ erzaehl: "Hella im Leuchtturm weiß mehr." }],
+        sonst: [{ erzaehl: "Vier Stellen im Dorf zeigen, wie Stoffe ihren Zustand ändern. Sieh sie dir an." }] }
+    ]) }
+  ],
+
+  // Die vier Stationen (erst nach den Teilchenkisten sichtbar)
+  station_netze: stationFrage("st_netze", "Die nassen Netze hängen in der Sonne. Am Mittag sind sie trocken.", "verdunsten",
+    "Das Wasser verdunstet: Die Teilchen lösen sich und fliegen als Gas davon."),
+  station_eis: stationFrage("st_eis", "Im Eiskeller liegt Eis auf den Fischen. Am Abend steht dort Wasser.", "schmelzen",
+    "Das Eis schmilzt: Die Teilchen verlassen ihre festen Plätze."),
+  station_fenster: stationFrage("st_fenster", "Aus der warmen Backstube steigt Dampf. Am kalten Fenster bilden sich Tropfen.", "kondensieren",
+    "Der Dampf kondensiert: Am kalten Glas rücken die Teilchen zu Tropfen zusammen."),
+  station_wachs: stationFrage("st_wachs", "Flüssiges Wachs tropft vom Leuchtfeuer. Auf dem kalten Stein wird es hart.", "erstarren",
+    "Das Wachs erstarrt: Die Teilchen kommen zur Ruhe und finden feste Plätze."),
+
+  strandweg_zu: [
+    { sag: "Bäckerin Fenna", text: "Warte! Erst muss der Späher weg – sonst schickt er dir die Reiter hinterher." }
+  ],
+
+  marit: [
+    { sag: "Fischerin Marit", text: "Netze, Eis aus dem Keller, Gläser – und Scherben kaufe ich dir ab." },
+    { handel: "teilchin" },
+    { sag: "Fischerin Marit", text: "Wenn du Ole siehst: Er soll endlich heimkommen." }
+  ],
+
+  muenzbrunnen: [
+    { erzaehl: "Der Münzbrunnen. Am Grund glänzen Münzen aus Nickel. Ein Magnet würde sie anziehen." }
+  ],
+
+  wegweiser_teilchin: [
+    { erzaehl: "Ein Schild: „Süden – Steppenpfad nach Pyrit.“" }
+  ],
+
+  // Der Leuchtturm: Heilort von Teilchin (ein Labor wie Mutters Werkstatt)
+  hella: [
+    { sag: "Turmwärterin Hella", text: "Komm rein, komm rein. Das Leuchtfeuer brennt mit Wachs und Öl. Und deine Elemons sind müde." },
+    { wenn: "teilchin_quest", dann: [
+      { wennNicht: "kisten_fertig", dann: [
+        { sag: "Turmwärterin Hella", text: "Ein Duft, der wandert? Alles besteht aus winzigen Teilchen. Schau – so sehen sie aus." },
+        { minispiel: "teilchenkisten", sprecher: "Hella" },
+        { erzaehl: "Buchseite „Teilchenmodell“: " + TEILCHEN_MERKSATZ },
+        { setze: "kisten_fertig" },
+        { sag: "Turmwärterin Hella", text: "Jetzt sieh dich im Dorf um. An vier Stellen ändern Stoffe ihren Zustand." }
+      ] },
+      // Seit Fassung 26: Der Späher kämpft mit Stickstoff, einem Gas. Normal-Angriffe
+      // gehen durch Gas hindurch (KAMPF.typFaktor) – ohne Hinweis wäre das eine Falle.
+      { sag: "Turmwärterin Hella", text: "Pass auf: Der Späher hat ein Gas dabei. Schläge gehen durch ein Gas einfach hindurch." },
+      { sag: "Turmwärterin Hella", text: "Du brauchst Angriffe aus einem Stoff – Stahl, Kristall, Feuer. Eisen von der Erzhalde kann das, und die Magnesiumflamme." }
+    ] }
+  ].concat(labor("Hella versorgt deine Elemons.")),
+
+  labortisch_teilchin: [
+    { erzaehl: "Hellas Arbeitstisch. Ein Klumpen Kerzenwachs, mal fest, mal flüssig." }
+  ].concat(GEFAESS_HERSTELLEN),
+
+  // ---------- Steppenpfad ----------
+  wilma: stoffmeister({ id: "wilma", name: "Hirtin Wilma", ort: "steppe",
+    gruss: "Meine Ziegen sind weg, nur Steine und Sand hier. Zeig mir, ob du was taugst!",
+    gegner: [{ art: "silicium", stufe: 8 }, { art: "schwefel", stufe: 8 }],
+    sieg: "Respekt. Nimm das, ich brauch es hier draußen nicht.",
+    danach: "Sand ist Silicium und Sauerstoff. Daraus macht man Glas.",
+    geld: 120 }),
+
+  kuno: stoffmeister({ id: "kuno", name: "Erzträger Kuno", ort: "steppe",
+    gruss: "Ich trage Erz aus Pyrit. Wer da hinwill, muss an mir vorbei!",
+    gegner: [{ art: "eisen", stufe: 8 }, { art: "kohlenstoff", stufe: 9 }],
+    sieg: "Na gut. In Pyrit arbeiten Kinder in der Mine. Das gefällt mir auch nicht.",
+    danach: "Das Erz von Pyrit glänzt wie Gold. Ist aber keins.",
+    geld: 150 }),
+
+  // ---------- Pyrit ----------
+  pyrit_ankunft: [
+    { erzaehl: "Pyrit. Die Hütten stehen im Kreis um ein Feuer. Oben im Fels gähnt der Eingang einer Mine." }
+  ],
+
+  feuerstelle_pyrit: [
+    { erzaehl: "Die Feuerstelle. Holz, Luft und Hitze – solange alle drei da sind, brennt das Feuer." }
+  ],
+
+  berta: [
+    { sag: "Bergarbeiterin Berta", text: "Da unten graben Kinder für die grauen Reiter. Noch kommst du nicht hinein." },
+    { sag: "Bergarbeiterin Berta", text: "Komm wieder, wenn du bereit bist. (Kapitel 3 folgt.)" }
+  ],
+
+  mine_zu: [
+    { erzaehl: "Wachen der grauen Reiter versperren den Stollen. Hier kommst du noch nicht hinein. (Kapitel 3 folgt.)" }
   ]
 };

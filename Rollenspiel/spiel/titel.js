@@ -4,9 +4,11 @@
 
 // Alle Karten (werkzeug\platzhalter-bauen.ps1). Seit Fassung 17 mit den
 // begehbaren Laboren. Neue Karten auch in sw.js (DATEIEN) eintragen.
-var KARTEN_NAMEN = ["stoffingen", "kolbenwald", "brenner", "labor_stoffingen", "labor_brenner"];
+// Seit Fassung 25 dazu Kapitel 2: Meerstraße, Teilchin (mit Leuchtturm), Steppenpfad, Pyrit.
+var KARTEN_NAMEN = ["stoffingen", "kolbenwald", "brenner", "labor_stoffingen", "labor_brenner",
+  "meerstrasse", "teilchin", "labor_teilchin", "steppenpfad", "pyrit"];
 // Zeilen im Figurenbogen (seit Fassung 17: Kolja, Rieke, Händler Funke)
-var FIGUREN_ZEILEN = 14;
+var FIGUREN_ZEILEN = 23;   // seit Fassung 25: neun Figuren für Kapitel 2
 
 class LadeSzene extends Phaser.Scene {
   constructor() { super("laden"); }

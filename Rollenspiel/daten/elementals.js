@@ -134,6 +134,36 @@ var ARTEN = {
     stoff: { haerte: 6.5, dichte: 2.33, schmelz: 1414 },
     steckbrief: { farbe: "dunkelgrau", glanz: true, magnetisch: false, leitfaehig: false, verformbar: false, brennt: false },
     form: "stueck",
+  },
+
+  // ---------- Seit Fassung 26: Kapitel 2 (Teilchin) ----------
+  // Stickstoff: ein Gas. Vier Fünftel der Luft, farblos, reagiert kaum.
+  // In Teilchin nur beim Späher der grauen Reiter; laut „Elementals je
+  // Region“ gehört er nach Aerosol und ist erst dort fangbar.
+  stickstoff: {
+    name: "Stickstoff", formel: "N", klasse: "Nichtmetall", gruppe: "hg5", bild: "stickstoff", seltenheit: "selten", fangbarAb: "Aerosol",
+    beschreibung: "Ein farbloses Gas ohne Geruch. Vier Fünftel der Luft sind Stickstoff. Er reagiert kaum mit anderen Stoffen.",
+    stoff: { haerte: 0, dichte: 0.00125, schmelz: -210, siede: -196 },
+    steckbrief: { farbe: "farblos", glanz: false, magnetisch: false, leitfaehig: false, verformbar: false, brennt: false },
+    form: "gas",
+  },
+
+  // Nickel und Cobalt: mit Eisen die drei magnetischen Metalle. Der Magnet
+  // allein trennt sie nicht mehr – erst die Farbe (Lupe) und der Fundort.
+  nickel: {
+    name: "Nickel", formel: "Ni", klasse: "Metall", gruppe: "nebengruppe", bild: "nickel", seltenheit: "haeufig",
+    beschreibung: "Silbriges Metall mit einem Hauch Gelb. Der Magnet hält es fest wie Eisen. Nickel steckt in Münzen und in Edelstahl.",
+    stoff: { haerte: 4, dichte: 8.91, schmelz: 1455 },
+    steckbrief: { farbe: "silbrig-gelblich", glanz: true, magnetisch: true, leitfaehig: true, verformbar: true, brennt: false },
+    form: "stueck",
+  },
+
+  cobalt: {
+    name: "Cobalt", formel: "Co", klasse: "Metall", gruppe: "nebengruppe", bild: "cobalt", seltenheit: "selten",
+    beschreibung: "Bläulich-silbernes, hartes Metall. Neben Eisen und Nickel das dritte magnetische Metall. Cobaltsalze färben Glas tiefblau.",
+    stoff: { haerte: 5, dichte: 8.90, schmelz: 1495 },
+    steckbrief: { farbe: "bläulich-silbern", glanz: true, magnetisch: true, leitfaehig: true, verformbar: true, brennt: false },
+    form: "stueck",
   }
 };
 
@@ -228,7 +258,11 @@ var WERKZEUGE = {
   // Laborgeräte für den Abzug (seit Fassung 17). Man bekommt sie in Quests;
   // mit ihnen entstehen später Verbindungen.
   tiegelzange:       { name: "Tiegelzange", prueft: [], labor: true, text: "Greift heiße Tiegel und Schalen. Vom Köhler." },
-  messzylinder:      { name: "Messzylinder", prueft: [], labor: true, text: "Misst Flüssigkeiten genau ab. Von Meisterin Vitra." }
+  messzylinder:      { name: "Messzylinder", prueft: [], labor: true, text: "Misst Flüssigkeiten genau ab. Von Meisterin Vitra." },
+  // Seit Fassung 26 (Belohnung der Teilchin-Quest): misst bis etwa 360 °C.
+  // Befund „zustand“: fest, flüssig oder Gas bei 20 °C und – wenn messbar –
+  // die Schmelztemperatur (KAMPF.befundWert).
+  thermometer:       { name: "Thermometer", prueft: ["zustand"], text: "Misst Temperaturen bis etwa 360 °C. Zeigt, ob ein Stoff bei 20 °C fest, flüssig oder ein Gas ist. Von Bäckerin Fenna." }
 };
 
 // Die Geräte, die der Abzug kennt, in dieser Reihenfolge
@@ -253,9 +287,11 @@ var GEFAESSE = {
 
 // Weitere Waren im Gepäck: Verbrauchsgüter (in stand.vorrat) und Material (stand.material)
 var WAREN = {
-  kaeltemischung: { name: "Kältemischung", vorrat: true, text: "Eis und Kochsalz kühlen bis −20 °C. Ein abgekühltes Elemental fängt man doppelt so leicht." },
+  kaeltemischung: { name: "Kältemischung", vorrat: true, text: "Eis und Kochsalz kühlen bis −20 °C. Ein abgekühltes Elemon fängt man doppelt so leicht." },
   glasbruch:      { name: "Glasbruch",     text: "Scherben aus dem Kolbenwald. Verkaufen oder am Labortisch zu neuen Gefäßen schmelzen." },
-  quarz:          { name: "Quarz",         text: "Reiner Quarzsand (Siliciumdioxid). Daraus entsteht die Quarzampulle." }
+  quarz:          { name: "Quarz",         text: "Reiner Quarzsand (Siliciumdioxid). Daraus entsteht die Quarzampulle." },
+  // Seit Fassung 26: Fennas Brot – im Gepäck, heilt die Gruppe einmal unterwegs
+  brot:           { name: "Brot",          vorrat: true, text: "Frisch aus Fennas Ofen. Im Kampf (⋯): Das Elemon erholt sich um die Hälfte. Im Menü (Gepäck): Alle Elemons erholen sich." }
 };
 
 // Name einer Sache im Gepäck, egal welcher Sorte

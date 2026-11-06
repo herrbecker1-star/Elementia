@@ -235,6 +235,12 @@ class OberweltSzene extends Phaser.Scene {
       g.fillStyle(0xf4ead5).fillRect(5, 6, 4, 8).fillRect(13, 6, 4, 8).fillRect(21, 6, 4, 8);
       g.fillStyle(0x8a5a32).fillRect(3, 20, 26, 6);
       g.fillStyle(0xcfeeff, 0.95).fillRect(8, 15, 3, 5).fillRect(14, 15, 3, 5).fillRect(20, 15, 3, 5);
+    } else if (name === "funkeln") {
+      // Seit Fassung 26: eine Station der Teilchin-Quest – ein goldenes Funkeln
+      g.fillStyle(0xffe08a, 0.95).fillTriangle(16, 4, 19, 16, 13, 16).fillTriangle(16, 28, 19, 16, 13, 16)
+        .fillTriangle(4, 16, 16, 13, 16, 19).fillTriangle(28, 16, 16, 13, 16, 19);
+      g.fillStyle(0xffffff, 1).fillCircle(16, 16, 3);
+      g.fillStyle(0xffe08a, 0.8).fillCircle(25, 7, 2).fillCircle(7, 24, 1.5);
     } else {
       // Ein Laborgerät, das an einem Ast hängt: Pfahl mit Glaskörper
       g.fillStyle(0x6b4424).fillRect(15, 4, 2, 26);
@@ -575,7 +581,7 @@ class OberweltSzene extends Phaser.Scene {
         spr.setVelocity((spr.x - held.x) * 3, (spr.y - held.y) * 3);
         if (this.time.now - this.letzteWarnung > 8000) {
           this.letzteWarnung = this.time.now;
-          this.ui.dialogFuehren([{ erzaehl: "Das Licht weicht zurück. Deine Elementals sind zu erschöpft – erst ins Labor." }], this.stand.flags);
+          this.ui.dialogFuehren([{ erzaehl: "Das Licht weicht zurück. Deine Elemons sind zu erschöpft – erst ins Labor." }], this.stand.flags);
         }
         return;
       }

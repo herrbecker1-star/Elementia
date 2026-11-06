@@ -1868,9 +1868,9 @@ var ATTACKEN = {
   "text": "einfacher körperlicher Angriff",
   "ae": 2
  },
- "klaps": {
-  "id": "klaps",
-  "name": "Klaps",
+ "pranke": {
+  "id": "pranke",
+  "name": "Pranke",
   "vorbild": "Pfund",
   "typ": "normal",
   "kategorie": "physisch",
@@ -1928,6 +1928,22 @@ var ATTACKEN = {
   },
   "text": "einfacher körperlicher Angriff",
   "ae": 3
+ },
+ "magnesiumflamme": {
+  "id": "magnesiumflamme",
+  "name": "Magnesiumflamme",
+  "vorbild": "Glut",
+  "typ": "feuer",
+  "kategorie": "speziell",
+  "staerke": 40,
+  "genau": 100,
+  "effekt": "10 % verbrannt",
+  "e": {
+   "status": "verbrannt",
+   "chance": 10
+  },
+  "text": "Magnesium verbrennt mit grellweißem Licht",
+  "ae": 0
  }
 };
 
@@ -2048,7 +2064,8 @@ var ELEMENTE = {
   "typ2": null,
   "zustand": "fest",
   "signatur": [
-   "magnesiumblitz"
+   "magnesiumblitz",
+   "magnesiumflamme"
   ]
  },
  "Al": {
@@ -2788,7 +2805,7 @@ var LERNSETS = {
  },
  "He": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "neonlicht"
@@ -2869,7 +2886,7 @@ var LERNSETS = {
  },
  "B": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "leichtbau"
@@ -2953,7 +2970,7 @@ var LERNSETS = {
  },
  "O": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "stinkwolke"
@@ -3031,7 +3048,7 @@ var LERNSETS = {
  },
  "Na": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "natriumspritzer"
@@ -3057,10 +3074,12 @@ var LERNSETS = {
  },
  "Mg": {
   "1": [
-   "kratzer"
-  ],
-  "5": [
+   "kratzer",
    "magnesiumblitz"
+  ],
+  "7": [
+   "biss",
+   "magnesiumflamme"
   ],
   "11": [
    "kalkpanzer"
@@ -3075,12 +3094,9 @@ var LERNSETS = {
    "ausfaellung"
   ],
   "36": [
-   "biss"
-  ],
-  "42": [
    "hammerfaust"
   ],
-  "48": [
+  "42": [
    "kalkbeben"
   ]
  },
@@ -3115,7 +3131,7 @@ var LERNSETS = {
  },
  "Si": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "kristallgitter"
@@ -3196,7 +3212,7 @@ var LERNSETS = {
  },
  "Cl": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "chlorgestank"
@@ -3274,7 +3290,7 @@ var LERNSETS = {
  },
  "Ca": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "kalkpanzer"
@@ -3361,7 +3377,7 @@ var LERNSETS = {
  },
  "V": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "zinkschicht"
@@ -3448,30 +3464,28 @@ var LERNSETS = {
  },
  "Fe": {
   "1": [
-   "klaps"
-  ],
-  "7": [
+   "pranke",
    "zinkschicht"
   ],
-  "13": [
+  "7": [
    "eisenkralle"
   ],
-  "19": [
+  "13": [
    "doppelklaps"
   ],
-  "25": [
+  "19": [
    "federstahl"
   ],
-  "32": [
+  "25": [
    "stahlschlag"
   ],
-  "38": [
+  "32": [
    "eisenschweif"
   ],
-  "44": [
+  "38": [
    "titanhammer"
   ],
-  "48": [
+  "44": [
    "rammen"
   ]
  },
@@ -3535,7 +3549,7 @@ var LERNSETS = {
  },
  "Cu": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "zinkschicht"
@@ -3622,7 +3636,7 @@ var LERNSETS = {
  },
  "Ge": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "kristallgitter"
@@ -3703,7 +3717,7 @@ var LERNSETS = {
  },
  "Br": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "bromdampf"
@@ -3781,7 +3795,7 @@ var LERNSETS = {
  },
  "Sr": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "kalkpanzer"
@@ -3868,7 +3882,7 @@ var LERNSETS = {
  },
  "Nb": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "gluehdraht"
@@ -3958,7 +3972,7 @@ var LERNSETS = {
  },
  "Ru": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "goldglanz"
@@ -4045,7 +4059,7 @@ var LERNSETS = {
  },
  "Ag": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "goldglanz"
@@ -4132,7 +4146,7 @@ var LERNSETS = {
  },
  "Sn": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "kristallgitter"
@@ -4213,7 +4227,7 @@ var LERNSETS = {
  },
  "I": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "bromdampf"
@@ -4291,7 +4305,7 @@ var LERNSETS = {
  },
  "Ba": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "kalkpanzer"
@@ -4378,7 +4392,7 @@ var LERNSETS = {
  },
  "Pr": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "anziehung"
@@ -4436,7 +4450,7 @@ var LERNSETS = {
  },
  "Sm": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "anziehung"
@@ -4523,7 +4537,7 @@ var LERNSETS = {
  },
  "Tb": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "anziehung"
@@ -4581,7 +4595,7 @@ var LERNSETS = {
  },
  "Er": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "anziehung"
@@ -4668,7 +4682,7 @@ var LERNSETS = {
  },
  "W": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "gluehdraht"
@@ -4755,7 +4769,7 @@ var LERNSETS = {
  },
  "Ir": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "goldglanz"
@@ -4842,7 +4856,7 @@ var LERNSETS = {
  },
  "Hg": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "zinkschicht"
@@ -4929,7 +4943,7 @@ var LERNSETS = {
  },
  "Bi": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "schockfrost"
@@ -5013,7 +5027,7 @@ var LERNSETS = {
  },
  "Rn": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "neonlicht"
@@ -5103,7 +5117,7 @@ var LERNSETS = {
  },
  "Ac": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "alphastrahlung"
@@ -5181,7 +5195,7 @@ var LERNSETS = {
  },
  "U": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "alphastrahlung"
@@ -5259,7 +5273,7 @@ var LERNSETS = {
  },
  "Am": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "alphastrahlung"
@@ -5311,7 +5325,7 @@ var LERNSETS = {
  },
  "Cf": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "alphastrahlung"
@@ -5337,7 +5351,7 @@ var LERNSETS = {
  },
  "Rf": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "gluehdraht"
@@ -5433,7 +5447,7 @@ var LERNSETS = {
  },
  "Bh": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "gluehdraht"
@@ -5529,7 +5543,7 @@ var LERNSETS = {
  },
  "Ds": {
   "1": [
-   "klaps"
+   "pranke"
   ],
   "7": [
    "goldglanz"

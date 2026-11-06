@@ -17,10 +17,15 @@ var SPIELSTAND = (function () {
   var SCHLUESSEL = "elementia-abenteuer-spielstand";
   var FASSUNG = 1;
   var CODE_VORSATZ = "EA1-";
+  // Stand der Karten (seit Fassung 24): Ändern sich die Karten so, dass
+  // gespeicherte Koordinaten im Fels landen könnten, steigt die Zahl –
+  // ältere Stände beginnen dann am Startpunkt ihrer Karte.
+  var KARTEN_STAND = 24;
 
   function neu() {
     return {
       fassung: FASSUNG,
+      kartenStand: KARTEN_STAND,
       karte: "stoffingen",
       x: null,            // null = Startpunkt der Karte
       y: null,
@@ -96,6 +101,11 @@ var SPIELSTAND = (function () {
       // Seit Fassung 20 gelten die Attacken aus der Tabelle des Nutzers:
       // Was es nicht mehr gibt, fällt weg; die freien Plätze füllt unten
       // das Lernset. Doppelte fallen weg.
+      // Seit Fassung 23 heißt Klaps „Pranke“ (Wunsch des Nutzers, 06.11.2026).
+      var umbenannt = { klaps: "pranke" };
+      ["angriffe", "lernen"].forEach(function (feld) {
+        if (Array.isArray(el[feld])) el[feld] = el[feld].map(function (id) { return umbenannt[id] || id; });
+      });
       if (Array.isArray(el.angriffe) && typeof ATTACKEN !== "undefined") {
         el.angriffe = el.angriffe.filter(function (id, i, liste) { return ATTACKEN[id] && liste.indexOf(id) === i; });
         if (Array.isArray(el.lernen)) el.lernen = el.lernen.filter(function (id) { return ATTACKEN[id]; });
@@ -115,6 +125,13 @@ var SPIELSTAND = (function () {
     if (stand.flags.starter && !alle.some(function (el) { return el.starter; })) {
       var erster = alle.filter(function (el) { return el.art === stand.flags.starter; })[0];
       if (erster) erster.starter = true;
+    }
+    // Seit Fassung 24 sind Stoffingen, der Kolbenwald, Brenner und die Labore
+    // umgebaut: Wer aus einem älteren Stand kommt, beginnt am Startpunkt.
+    if (stand.kartenStand !== KARTEN_STAND) {
+      stand.x = null; stand.y = null;
+      if (stand.labor) { stand.labor.x = null; stand.labor.y = null; }
+      stand.kartenStand = KARTEN_STAND;
     }
     if (typeof stand.x !== "number" || typeof stand.y !== "number") { stand.x = null; stand.y = null; }
     if (["unten", "links", "rechts", "oben"].indexOf(stand.richtung) < 0) stand.richtung = "unten";
@@ -167,6 +184,7 @@ var SPIELSTAND = (function () {
 
   return {
     FASSUNG: FASSUNG,
+    KARTEN_STAND: KARTEN_STAND,
     GRUPPE_MAX: GRUPPE_MAX,
     neu: neu,
     aufnehmen: aufnehmen,
