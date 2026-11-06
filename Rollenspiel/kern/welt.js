@@ -86,7 +86,7 @@ var WELT = (function () {
   // Seit Fassung 25: strand, steppe, fels (Teilchin, Steppenpfad); seit Fassung 26 die Küste
   // als eigener Hintergrund (strand, brunnen) und die Erzhalde der Meerstraße (Cobalt).
   var BIOM_ORT = { wiese: "steppe", dorf: "dorf", garten: "dorf", schmiede: "dorf", meiler: "steppe", quelle: "wald", hain: "wald", wald: "wald",
-    strand: "kueste", steppe: "steppe", fels: "steppe", erzhalde: "steppe", brunnen: "kueste" };
+    strand: "kueste", steppe: "steppe", fels: "steppe", erzhalde: "steppe", brunnen: "hafen" };   // hafen seit Fassung 28
 
   return {
     PHASEN: PHASEN, PHASE_NAME: PHASE_NAME, WETTER_NAME: WETTER_NAME, KLIMA: KLIMA,

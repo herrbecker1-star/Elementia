@@ -767,7 +767,7 @@ var DIALOGE = {
         { setze: "duftspur_fertig" },
         { sag: "Späher", text: "Teilchen … die sich bewegen … Unsinn! Meine Elemons sehen das anders." }
       ] }
-    ].concat(stoffmeister({ id: "spaeher", name: "Späher", ort: "kueste",
+    ].concat(stoffmeister({ id: "spaeher", name: "Späher", ort: "sturm",
       gruss: "Genug geredet! Mein Stickstoff ist so unsichtbar wie dein Brotduft. Versuch ihn zu treffen!",
       // Stickstoff (Gas, vier Fünftel der Luft) – fangbar erst in Aerosol.
       // Stufen gemessen (Prüfstand 2h), siehe LIESMICH „Fassung 26“.

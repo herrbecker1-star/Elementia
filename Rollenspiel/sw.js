@@ -12,7 +12,7 @@
 // ============================================================
 
 // Bei JEDER Veröffentlichung erhöhen – sonst holt kein Handy die neue Fassung.
-var FASSUNG = 27;
+var FASSUNG = 28;
 var SPEICHER = "elementia-abenteuer-" + FASSUNG;
 
 var DATEIEN = [
@@ -52,6 +52,8 @@ var DATEIEN = [
   "grafik/kampf/wald.jpg",
   "grafik/kampf/steppe.jpg",
   "grafik/kampf/kueste.jpg",
+  "grafik/kampf/hafen.jpg",
+  "grafik/kampf/sturm.jpg",
   "grafik/szenen/starterwahl_eisen.jpg",
   "grafik/szenen/starterwahl_magnesium.jpg",
   "grafik/szenen/reiter_ankunft.jpg",

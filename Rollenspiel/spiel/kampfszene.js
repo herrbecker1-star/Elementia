@@ -13,7 +13,8 @@
 // ============================================================
 
 // Seit Fassung 26: kueste (Teilchin) – das Bild malt der Nutzer, bis dahin ein Platzhalter
-var KAMPF_HINTERGRUND = { dorf: "grafik/kampf/dorf.jpg", wald: "grafik/kampf/wald.jpg", steppe: "grafik/kampf/steppe.jpg", kueste: "grafik/kampf/kueste.jpg" };
+var KAMPF_HINTERGRUND = { dorf: "grafik/kampf/dorf.jpg", wald: "grafik/kampf/wald.jpg", steppe: "grafik/kampf/steppe.jpg", kueste: "grafik/kampf/kueste.jpg",
+  hafen: "grafik/kampf/hafen.jpg", sturm: "grafik/kampf/sturm.jpg" };   // seit Fassung 28: Teilchin-Dorf und Späher
 
 class KampfSzene extends Phaser.Scene {
   constructor() { super("kampf"); }
