@@ -28,7 +28,7 @@ var HANDEL = (function () {
   var MAERKTE = {
     stoffingen: ["reagenzglas", "kaeltemischung", "glasbruch"],
     brenner:    ["reagenzglas", "kaeltemischung", "glasbruch"],
-  // Seit Fassung 25: Fischerin Marit in Teilchin – Kältemischung aus dem Eiskeller
+  // Seit Fassung 25: Fischerin Marit in Teilchin – Kältemischung aus den Eiskisten
   teilchin:   ["reagenzglas", "kaeltemischung", "glasbruch"]
   };
 

@@ -20,7 +20,7 @@ var SPIELSTAND = (function () {
   // Stand der Karten (seit Fassung 24): Ändern sich die Karten so, dass
   // gespeicherte Koordinaten im Fels landen könnten, steigt die Zahl –
   // ältere Stände beginnen dann am Startpunkt ihrer Karte.
-  var KARTEN_STAND = 24;
+  var KARTEN_STAND = 29;   // Fassung 29: Brenner und Teilchin umgebaut
 
   function neu() {
     return {

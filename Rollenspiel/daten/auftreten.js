@@ -77,9 +77,10 @@ var AUFTRITTE = {
   ],
 
   // Teilchin: Sand am Strand ist Siliciumdioxid – dort lebt Silicium.
-  // Seit Fassung 26 Nickel am Münzbrunnen (Nickelmünzen) und selten auf der Wiese.
+  // Seit Fassung 26 Nickel (Nickelmünzen) und selten auf der Wiese; seit
+  // Fassung 29 am Wrack am Weststrand (vorher am Münzbrunnen).
   teilchin: [
-    { art: "nickel",      stufe: [7, 9], gewicht: 6, biome: ["brunnen"] },
+    { art: "nickel",      stufe: [7, 9], gewicht: 6, biome: ["wrack"] },
     { art: "nickel",      stufe: [7, 9], gewicht: 1, biome: ["wiese", "hain"] },
     { art: "silicium",    stufe: [7, 9], gewicht: 4, biome: ["strand"] },
     { art: "zink",        stufe: [7, 9], gewicht: 3, biome: ["wiese", "hain"] },
@@ -121,8 +122,8 @@ var FUNDHINWEISE = {
   bor:         { vage: "„Wo warme Quellen dampfen, glänzt etwas Schwarzes, das grün brennt.“",
                  genau: "An den warmen Quellen in Stoffingen und im Kolbenwald, im Nebel öfter. Selten auch im Wald und an der Meerstraße." },
   // Seit Fassung 26
-  nickel:      { vage: "„Wo Münzen im Wasser liegen, schläft ein Silbriger, den der Magnet so liebt wie das Eisen.“",
-                 genau: "Am Münzbrunnen von Teilchin, selten auch auf den Wiesen dort." },
+  nickel:      { vage: "„Wo Münzen im Sand liegen, schläft ein Silbriger, den der Magnet so liebt wie das Eisen.“",
+                 genau: "Am Wrack am Strand von Teilchin, selten auch auf den Wiesen dort." },
   cobalt:      { vage: "„Auf dem Erzhaufen vor der Küste wohnt ein Bläulicher. Sein Salz färbt Glas wie den Himmel.“",
                  genau: "An der Erzhalde am Westende der Meerstraße, vor Teilchin." },
   stickstoff:  { vage: "„Unsichtbar ist er überall – vier von fünf Atemzügen. Fangen kann ihn hier niemand.“",

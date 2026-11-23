@@ -427,7 +427,7 @@ class UiSzene extends Phaser.Scene {
       return WERKZEUGE[w].name + ": " + (stand.werkzeuge.indexOf(w) >= 0 ? "✓ vorhanden" : "– fehlt noch");
     });
     return this.sprechblase(null, "Der Abzug. " + zeilen.join(" · ") + ".").then(function () {
-      return this.sprechblase(null, "Hier stellst du später Verbindungen her. Die Geräte bekommst du unterwegs.");
+      return this.sprechblase(null, "Hier entstehen später Verbindungen. Die Geräte dafür bekommst du unterwegs.");
     }.bind(this));
   }
 
